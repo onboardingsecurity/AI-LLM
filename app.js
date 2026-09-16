@@ -627,20 +627,20 @@
   el.btnRankingHome.addEventListener("click", resetToHome);
 
   el.muteToggles.forEach(function (toggle) {
-    toggle.addEventListener("change", function () {
-      state.mute = toggle.checked;
+    toggle.addEventListener("click", function () {
+      state.mute = toggle.getAttribute("aria-pressed") !== "true";
       el.muteToggles.forEach(function (other) {
-        other.checked = state.mute;
+        other.setAttribute("aria-pressed", state.mute ? "true" : "false");
       });
       if (state.mute) stopCurrentSound();
     });
   });
 
   el.reducedMotionToggles.forEach(function (toggle) {
-    toggle.addEventListener("change", function () {
-      state.reducedMotion = toggle.checked;
+    toggle.addEventListener("click", function () {
+      state.reducedMotion = toggle.getAttribute("aria-pressed") !== "true";
       el.reducedMotionToggles.forEach(function (other) {
-        other.checked = state.reducedMotion;
+        other.setAttribute("aria-pressed", state.reducedMotion ? "true" : "false");
       });
       if (state.reducedMotion) {
         [el.boardLeft, el.boardRight].forEach(function (board) {
