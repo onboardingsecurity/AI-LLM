@@ -15,19 +15,21 @@
   // ---------------------------------------------------------------
   var el = {
     home: document.getElementById("home-screen"),
+    rules: document.getElementById("rules-screen"),
     game: document.getElementById("game-screen"),
     ranking: document.getElementById("ranking-screen"),
 
     nameInput: document.getElementById("player-name"),
     btnStart: document.getElementById("btn-start"),
+    btnStartConfirmed: document.getElementById("btn-start-confirmed"),
     imageLoadingNote: document.getElementById("image-loading-note"),
     btnGotoRanking: document.getElementById("btn-goto-ranking"),
-    toggleMute: document.getElementById("toggle-mute"),
-    toggleReducedMotion: document.getElementById("toggle-reduced-motion"),
+    muteToggles: Array.prototype.slice.call(document.querySelectorAll('[data-toggle="mute"]')),
+    reducedMotionToggles: Array.prototype.slice.call(document.querySelectorAll('[data-toggle="reduced-motion"]')),
 
     statusStage: document.getElementById("status-stage"),
-    statusTime: document.getElementById("status-time"),
     statusFound: document.getElementById("status-found"),
+    timeBarFill: document.getElementById("time-bar-fill"),
     btnPause: document.getElementById("btn-pause"),
     btnRestart: document.getElementById("btn-restart"),
 
@@ -81,6 +83,7 @@
   // ---------------------------------------------------------------
   function showScreen(name) {
     el.home.hidden = name !== "home";
+    el.rules.hidden = name !== "rules";
     el.game.hidden = name !== "game";
     el.ranking.hidden = name !== "ranking";
   }
@@ -323,8 +326,11 @@
     var totalStages = state.imageSets.length || 1;
     var totalDiffs = state.boardData ? state.boardData.hotspots.length : 0;
     el.statusStage.textContent = "단계 " + state.stage + " / " + totalStages;
-    el.statusTime.textContent = "남은시간 " + formatTime(state.remaining);
     el.statusFound.textContent = "찾은 개수 " + state.foundCells.length + " / " + totalDiffs;
+
+    var timeLimit = stageTimeLimit(state.stage);
+    var ratio = timeLimit > 0 ? Math.max(0, Math.min(1, state.remaining / timeLimit)) : 0;
+    el.timeBarFill.style.width = (ratio * 100) + "%";
   }
 
   // ---------------------------------------------------------------
@@ -380,6 +386,29 @@
     el.failOverlay.hidden = true;
   }
 
+  // object-fit: contain으로 표시되는 캔버스는 CSS 박스 크기와 실제 그려지는
+  // 이미지 영역 크기가 다를 수 있다(비율이 안 맞으면 상하 또는 좌우에 여백이
+  // 생김). 클릭 좌표를 실제 이미지가 그려진 영역 기준으로 보정해서 반환한다.
+  function getRenderedImageRect(canvas) {
+    var rect = canvas.getBoundingClientRect();
+    var canvasAspect = canvas.width / canvas.height;
+    var boxAspect = rect.width / rect.height;
+    var width, height;
+    if (canvasAspect > boxAspect) {
+      width = rect.width;
+      height = rect.width / canvasAspect;
+    } else {
+      height = rect.height;
+      width = rect.height * canvasAspect;
+    }
+    return {
+      left: rect.left + (rect.width - width) / 2,
+      top: rect.top + (rect.height - height) / 2,
+      width: width,
+      height: height,
+    };
+  }
+
   // ---------------------------------------------------------------
   // 클릭 처리 (요구사항 2단계: 요소당 리스너 1개, 멱등 처리)
   // ---------------------------------------------------------------
@@ -388,9 +417,10 @@
     var canvas = e.target.closest("canvas");
     if (!canvas) return;
 
-    var rect = canvas.getBoundingClientRect();
+    var rect = getRenderedImageRect(canvas);
     var fx = (e.clientX - rect.left) / rect.width;
     var fy = (e.clientY - rect.top) / rect.height;
+    if (fx < 0 || fx > 1 || fy < 0 || fy > 1) return; // 여백(letterbox) 영역 클릭은 무시
     var data = state.boardData;
 
     var hitIndex = -1;
@@ -580,6 +610,10 @@
 
   el.btnStart.addEventListener("click", function () {
     if (!canStartGame()) return;
+    showScreen("rules");
+  });
+
+  el.btnStartConfirmed.addEventListener("click", function () {
     startNewGame();
   });
 
@@ -592,19 +626,29 @@
   el.btnGotoRanking.addEventListener("click", goToRanking);
   el.btnRankingHome.addEventListener("click", resetToHome);
 
-  el.toggleMute.addEventListener("change", function () {
-    state.mute = el.toggleMute.checked;
-    if (state.mute) stopCurrentSound();
+  el.muteToggles.forEach(function (toggle) {
+    toggle.addEventListener("change", function () {
+      state.mute = toggle.checked;
+      el.muteToggles.forEach(function (other) {
+        other.checked = state.mute;
+      });
+      if (state.mute) stopCurrentSound();
+    });
   });
 
-  el.toggleReducedMotion.addEventListener("change", function () {
-    state.reducedMotion = el.toggleReducedMotion.checked;
-    if (state.reducedMotion) {
-      [el.boardLeft, el.boardRight].forEach(function (board) {
-        var canvas = board.querySelector("canvas");
-        if (canvas) canvas.classList.remove("flash-effect");
+  el.reducedMotionToggles.forEach(function (toggle) {
+    toggle.addEventListener("change", function () {
+      state.reducedMotion = toggle.checked;
+      el.reducedMotionToggles.forEach(function (other) {
+        other.checked = state.reducedMotion;
       });
-    }
+      if (state.reducedMotion) {
+        [el.boardLeft, el.boardRight].forEach(function (board) {
+          var canvas = board.querySelector("canvas");
+          if (canvas) canvas.classList.remove("flash-effect");
+        });
+      }
+    });
   });
 
   el.boardLeft.addEventListener("click", handleBoardClick);

@@ -96,6 +96,12 @@ h1 {
   border-radius: 12px;
 }
 
+.toggle-row-compact {
+  margin: 0 0 2vh;
+  padding: 0.5em 1em;
+  font-size: 0.9rem;
+}
+
 .toggle-row label {
   display: flex;
   align-items: center;
@@ -214,19 +220,59 @@ button.secondary {
   margin-left: auto;
 }
 
+#game-screen {
+  display: flex;
+  flex-direction: column;
+  /* body의 상하 padding(3vh + 5vh)을 제외한 높이에 맞춰, 보드 영역이 늘어나도
+     페이지 세로 스크롤이 생기지 않고 위아래 여백(padding)이 항상 남도록 고정한다. */
+  height: calc(100vh - 8vh);
+}
+
+#status-bar,
+.toggle-row-compact {
+  flex: none;
+}
+
 #boards {
   display: flex;
   flex-wrap: wrap;
   gap: 2vw;
   width: 100%;
+  flex: 1 1 auto;
+  min-height: 0;
 }
 
 .board-panel {
   flex: 1 1 45%;
   min-width: 280px;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  /* 이미지 박스 바로 아래에 남은시간 막대를 위한 여백을 살짝 남긴다 */
+  margin-bottom: 1.2vh;
+}
+
+#time-bar-track {
+  flex: none;
+  width: 100%;
+  height: 14px;
+  margin: 0 0 1.2vh;
+  background: #e7e9f0;
+  border-radius: 999px;
+  overflow: hidden;
+}
+
+#time-bar-fill {
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, var(--accent-2), var(--accent));
+  border-radius: inherit;
+  transform-origin: left center;
+  transition: width 0.2s linear;
 }
 
 .board-label {
+  flex: none;
   margin: 0 0 0.6em 0.2em;
   font-weight: 800;
   font-size: 0.9rem;
@@ -240,12 +286,21 @@ button.secondary {
   border-radius: 14px;
   overflow: hidden;
   box-shadow: 0 14px 28px -16px rgba(30, 41, 59, 0.35);
+  /* 두 패널(기준/오답)이 항상 같은 크기의 박스를 갖도록 뷰포트 기준으로 계산된
+     남은 공간을 그대로 채운다. 이미지 원본 해상도·비율은 박스 크기에 영향을 주지 않는다. */
+  flex: 1 1 auto;
+  min-height: 0;
 }
 
 .board-canvas {
   display: block;
   width: 100%;
-  height: auto;
+  height: 100%;
+  /* 각 이미지 세트의 원본 비율이 서로 달라도(가로로 넓은 사진, 정사각형 사진 등)
+     같은 크기의 박스 안에서 잘리거나 찌그러지지 않고 비율 그대로 맞춰 보이도록
+     object-fit: contain을 사용한다. 박스 비율과 이미지 비율이 다르면 그 차이만큼
+     여백이 생기는데, 클릭 판정도 실제로 그려진 영역 기준으로 보정한다. */
+  object-fit: contain;
   cursor: crosshair;
 }
 
@@ -314,9 +369,14 @@ button.secondary {
 
 /* ---------- 순위 화면 ---------- */
 
+#ranking-screen {
+  text-align: center;
+}
+
 #ranking-table {
   width: 100%;
   max-width: 520px;
+  margin: 0 auto;
   border-collapse: separate;
   border-spacing: 0;
   background: var(--card-bg);
