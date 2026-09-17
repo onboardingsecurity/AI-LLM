@@ -8,6 +8,66 @@
   var WRONG_CLICK_PENALTY_SECONDS = 10;
   var VARIANTS_PER_SET = 3;
   var imageCache = {};
+  // ⚠️ 개정(2026-09-17, "단계별 배경 이미지 적용" 요청): assets/background/에
+  // background1.png~background5.png가 있고, 단계 번호에 맞춰 그대로 쓴다.
+  // STAGE_TIME_LIMITS와 같은 패턴으로, 배경 개수(5)보다 단계가 많아지면
+  // 마지막 배경(5번)을 계속 쓴다. 배경은 게임 화면 전체(뷰포트)를 덮도록
+  // body에 적용한다(홈 화면 배경과 동일한 방식 — .screen은 좁아서 옆 여백이
+  // 남기 때문).
+  var STAGE_BACKGROUND_COUNT = 5;
+
+  function updateStageBackground(stageNumber) {
+    var idx = Math.min(stageNumber, STAGE_BACKGROUND_COUNT);
+    document.body.style.backgroundImage = 'url("assets/background/background' + idx + '.png")';
+    document.body.style.backgroundSize = "cover";
+    document.body.style.backgroundPosition = "center";
+    document.body.style.backgroundRepeat = "no-repeat";
+  }
+
+  function clearStageBackground() {
+    document.body.style.backgroundImage = "";
+    document.body.style.backgroundSize = "";
+    document.body.style.backgroundPosition = "";
+    document.body.style.backgroundRepeat = "";
+  }
+
+  // ---------------------------------------------------------------
+  // 클로드 아이콘 미니 이벤트 (추가 요청으로 신설, GAME_RULES.md 참고)
+  // 난이도 파라미터가 아니라 장식/보너스 값이라 3단계 튜닝 원칙 대상이 아니다.
+  // ---------------------------------------------------------------
+  // ⚠️ 개정(2026-09-17): "5초 단위로" 요청에 따라 무작위 간격(8~18초) 대신
+  // 고정 5초 간격으로 바꿨다.
+  // ⚠️ 개정(2026-09-17, "1단계 5초, 2단계 4.5초.. 0.5초씩 줄여줘" 요청): 모든
+  // 단계에서 똑같은 5초 대신, STAGE_TIME_LIMITS와 같은 방식(단계별 배열 + 배열
+  // 길이를 넘는 단계는 마지막 값 유지)으로 단계마다 0.5초씩 짧아지게 했다.
+  // ⚠️ 개정(2026-09-17, "5,4,3,2,1초로 설정해줘" 요청): 0.5초씩 줄던 값(5~3초)을
+  // 1초씩 줄어드는 값(5~1초)으로 바꿨다.
+  // ⚠️ 개정(2026-09-17, "스폰 간격 전부 1/3로 줄여줘" 요청): 위 5개 값을 각각
+  // 그대로 1/3로 줄였다(5000/3≈1667, 4000/3≈1333, 3000/3=1000, 2000/3≈667,
+  // 1000/3≈333, 반올림). 단계 간 비율(5:4:3:2:1)은 그대로 유지된다.
+  var CLAUDE_FLYBY_SPAWN_INTERVAL_BY_STAGE_MS = [1667, 1333, 1000, 667, 333];
+  // ⚠️ 개정(2026-09-17, "1개~4개까지 등장하게" 요청): 매번 1개씩만 나오던 것을
+  // 스폰 파도(5초)마다 1~4개가 무작위로 나오도록 되돌렸다(개수만 3→4로 확장).
+  // 이동 속도가 느려지고(1/3) 대각선까지 생기면서 한 아이콘이 화면에 머무는
+  // 시간이 스폰 간격(5초)보다 길어질 수 있어(먼 대각선일수록 오래 걸림), 이전
+  // 파도의 아이콘이 아직 날고 있는 채로 다음 파도가 겹칠 수 있다. 그래서 동시
+  // 표시 상한(안전장치)도 3에서 12로 넉넉히 올려, 정상적인 1~4개 스폰이 이
+  // 상한에 걸려 조용히 줄어드는 일이 없게 했다.
+  var CLAUDE_FLYBY_SPAWN_COUNT_MAX = 4;
+  var CLAUDE_FLYBY_MAX_CONCURRENT = 12; // 애니메이션이 크게 밀릴 때를 대비한 안전장치(평소엔 거의 안 걸림)
+  // ⚠️ 개정(2026-09-17, "속도 1/3, 일정한 속도로" 요청): 왕복 구간마다 duration을
+  // 무작위(1200~1800ms)로 정하던 방식은 폐기했다. 그러면 대각선처럼 이동 거리가
+  // 길어질 때 속도가 들쭉날쭉해지기 때문에, 대신 "픽셀/ms 속도"를 고정값으로 두고
+  // 매번 이동 거리(px)를 이 속도로 나눠 duration을 계산한다 — 경로 길이와 무관하게
+  // 항상 같은 체감 속도로, easing 없이(linear) 등속 이동한다.
+  // 값 산출: 이전 버전은 가로 1366px+양쪽 버퍼 180px ≈ 1546px를 평균 1500ms에
+  // 지나갔다(≈1.03px/ms). 그 1/3인 약 0.34px/ms로 낮췄다.
+  var CLAUDE_FLYBY_SPEED_PX_PER_MS = 0.34;
+  var CLAUDE_FLYBY_OFFSCREEN_BUFFER = 90; // 시작/끝 지점이 화면 밖으로 이 정도 나가 있어야 함
+  var CLAUDE_CATCH_BONUS_SECONDS = 3;
+  // ⚠️ 개정(2026-09-17): 사용자가 직접 준비해 assets/claude-icon.png로 넣어준
+  // 이미지로 교체했다(기존에 자체 제작했던 5종 도트 이미지는 대체되어 삭제).
+  var CLAUDE_MASCOT_IMAGE = "assets/claude-icon.png";
 
   // ---------------------------------------------------------------
   // DOM 참조
@@ -35,6 +95,7 @@
     boards: document.getElementById("boards"),
     boardLeft: document.getElementById("board-left"),
     boardRight: document.getElementById("board-right"),
+    claudeFlybyLayer: document.getElementById("claude-flyby-layer"),
 
     pauseOverlay: document.getElementById("pause-overlay"),
     btnResume: document.getElementById("btn-resume"),
@@ -75,6 +136,7 @@
     wrongMarkTimer: null,
     audioCtx: null,
     currentOscillator: null,
+    claudeFlybyTimer: null, // 다음 클로드 아이콘 스폰 파도를 예약하는 setTimeout
   };
 
   // ---------------------------------------------------------------
@@ -301,6 +363,12 @@
     return STAGE_TIME_LIMITS[idx];
   }
 
+  // stageTimeLimit()과 동일한 방식: 배열 길이(5단계)를 넘는 단계는 마지막 값(3초)을 그대로 쓴다.
+  function claudeFlybySpawnInterval(stageNumber) {
+    var idx = Math.min(stageNumber - 1, CLAUDE_FLYBY_SPAWN_INTERVAL_BY_STAGE_MS.length - 1);
+    return CLAUDE_FLYBY_SPAWN_INTERVAL_BY_STAGE_MS[idx];
+  }
+
   function elapsedSeconds(timeLimit) {
     var raw = (Date.now() - state.startTimestamp - state.pausedTotal) / 1000;
     var used = raw + state.penaltySeconds; // 오답 차감분 포함
@@ -345,6 +413,7 @@
   // ---------------------------------------------------------------
   function startStage(stageNumber) {
     hideAllOverlays();
+    updateStageBackground(stageNumber);
     var timeLimit = stageTimeLimit(stageNumber);
     state.stage = stageNumber;
     state.foundCells = [];
@@ -365,6 +434,8 @@
         renderBoards();
         updateStatusBar();
         startTicking();
+        removeAllClaudeFlybys();
+        scheduleNextClaudeFlybyWave();
       });
     });
   }
@@ -380,6 +451,9 @@
   function resetToHome() {
     stopTicking();
     stopCurrentSound();
+    clearClaudeFlybyTimer();
+    removeAllClaudeFlybys();
+    clearStageBackground();
     hideAllOverlays();
     state.isPaused = false;
     el.nameInput.value = "";
@@ -555,9 +629,177 @@
   }
 
   // ---------------------------------------------------------------
+  // 클로드 아이콘 미니 이벤트 (추가 요청으로 신설): 게임 진행 중 무작위 간격으로
+  // 화면을 가로질러 지나가는 보너스 아이콘. 잡으면 +3초, 놓치면 그냥 사라진다.
+  // ---------------------------------------------------------------
+  function isGameplayActive() {
+    return (
+      !el.game.hidden &&
+      !state.isPaused &&
+      el.pauseOverlay.hidden &&
+      el.clearOverlay.hidden &&
+      el.failOverlay.hidden
+    );
+  }
+
+  function clearClaudeFlybyTimer() {
+    if (state.claudeFlybyTimer) {
+      clearTimeout(state.claudeFlybyTimer);
+      state.claudeFlybyTimer = null;
+    }
+  }
+
+  function removeAllClaudeFlybys() {
+    el.claudeFlybyLayer.innerHTML = "";
+  }
+
+  function scheduleNextClaudeFlybyWave() {
+    clearClaudeFlybyTimer();
+    var interval = claudeFlybySpawnInterval(state.stage);
+    state.claudeFlybyTimer = setTimeout(spawnClaudeFlybyWave, interval);
+  }
+
+  function showClaudeCatchPop(x, y) {
+    if (state.reducedMotion) return; // 사라지는 연출 자체가 애니메이션이라 움직임 감소 시 생략
+    var pop = document.createElement("div");
+    pop.className = "claude-catch-pop";
+    pop.textContent = "+3초";
+    pop.style.left = x + "px";
+    pop.style.top = y + "px";
+    pop.addEventListener(
+      "animationend",
+      function () {
+        pop.remove();
+      },
+      { once: true }
+    );
+    el.claudeFlybyLayer.appendChild(pop);
+  }
+
+  function catchClaudeFlyby(icon, animation) {
+    if (!icon.parentNode) return; // 이미 사라진 아이콘 재클릭 방지 (멱등 처리)
+    var rect = icon.getBoundingClientRect();
+    animation.cancel(); // 진행 중인 이동 애니메이션을 즉시 정지
+    icon.remove();
+    // elapsedSeconds()가 이미 Math.max(0, ...)로 하한을 잡아주므로, 여기서는
+    // 오답 페널티(+=)와 대칭으로 그냥 빼주기만 하면 남은 시간이 제한시간을
+    // 넘지 않도록 자동으로 클램프된다.
+    state.penaltySeconds -= CLAUDE_CATCH_BONUS_SECONDS;
+    tick(); // 오답 페널티와 동일하게 다음 tick을 기다리지 않고 즉시 반영
+    showClaudeCatchPop(rect.left + rect.width / 2, rect.top + rect.height / 2);
+  }
+
+  // 뷰포트 네 변(상/하/좌/우) 중 하나를 골라, 그 변 바로 바깥(화면 밖)의 무작위
+  // 지점을 반환한다(시작점 전용 — 도착점은 아래 extendToOffscreenExit()로 따로 계산).
+  function randomOffscreenEdgePoint(vw, vh, buffer) {
+    var edge = ["top", "bottom", "left", "right"][Math.floor(Math.random() * 4)];
+    var point;
+    if (edge === "top") {
+      point = { x: -buffer + Math.random() * (vw + 2 * buffer), y: -buffer };
+    } else if (edge === "bottom") {
+      point = { x: -buffer + Math.random() * (vw + 2 * buffer), y: vh + buffer };
+    } else if (edge === "left") {
+      point = { x: -buffer, y: -buffer + Math.random() * (vh + 2 * buffer) };
+    } else {
+      point = { x: vw + buffer, y: -buffer + Math.random() * (vh + 2 * buffer) };
+    }
+    return point;
+  }
+
+  // ⚠️ 개정(2026-09-17, "최대한 중앙을 지나가도록" 요청): 도착점을 시작점과 무관하게
+  // 또 다른 변에서 완전히 무작위로 뽑던 방식은 폐기했다. 그러면 두 화면 구석을
+  // 잇는 경로처럼 중앙에서 한참 벗어나는 경우가 잦았기 때문이다. 대신
+  // "시작점 → 화면 중앙 부근(약간의 무작위 흔들림 포함) → 그 방향을 계속 이어서
+  // 화면 밖으로 나가는 지점"으로 도착점을 계산한다. 시작 변/시작 위치는 여전히
+  // 완전히 무작위라 "아무 방향에서" 오는 건 그대로 유지하면서, 경로 자체는 항상
+  // 중앙 부근을 지나가게 된다.
+  var CLAUDE_FLYBY_CENTER_JITTER_FRACTION = 0.25; // 정중앙 기준 ±12.5%(가로/세로 각각) 범위 안에서 흔들림
+
+  // centerish에서 (dx,dy) 방향으로 계속 나아가 "화면 밖 buffer만큼 나간 사각형"
+  // 경계에 닿는 지점을 구한다(레이-박스 교차, slab method).
+  function extendToOffscreenExit(cx, cy, dx, dy, vw, vh, buffer) {
+    var xMin = -buffer;
+    var xMax = vw + buffer;
+    var yMin = -buffer;
+    var yMax = vh + buffer;
+    var tx = dx > 0 ? (xMax - cx) / dx : dx < 0 ? (xMin - cx) / dx : Infinity;
+    var ty = dy > 0 ? (yMax - cy) / dy : dy < 0 ? (yMin - cy) / dy : Infinity;
+    var t = Math.min(tx, ty);
+    return { x: cx + dx * t, y: cy + dy * t };
+  }
+
+  function spawnClaudeFlyby() {
+    var vw = window.innerWidth;
+    var vh = window.innerHeight;
+    var buffer = CLAUDE_FLYBY_OFFSCREEN_BUFFER;
+    // 시작 변/위치는 매번 무작위(요청: "아무 방향에서").
+    var start = randomOffscreenEdgePoint(vw, vh, buffer);
+    // 중앙 부근의 목표점(약간의 무작위 흔들림 포함)을 지나 화면 밖으로 빠져나가는
+    // 지점을 도착점으로 삼는다 — 결과적으로 경로가 항상 중앙 부근을 지난다.
+    var centerish = {
+      x: vw / 2 + (Math.random() - 0.5) * vw * CLAUDE_FLYBY_CENTER_JITTER_FRACTION,
+      y: vh / 2 + (Math.random() - 0.5) * vh * CLAUDE_FLYBY_CENTER_JITTER_FRACTION,
+    };
+    var end = extendToOffscreenExit(centerish.x, centerish.y, centerish.x - start.x, centerish.y - start.y, vw, vh, buffer);
+    var dx = end.x - start.x;
+    var dy = end.y - start.y;
+    var distance = Math.sqrt(dx * dx + dy * dy);
+    // 이동 거리와 무관하게 항상 같은 속도(px/ms)로 움직이도록, 거리에 비례해
+    // duration을 계산한다 — 대각선이 더 길어도 더 빨라지지 않는다.
+    var duration = distance / CLAUDE_FLYBY_SPEED_PX_PER_MS;
+
+    var icon = document.createElement("div");
+    icon.className = "claude-flyby";
+    var img = document.createElement("img");
+    img.src = CLAUDE_MASCOT_IMAGE;
+    img.alt = "";
+    img.draggable = false;
+    icon.appendChild(img);
+    el.claudeFlybyLayer.appendChild(icon);
+
+    // 경로가 매번 임의의 두 지점(가로/세로/대각선 전부 가능)이라 고정된 CSS
+    // @keyframes 두 개로는 표현할 수 없다. Web Animations API로 시작/끝 좌표를
+    // 그때그때 계산해 넣고, easing: linear로 등속(일정한 속도) 이동시킨다.
+    var animation = icon.animate(
+      [
+        { transform: "translate(" + start.x + "px, " + start.y + "px)" },
+        { transform: "translate(" + end.x + "px, " + end.y + "px)" },
+      ],
+      { duration: duration, easing: "linear", fill: "forwards" }
+    );
+    animation.onfinish = function () {
+      icon.remove();
+    };
+    icon.addEventListener(
+      "click",
+      function () {
+        catchClaudeFlyby(icon, animation);
+      },
+      { once: true }
+    );
+  }
+
+  function spawnClaudeFlybyWave() {
+    if (isGameplayActive() && !state.reducedMotion) {
+      var room = CLAUDE_FLYBY_MAX_CONCURRENT - el.claudeFlybyLayer.children.length;
+      if (room > 0) {
+        var count = 1 + Math.floor(Math.random() * Math.min(CLAUDE_FLYBY_SPAWN_COUNT_MAX, room));
+        for (var i = 0; i < count; i++) {
+          spawnClaudeFlyby();
+        }
+      }
+    }
+    // 일시정지/오버레이/움직임 감소 중에는 스폰만 건너뛰고, 다음 파도는 계속
+    // 예약해둔다 — 조건이 풀리면(재개, 토글 해제 등) 자연스럽게 다시 스폰된다.
+    scheduleNextClaudeFlybyWave();
+  }
+
+  // ---------------------------------------------------------------
   // 성공 / 실패
   // ---------------------------------------------------------------
   function handleStageSuccess() {
+    clearClaudeFlybyTimer();
+    removeAllClaudeFlybys();
     stopTicking();
     var timeLimit = stageTimeLimit(state.stage);
     state.cumulativeElapsed += elapsedSeconds(timeLimit);
@@ -582,6 +824,8 @@
   }
 
   function handleFail() {
+    clearClaudeFlybyTimer();
+    removeAllClaudeFlybys();
     stopTicking();
     el.failOverlay.hidden = false;
   }
@@ -594,6 +838,7 @@
     state.isPaused = true;
     state.pausedAt = Date.now();
     stopTicking();
+    removeAllClaudeFlybys(); // 일시정지 시점에 떠 있던 클로드 아이콘은 제거 (스폰 자체는 isGameplayActive()가 알아서 멈춤)
     el.pauseOverlay.hidden = false;
   }
 
@@ -667,6 +912,11 @@
   // 순위 화면
   // ---------------------------------------------------------------
   function goToRanking() {
+    // 마지막 단계를 클리어하고 바로 순위 화면으로 넘어오는 경로는 resetToHome()을
+    // 거치지 않아서, JS로 body에 직접 설정해둔 단계 배경(inline style)이 남아있으면
+    // 인라인 스타일이 CSS 규칙(body:has(#ranking-screen...))보다 우선순위가 높아
+    // 순위 화면 배경이 적용되지 않는다. 그래서 여기서도 명시적으로 지워준다.
+    clearStageBackground();
     var records = RankingStorage.getSortedRecords();
     el.rankingBody.innerHTML = "";
     el.rankingEmpty.hidden = records.length > 0;
@@ -745,6 +995,7 @@
         if (canvas) canvas.classList.remove("flash-effect");
       });
       el.boards.classList.remove("shake-effect");
+      removeAllClaudeFlybys(); // 스폰 자체는 다음 파도부터 isGameplayActive() 체크로 자동 중단됨
     }
   });
 
