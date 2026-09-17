@@ -30,13 +30,12 @@ body {
   background: radial-gradient(1200px 700px at 15% -10%, #eef4ff 0%, transparent 60%),
     radial-gradient(1000px 600px at 110% 10%, #fff1ec 0%, transparent 55%),
     linear-gradient(180deg, #f6f7fb 0%, #eef0f6 100%);
-  /* 커스텀 마우스 커서 (assets/mouse-cursor.png). 화살표 끝 지점(3,0)을 클릭 기준점으로 지정하고,
-     이미지를 못 불러오는 경우를 대비해 기본 화살표(auto)로 폴백한다. */
-  cursor: url("assets/mouse-cursor.png") 3 0, auto;
 }
 
-/* 버튼 hover/비활성, 게임 보드 등 어디서도 커서 모양이 손·not-allowed·crosshair 등으로
-   바뀌지 않고 항상 이 커스텀 커서로 고정되도록 최우선 순위로 강제한다. */
+/* 커스텀 마우스 커서 (assets/mouse-cursor.png). 화살표 끝 지점(3,0)을 클릭 기준점으로 지정하고,
+   이미지를 못 불러오는 경우를 대비해 기본 화살표(auto)로 폴백한다. 버튼 hover/비활성,
+   게임 보드 등 어디서도 커서 모양이 손·not-allowed·crosshair 등으로 바뀌지 않고 항상
+   이 커스텀 커서로 고정되도록 최우선 순위로 강제한다. */
 * {
   cursor: url("assets/mouse-cursor.png") 3 0, auto !important;
 }
@@ -44,6 +43,63 @@ body {
 .screen {
   max-width: 1200px;
   margin: 0 auto;
+}
+
+/* ---------- 홈 화면 좌/우 마스코트 이미지 ---------- */
+
+.home-layout {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+}
+
+.home-main {
+  flex: 0 1 460px;
+  min-width: 0;
+  position: relative;
+  z-index: 1;
+}
+
+/* 좌우 마스코트를 크게 키우면서(요청 반영) 가운데 카드 폭에 영향을 주지 않도록,
+   flex 흐름에서 완전히 빼서 뷰포트 기준 position: fixed로 화면 양 끝에 고정한다
+   (.home-main처럼 폭을 두고 경쟁하면 카드가 심하게 눌려 글자가 세로로 깨진다).
+   카드보다 z-index를 낮게 둬서 겹치는 영역은 카드 밑으로 자연스럽게 가려진다.
+
+   두 이미지는 정사각형 슬롯에 object-fit: contain으로 들어가지만 원본 비율이
+   서로 달라(왼쪽 649x385 가로로 긴 사진, 오른쪽 210x210 정사각형) 슬롯을 그냥
+   수직 중앙 정렬하면 발 위치가 어긋난다: 왼쪽 이미지는 슬롯 안에서 레터박스
+   여백이 생기고, 그 사진 자체에도 발 아래 여백(전체 높이의 5.45%)이 있는 반면
+   오른쪽 이미지는 슬롯을 꽉 채우고 발 아래 여백은 7.14%뿐이다. 슬롯 바닥에서
+   발까지의 실제 거리를 세로 크기에 대한 비율로 미리 계산해두고(왼쪽 23.57%,
+   오른쪽 7.14%), 공통 기준선(--home-mascot-foot-baseline)에서 그 거리만큼
+   뺀 값을 각자의 bottom 위치로 지정해 두 발 위치를 수평선상에 맞춘다. */
+:root {
+  --home-mascot-left-size: clamp(360px, 42vw, 600px);
+  --home-mascot-right-size: clamp(240px, 28vw, 400px);
+  --home-mascot-foot-baseline: 22vh;
+}
+
+.home-mascot {
+  position: fixed;
+  object-fit: contain;
+  pointer-events: none;
+  user-select: none;
+  z-index: 0;
+}
+
+.home-mascot-left {
+  left: 1vw;
+  width: var(--home-mascot-left-size);
+  height: var(--home-mascot-left-size);
+  bottom: calc(var(--home-mascot-foot-baseline) - 0.2357 * var(--home-mascot-left-size));
+}
+
+.home-mascot-right {
+  right: 1vw;
+  width: var(--home-mascot-right-size);
+  height: var(--home-mascot-right-size);
+  bottom: calc(var(--home-mascot-foot-baseline) - 0.0714 * var(--home-mascot-right-size));
 }
 
 /* ---------- 홈 화면 히어로 ---------- */
@@ -80,7 +136,10 @@ h1 {
   border: 1px solid var(--card-border);
   border-radius: 16px;
   padding: 2.2vh 2.4vw;
-  margin-bottom: 2vh;
+  /* 게임 규칙/조작 설명 영역 너비를 화면(.screen) 너비의 절반으로 줄이고
+     가운데 정렬한다. */
+  max-width: 50%;
+  margin: 0 auto 2vh;
   box-shadow: 0 10px 30px -18px rgba(30, 41, 59, 0.25);
 }
 
@@ -141,105 +200,32 @@ h1 {
   border-color: var(--ink);
 }
 
-.icon-shape {
-  position: relative;
+.icon-graphic {
+  display: block;
   flex: none;
   width: 1.5em;
   height: 1.5em;
 }
 
-/* 슬래시(대각선 획): 두 아이콘 공통. 켜짐(음소거/움직임 감소 적용 중) 상태에서만 보인다 */
-.icon-shape::after {
-  content: "";
-  position: absolute;
-  left: -8%;
-  top: 50%;
-  width: 116%;
-  height: 2px;
-  background: currentColor;
-  transform: translateY(-50%) rotate(-40deg);
-  transform-origin: center;
+/* 음소거: 스피커+물결선을 항상 함께 보여주고(음소거 중에도 물결은 지우지
+   않음), 대각선 슬래시만 음소거 중일 때 추가로 겹쳐 그린다. */
+.icon-slash {
   opacity: 0;
   transition: opacity 0.15s ease;
 }
 
-.icon-toggle[aria-pressed="true"] .icon-shape::after {
+.icon-toggle[aria-pressed="true"] .icon-slash {
   opacity: 1;
 }
 
-/* 음소거 아이콘: 스피커 몸체 + 소리 물결 두 겹 */
-.icon-mute::before {
-  content: "";
-  position: absolute;
-  left: 0;
-  top: 25%;
-  width: 42%;
-  height: 50%;
-  background: currentColor;
-  clip-path: polygon(0% 30%, 42% 30%, 100% 0%, 100% 100%, 42% 70%, 0% 70%);
-}
-
-.icon-wave {
-  position: absolute;
-  top: 50%;
-  border: 2px solid transparent;
-  border-right-color: currentColor;
-  border-radius: 50%;
-  transform: translateY(-50%);
+/* 움직임 감소: 퍼지는 물결(리플) 두 겹 중 바깥쪽 하나만 움직임 감소 중일 때
+   꺼서, 움직임이 잦아든 느낌을 슬래시 없이 표현한다. */
+.icon-ring-outer {
+  opacity: 0.45;
   transition: opacity 0.15s ease;
 }
 
-.icon-wave-1 {
-  left: 56%;
-  width: 0.5em;
-  height: 0.5em;
-}
-
-.icon-wave-2 {
-  left: 68%;
-  width: 0.9em;
-  height: 0.9em;
-}
-
-.icon-toggle[aria-pressed="true"] .icon-wave {
-  opacity: 0;
-}
-
-/* 움직임 감소 아이콘: 움직이는 점 + 잔상(트레일) 두 겹 */
-.icon-dot {
-  position: absolute;
-  right: 8%;
-  top: 50%;
-  width: 0.4em;
-  height: 0.4em;
-  border-radius: 50%;
-  background: currentColor;
-  transform: translateY(-50%);
-}
-
-.icon-trail {
-  position: absolute;
-  top: 50%;
-  border: 2px solid transparent;
-  border-right-color: currentColor;
-  border-radius: 50%;
-  transform: translateY(-50%);
-  transition: opacity 0.15s ease;
-}
-
-.icon-trail-1 {
-  right: 38%;
-  width: 0.5em;
-  height: 0.5em;
-}
-
-.icon-trail-2 {
-  right: 52%;
-  width: 0.9em;
-  height: 0.9em;
-}
-
-.icon-toggle[aria-pressed="true"] .icon-trail {
+.icon-toggle[aria-pressed="true"] .icon-ring-outer {
   opacity: 0;
 }
 
@@ -302,7 +288,17 @@ button:disabled {
   background: var(--card-bg);
   border: 1px solid var(--card-border);
   border-radius: 24px;
-  padding: 2.6em 2.2em 2.2em;
+  /* 카드 하단이 좌우 공룡 마스코트 발 위치(--home-mascot-foot-baseline: 뷰포트
+     하단에서 22vh)보다 항상 살짝 더 아래까지 내려오게 한다. 마스코트는 vw/vh
+     기준으로 커지므로(특히 1920x1080처럼 세로가 큰 화면), em 단위 padding만
+     쓰면 뷰포트가 커질수록 카드가 상대적으로 짧아져 발보다 위에서 끝나
+     버린다. 1366x768과 1920x1080 두 기준 해상도에서 실측(발 위치와 카드
+     하단 차이)해 얻은 1차식으로 아래쪽 padding을 보정한다. 뷰포트가 작을
+     때는 이 식이 음수가 될 수 있어 최소값(1.2em)으로 바닥을 둔다. */
+  padding-top: 2.6em;
+  padding-left: 2.2em;
+  padding-right: 2.2em;
+  padding-bottom: calc(80px + max(1.2em, calc(68.34vh - 547.35px)));
   box-shadow: 0 20px 45px -22px rgba(30, 41, 59, 0.4);
   text-align: center;
 }
@@ -334,12 +330,12 @@ button:disabled {
 }
 
 .field-group {
-  text-align: left;
+  text-align: center;
   margin-bottom: 1.4em;
 }
 
 .field-group label {
-  font-size: 0.8rem;
+  font-size: 1.15rem;
   font-weight: 700;
   color: var(--ink-soft);
   text-transform: uppercase;
@@ -351,6 +347,7 @@ button:disabled {
   padding: 0.85em 1em;
   font-size: 1.05rem;
   border-radius: 12px;
+  text-align: center;
 }
 
 .field-group input[type="text"]:focus {
@@ -386,8 +383,19 @@ button:disabled {
 /* ---------- 게임 화면 ---------- */
 
 #status-bar {
-  /* 왼쪽 상단의 음소거/움직임 감소 토글 바로 밑에 붙는 컨트롤 묶음이 되도록
-     전체 너비로 늘어나지 않고 내용 크기만큼만 왼쪽에 붙는다 */
+  /* 왼쪽 상단의 음소거/움직임 감소 토글(.toggle-row-fixed, position:fixed,
+     left:1.6vw) 바로 밑에 붙는 컨트롤 묶음이 되도록 전체 너비로 늘어나지
+     않고 내용 크기만큼만 왼쪽에 붙는다.
+     주의: #game-screen은 .screen 클래스라 뷰포트가 1200px보다 넓으면
+     가운데 정렬되어 버려서(margin:auto), align-self:flex-start만으로는
+     "#game-screen 안에서 왼쪽"일 뿐 "화면 자체의 왼쪽"이 되지 않고 토글보다
+     한참 오른쪽(사실상 중앙 쪽)에 떠 보인다. 그래서 .screen이 실제로 얼마나
+     가운데로 밀려났는지(뷰포트폭이 1200px를 넘는 만큼의 절반, body 좌우
+     padding 4vw 포함)를 역산해 그만큼을 반대로 당겨서 토글과 같은
+     left:1.6vw 위치에 오도록 보정한다. (1200px, 4vw는 .screen/body 값과
+     반드시 함께 바뀌어야 하는 상수) */
+  position: relative;
+  left: calc(600px - 48.4vw);
   display: flex;
   flex-wrap: wrap;
   align-items: center;
@@ -402,7 +410,6 @@ button:disabled {
 }
 
 #status-stage,
-#status-time,
 #status-found {
   display: inline-flex;
   align-items: center;
@@ -413,11 +420,6 @@ button:disabled {
   background: #f1f3f9;
   color: var(--ink);
   white-space: nowrap;
-}
-
-#status-time {
-  background: #fff0ec;
-  color: var(--accent-dark);
 }
 
 #status-found {
@@ -441,12 +443,15 @@ button:disabled {
   display: flex;
   flex-direction: column;
   /* body의 상하 padding(8vh + 5vh)을 제외한 높이에 맞춰, 보드 영역이 늘어나도
-     페이지 세로 스크롤이 생기지 않고 위아래 여백(padding)이 항상 남도록 고정한다. */
-  height: calc(100vh - 13vh);
+     페이지 세로 스크롤이 생기지 않고 위아래 여백(padding)이 항상 남도록 고정한다.
+     1366x768처럼 좁은 화면에서는 body의 8vh 상단 padding만으로는 왼쪽 상단
+     토글(높이 고정, 뷰포트에 비례하지 않음)의 아래쪽 끝보다 약간 위에서
+     시작해버려 겹치므로, 16px을 추가로 확보하고 그만큼 높이에서 뺀다. */
+  padding-top: 16px;
+  height: calc(100vh - 13vh - 16px);
 }
 
-#status-bar,
-.toggle-row-compact {
+#status-bar {
   flex: none;
 }
 
@@ -494,9 +499,14 @@ button:disabled {
   border-radius: 14px;
   overflow: hidden;
   box-shadow: 0 14px 28px -16px rgba(30, 41, 59, 0.35);
-  /* 두 패널(기준/오답)이 항상 같은 크기의 박스를 갖도록 뷰포트 기준으로 계산된
-     남은 공간을 그대로 채운다. 이미지 원본 해상도·비율은 박스 크기에 영향을 주지 않는다. */
-  flex: 1 1 auto;
+  /* 박스 비율을 image4(549x553, 거의 정사각형)에 고정한다. 세로 공간을 끝까지
+     채우지 않고 이 비율에서 멈추므로, 어떤 이미지 세트가 나오든 패널 하단에
+     동일한 크기의 여백이 생긴다. 비율이 다른 이미지(image1의 가로로 긴 비율,
+     image3/5의 세로로 긴 비율 등)는 이 박스 안에서 object-fit: contain으로
+     레터박스 처리된다. */
+  flex: 0 1 auto;
+  aspect-ratio: 549 / 553;
+  max-height: 100%;
   min-height: 0;
 }
 
@@ -519,6 +529,73 @@ button:disabled {
   0% { transform: scale(1); }
   40% { transform: scale(1.35); }
   100% { transform: scale(1); }
+}
+
+/* 오답 클릭 시 보드(좌우 그림) 영역만 짧게 흔든다. 움직임 감소 토글이
+   켜져 있으면 JS에서 이 클래스를 아예 붙이지 않는다. */
+#boards.shake-effect {
+  animation: boards-shake 0.4s ease;
+}
+
+@keyframes boards-shake {
+  0%, 100% { transform: translateX(0); }
+  20% { transform: translateX(-8px); }
+  40% { transform: translateX(8px); }
+  60% { transform: translateX(-6px); }
+  80% { transform: translateX(6px); }
+}
+
+/* 다른점을 찾은 지점에서 짧게 터지는 폭죽 파티클. .board가 position:relative +
+   overflow:hidden이라 이 안에 절대 위치로 붙이면 판 밖으로 새어나가지 않는다.
+   --dx/--dy는 JS에서 파티클마다 다른 방향/거리로 계산해 넣어준다. 커스텀
+   마우스 커서가 클릭 지점을 가려서 잘 안 보인다는 피드백에 따라, 파티클이
+   커서 아이콘 크기를 훌쩍 넘는 반경까지 퍼지도록 크게 만들고 발광 효과를
+   더했다. width/height는 JS가 파티클마다 인라인 스타일로 다르게 지정한다. */
+.firework-particle {
+  position: absolute;
+  border-radius: 50%;
+  pointer-events: none;
+  box-shadow: 0 0 14px 4px currentColor;
+  transform: translate(-50%, -50%);
+  animation: firework-burst 0.85s cubic-bezier(0.2, 0.8, 0.3, 1) forwards;
+}
+
+@keyframes firework-burst {
+  0% {
+    transform: translate(-50%, -50%) translate(0, 0) scale(1.4);
+    opacity: 1;
+  }
+  60% {
+    opacity: 1;
+  }
+  100% {
+    transform: translate(-50%, -50%) translate(var(--dx), var(--dy)) scale(0.2);
+    opacity: 0;
+  }
+}
+
+/* 파티클 터지는 순간 중심에서 확 커졌다 사라지는 충격파 링. 커서에 가려도
+   금방 커서보다 훨씬 커지므로 놓치기 어렵다. */
+.firework-ring {
+  position: absolute;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  border: 5px solid #ffd166;
+  pointer-events: none;
+  transform: translate(-50%, -50%) scale(0.3);
+  animation: firework-ring-pop 0.65s ease-out forwards;
+}
+
+@keyframes firework-ring-pop {
+  0% {
+    transform: translate(-50%, -50%) scale(0.3);
+    opacity: 1;
+  }
+  100% {
+    transform: translate(-50%, -50%) scale(11);
+    opacity: 0;
+  }
 }
 
 .feedback {

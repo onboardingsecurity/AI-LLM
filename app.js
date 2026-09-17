@@ -6,7 +6,6 @@
   // ---------------------------------------------------------------
   var STAGE_TIME_LIMITS = [180, 150, 120, 90, 60];
   var WRONG_CLICK_PENALTY_SECONDS = 10;
-  var MAX_IMAGE_SET_PROBE = 20;
   var VARIANTS_PER_SET = 3;
   var imageCache = {};
 
@@ -33,9 +32,9 @@
     btnPause: document.getElementById("btn-pause"),
     btnRestart: document.getElementById("btn-restart"),
 
+    boards: document.getElementById("boards"),
     boardLeft: document.getElementById("board-left"),
     boardRight: document.getElementById("board-right"),
-    wrongFeedback: document.getElementById("wrong-feedback"),
 
     pauseOverlay: document.getElementById("pause-overlay"),
     btnResume: document.getElementById("btn-resume"),
@@ -73,7 +72,7 @@
     imageSetsReady: false,
     mute: false,
     reducedMotion: false,
-    wrongFeedbackTimer: null,
+    wrongMarkTimer: null,
     audioCtx: null,
     currentOscillator: null,
   };
@@ -152,7 +151,6 @@
     var results = [];
     var n = 1;
     function probeNext() {
-      if (n > MAX_IMAGE_SET_PROBE) return Promise.resolve(results);
       var current = n;
       var setId = "image" + current;
       var basePath = "assets/" + setId + "/" + setId + ".png";
@@ -258,10 +256,15 @@
     redrawBoards();
   }
 
+  function getBoardCanvases() {
+    return [el.boardLeft.querySelector("canvas"), el.boardRight.querySelector("canvas")];
+  }
+
   function redrawBoards() {
     var data = state.boardData;
-    var leftCanvas = el.boardLeft.querySelector("canvas");
-    var rightCanvas = el.boardRight.querySelector("canvas");
+    var canvases = getBoardCanvases();
+    var leftCanvas = canvases[0];
+    var rightCanvas = canvases[1];
     if (!leftCanvas || !rightCanvas) return;
     var leftCtx = leftCanvas.getContext("2d");
     var rightCtx = rightCanvas.getContext("2d");
@@ -282,6 +285,10 @@
   // ---------------------------------------------------------------
   // 타이머
   // ---------------------------------------------------------------
+  function getTotalStages() {
+    return state.imageSets.length || 1;
+  }
+
   function stopTicking() {
     if (state.tickTimer !== null) {
       clearInterval(state.tickTimer);
@@ -323,7 +330,7 @@
   }
 
   function updateStatusBar() {
-    var totalStages = state.imageSets.length || 1;
+    var totalStages = getTotalStages();
     var totalDiffs = state.boardData ? state.boardData.hotspots.length : 0;
     el.statusStage.textContent = "단계 " + state.stage + " / " + totalStages;
     el.statusFound.textContent = "찾은 개수 " + state.foundCells.length + " / " + totalDiffs;
@@ -436,7 +443,7 @@
 
     if (hitIndex === -1) {
       state.penaltySeconds += WRONG_CLICK_PENALTY_SECONDS;
-      showWrongFeedback();
+      showWrongMark(canvas, fx, fy);
       tick(); // 페널티를 즉시 반영하고, 0 이하가 되면 바로 실패 처리
       return;
     }
@@ -444,18 +451,107 @@
 
     state.foundCells.push(hitIndex);
     redrawBoards();
+    triggerFirework(canvas, data.hotspots[hitIndex]);
     updateStatusBar();
     if (state.foundCells.length >= data.hotspots.length) {
       handleStageSuccess();
     }
   }
 
-  function showWrongFeedback() {
-    el.wrongFeedback.hidden = false;
-    if (state.wrongFeedbackTimer) clearTimeout(state.wrongFeedbackTimer);
-    state.wrongFeedbackTimer = setTimeout(function () {
-      el.wrongFeedback.hidden = true;
-    }, 600);
+  // 오답 클릭 위치에 빨간 X 표시를 잠깐 그리고 보드 영역을 흔든다. X 표시는
+  // 애니메이션이 아니라 정적 표시라 움직임 감소와 무관하게 항상 보여주고,
+  // 흔들림(모션)만 움직임 감소 시 끈다.
+  function drawWrongMark(canvas, fx, fy) {
+    var ctx = canvas.getContext("2d");
+    var cx = fx * canvas.width;
+    var cy = fy * canvas.height;
+    var r = Math.max(10, canvas.width * 0.025);
+    ctx.save();
+    ctx.strokeStyle = "#e0435b";
+    ctx.lineWidth = Math.max(3, r * 0.35);
+    ctx.lineCap = "round";
+    ctx.beginPath();
+    ctx.moveTo(cx - r, cy - r);
+    ctx.lineTo(cx + r, cy + r);
+    ctx.moveTo(cx + r, cy - r);
+    ctx.lineTo(cx - r, cy + r);
+    ctx.stroke();
+    ctx.restore();
+  }
+
+  function triggerBoardsShake() {
+    if (state.reducedMotion) return;
+    el.boards.classList.remove("shake-effect");
+    void el.boards.offsetWidth; // 강제 리플로우로 같은 클래스를 다시 붙여도 애니메이션이 재시작되게 한다
+    el.boards.classList.add("shake-effect");
+  }
+
+  function showWrongMark(canvas, fx, fy) {
+    drawWrongMark(canvas, fx, fy);
+    triggerBoardsShake();
+    if (state.wrongMarkTimer) clearTimeout(state.wrongMarkTimer);
+    state.wrongMarkTimer = setTimeout(function () {
+      redrawBoards(); // X 표시만 지우고 기존 그림(찾은 표시 포함)은 그대로 복원
+    }, 500);
+  }
+
+  // 다른점을 찾았을 때 그 지점(초록 원과 같은 좌표)에서 잠깐 폭죽 파티클이
+  // 터진다. 애니메이션이라 움직임 감소 시에는 생략하고 기존 초록 원만 남긴다.
+  // 클릭한 쪽 캔버스에만 표시한다(반대쪽 판은 그대로 둠). 커스텀 마우스
+  // 커서가 클릭 지점을 가리므로(사용자 피드백: "커서 때문에 안 보여", "그냥
+  // 크게 폭죽 터뜨려줘") 파티클 수/크기/퍼지는 반경과 충격파 링을 눈에 띄게
+  // 크게 잡았다. .board가 overflow:hidden이라 판 가장자리 근처에서 터지면
+  // 일부가 잘려 보일 수 있는데, 이는 판 밖으로 새어나가지 않게 하려는
+  // 의도된 동작이다.
+  var FIREWORK_COLORS = ["#ff6b4a", "#ffd166", "#17a672", "#14b8a6", "#7c6cf0", "#ff4d6d"];
+  var FIREWORK_PARTICLE_COUNT = 28;
+
+  function triggerFirework(canvas, hotspot) {
+    if (state.reducedMotion) return;
+    var board = canvas.parentElement; // .board (position: relative, overflow: hidden)
+    if (!board) return;
+    var rect = getRenderedImageRect(canvas);
+    var boardRect = board.getBoundingClientRect();
+    var originX = rect.left + hotspot.x * rect.width - boardRect.left;
+    var originY = rect.top + hotspot.y * rect.height - boardRect.top;
+
+    var ring = document.createElement("span");
+    ring.className = "firework-ring";
+    ring.style.left = originX + "px";
+    ring.style.top = originY + "px";
+    ring.addEventListener(
+      "animationend",
+      function () {
+        this.remove();
+      },
+      { once: true }
+    );
+    board.appendChild(ring);
+
+    for (var i = 0; i < FIREWORK_PARTICLE_COUNT; i++) {
+      var angle = (Math.PI * 2 * i) / FIREWORK_PARTICLE_COUNT + Math.random() * 0.4;
+      var distance = 90 + Math.random() * 100;
+      var size = 10 + Math.random() * 9;
+      var particle = document.createElement("span");
+      particle.className = "firework-particle";
+      particle.style.left = originX + "px";
+      particle.style.top = originY + "px";
+      particle.style.width = size + "px";
+      particle.style.height = size + "px";
+      var color = FIREWORK_COLORS[i % FIREWORK_COLORS.length];
+      particle.style.background = color;
+      particle.style.color = color; // box-shadow의 currentColor가 이 색을 그대로 쓰도록
+      particle.style.setProperty("--dx", Math.cos(angle) * distance + "px");
+      particle.style.setProperty("--dy", Math.sin(angle) * distance + "px");
+      particle.addEventListener(
+        "animationend",
+        function () {
+          this.remove();
+        },
+        { once: true }
+      );
+      board.appendChild(particle);
+    }
   }
 
   // ---------------------------------------------------------------
@@ -468,7 +564,7 @@
 
     playSuccessEffect();
 
-    var totalStages = state.imageSets.length || 1;
+    var totalStages = getTotalStages();
     if (state.stage >= totalStages) {
       RankingStorage.addRecord(state.name, Math.round(state.cumulativeElapsed));
       el.clearMessage.textContent = totalStages + "단계 클리어! 순위로 이동합니다...";
@@ -549,8 +645,7 @@
 
   function playSuccessAnimation() {
     if (state.reducedMotion) return;
-    [el.boardLeft, el.boardRight].forEach(function (board) {
-      var canvas = board.querySelector("canvas");
+    getBoardCanvases().forEach(function (canvas) {
       if (!canvas) return;
       canvas.classList.add("flash-effect");
       canvas.addEventListener(
@@ -626,33 +721,38 @@
   el.btnGotoRanking.addEventListener("click", goToRanking);
   el.btnRankingHome.addEventListener("click", resetToHome);
 
-  el.muteToggles.forEach(function (toggle) {
-    toggle.addEventListener("click", function () {
-      state.mute = toggle.getAttribute("aria-pressed") !== "true";
-      el.muteToggles.forEach(function (other) {
-        other.setAttribute("aria-pressed", state.mute ? "true" : "false");
+  function bindExclusiveToggle(toggles, onChange) {
+    toggles.forEach(function (toggle) {
+      toggle.addEventListener("click", function () {
+        var pressed = toggle.getAttribute("aria-pressed") !== "true";
+        toggles.forEach(function (other) {
+          other.setAttribute("aria-pressed", pressed ? "true" : "false");
+        });
+        onChange(pressed);
       });
-      if (state.mute) stopCurrentSound();
     });
+  }
+
+  bindExclusiveToggle(el.muteToggles, function (pressed) {
+    state.mute = pressed;
+    if (state.mute) stopCurrentSound();
   });
 
-  el.reducedMotionToggles.forEach(function (toggle) {
-    toggle.addEventListener("click", function () {
-      state.reducedMotion = toggle.getAttribute("aria-pressed") !== "true";
-      el.reducedMotionToggles.forEach(function (other) {
-        other.setAttribute("aria-pressed", state.reducedMotion ? "true" : "false");
+  bindExclusiveToggle(el.reducedMotionToggles, function (pressed) {
+    state.reducedMotion = pressed;
+    if (state.reducedMotion) {
+      getBoardCanvases().forEach(function (canvas) {
+        if (canvas) canvas.classList.remove("flash-effect");
       });
-      if (state.reducedMotion) {
-        [el.boardLeft, el.boardRight].forEach(function (board) {
-          var canvas = board.querySelector("canvas");
-          if (canvas) canvas.classList.remove("flash-effect");
-        });
-      }
-    });
+      el.boards.classList.remove("shake-effect");
+    }
   });
 
   el.boardLeft.addEventListener("click", handleBoardClick);
   el.boardRight.addEventListener("click", handleBoardClick);
+  el.boards.addEventListener("animationend", function () {
+    el.boards.classList.remove("shake-effect");
+  });
 
   el.btnPause.addEventListener("click", pauseGame);
   el.btnResume.addEventListener("click", resumeGame);
