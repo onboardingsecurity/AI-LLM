@@ -7,6 +7,7 @@
   var STAGE_TIME_LIMITS = [180, 150, 120, 90, 60];
   var WRONG_CLICK_PENALTY_SECONDS = 10;
   var VARIANTS_PER_SET = 3;
+  var MAX_STAGE_SETS = 5; // 5단계 고정: image1~image5까지만 확인 (없는 폴더를 찔러 콘솔 오류가 나지 않게 함)
   var imageCache = {};
   // ⚠️ 개정(2026-09-17, "단계별 배경 이미지 적용" 요청): assets/background/에
   // background1.png~background5.png가 있고, 단계 번호에 맞춰 그대로 쓴다.
@@ -213,6 +214,7 @@
     var results = [];
     var n = 1;
     function probeNext() {
+      if (n > MAX_STAGE_SETS) return Promise.resolve(results);
       var current = n;
       var setId = "image" + current;
       var basePath = "assets/" + setId + "/" + setId + ".png";
@@ -504,24 +506,33 @@
     if (fx < 0 || fx > 1 || fy < 0 || fy > 1) return; // 여백(letterbox) 영역 클릭은 무시
     var data = state.boardData;
 
-    var hitIndex = -1;
+    // ⚠️ 개정(2026-09-19, 전 이미지 좌표 점검 중 발견): 좌표 원이 서로 겹치는 경우
+    // (예: image4-1의 1번 원 반지름이 커서 2번 좌표 중심까지 덮음) 이전에는 "먼저
+    // 걸리는 원"이 이미 찾은 것이면 그 뒤 원이 있어도 클릭이 통째로 무시됐다.
+    // 이제 클릭 지점이 걸리는 원들 중 "아직 못 찾은 원"을 우선 정답 처리하고,
+    // 걸리는 원이 전부 이미 찾은 것일 때만 무시(멱등)한다.
+    var hitIndex = -1; // 아직 못 찾은 원 중 클릭이 닿은 첫 번째
+    var touchedFound = false; // 이미 찾은 원에 닿았는지
     for (var i = 0; i < data.hotspots.length; i++) {
       var h = data.hotspots[i];
       var dx = h.x - fx;
       var dy = h.y - fy;
       if (Math.sqrt(dx * dx + dy * dy) <= h.radius * 1.15) {
-        hitIndex = i;
-        break;
+        if (state.foundCells.indexOf(i) === -1) {
+          hitIndex = i;
+          break;
+        }
+        touchedFound = true;
       }
     }
 
-    if (hitIndex === -1) {
+    if (hitIndex === -1 && !touchedFound) {
       state.penaltySeconds += WRONG_CLICK_PENALTY_SECONDS;
       showWrongMark(canvas, fx, fy);
       tick(); // 페널티를 즉시 반영하고, 0 이하가 되면 바로 실패 처리
       return;
     }
-    if (state.foundCells.indexOf(hitIndex) !== -1) return; // 이미 찾은 대상: 무시 (멱등)
+    if (hitIndex === -1) return; // 이미 찾은 대상뿐: 무시 (멱등)
 
     state.foundCells.push(hitIndex);
     redrawBoards();

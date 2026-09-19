@@ -131,57 +131,6 @@ body:has(#ranking-screen:not([hidden])) {
   bottom: calc(var(--home-mascot-foot-baseline) - 0.0714 * var(--home-mascot-right-size));
 }
 
-/* ---------- 게임 화면 왼쪽 여백 마스코트 ---------- */
-
-/* 게임 화면(#game-screen)도 .screen(max-width:1200px)이라 넓은 뷰포트에서는
-   가운데 정렬되어 왼쪽에 빈 공간이 남는다. assets/stage-side1.png(정사각형,
-   500x500)를 그 공간에 채운다.
-   ⚠️ 개정(2026-09-18, 파일이 불투명 배경 → 투명 배경으로 교체됨): 처음 받은
-   파일은 배경이 검은색으로 채워진 불투명 PNG라 카드 형태(테두리/둥근
-   모서리/그림자)로 감싸야 어색하지 않았다. 사용자가 배경을 투명하게 다시
-   그려서 교체한 뒤에는, 홈 화면 마스코트(.home-mascot)와 똑같이 테두리·
-   그림자 없이 object-fit: contain만으로 배경 위에 자연스럽게 얹는 방식으로
-   되돌렸다.
-   ⚠️ 1366px 폭 기준 실측: body 좌우 padding(4vw*2)과 .screen(max-width:1200px)
-   가운데 정렬 여백을 합치면 왼쪽에 남는 공간은 약 83px뿐이다(그보다 좁아지면
-   그림판(#boards)과 겹친다). 그래서 폭을 min(5.5vw, 76px)로 좁게 고정하고
-   left도 0.4vw로 작게 둬서 가장 좁은 1366px에서도 겹치지 않게 했다
-   (1920px에서는 여백이 훨씬 넓어 같은 크기가 작아 보이지만 안전을 우선한다).
-   ⚠️ 개정(2026-09-18, "stage-side2와 동일한 크기로" 요청): 자리(왼쪽 여백)가
-   stage-side2/3만큼 큰 이미지가 들어갈 만큼 넓지 않아 그대로 키우면
-   그림판을 가린다. 사용자 확인 후 "자리는 유지, 여백에 맞는 한도 내에서
-   최대한 키움"으로 진행 — 70px → 76px(1366px 기준 여백 83px 중 겹치지
-   않는 한도)로 키웠다.
-   ⚠️ 개정(2026-09-18, "상태 표시줄을 오른쪽으로 옮겼으니 다시 크게" 요청):
-   상태 표시줄은 원래도 화면 하단(y 약 500~700)에 있었고 이 마스코트는
-   세로 중앙(top:50%)에 있어 서로 자리가 겹친 적이 없었다 — 상태 표시줄
-   이동은 이 여백의 "폭"(왼쪽 margin, 1366px 기준 83px)에는 영향을 주지
-   않는다(폭은 오직 .screen 가운데 정렬 계산에서만 나온다). 즉 여백 자체는
-   더 넓어지지 않았지만, 요청대로 그 안에서 그림판과 겹치지 않는 진짜 한도
-   (76px → 78px)까지 다시 한번 최대로 키웠다.
-   ⚠️ 개정(2026-09-18, "최대한 크게" 재요청): 이전까지는 min(Nvw, Mpx)처럼
-   상한을 어림수로 고정해서 여백을 다 못 썼다. 이번엔 여백 폭 자체의 공식
-   (다른 고정 요소들과 동일: 50vw - 600px)에서 좌우 여유 3px씩만 뺀
-   calc(50vw - 600px - 6px)를 폭으로 직접 써서, 뷰포트가 뭐든 이 여백을
-   거의 끝까지(위아래 각 3px 여유만 남기고) 채운다. left도 3px 고정으로
-   줄여 그만큼 더 확보했다. 이제 "왜 더는 못 키우나"의 답은 하나뿐이다 —
-   이 여백의 폭 자체(.screen이 max-width:1200px에서 가운데 정렬되며 남는
-   공간, 1366px 기준 83px, 1920px 기준 360px)가 물리적 한계다. 이 정사각형
-   이미지를 그보다 키우면 필연적으로 기준 이미지(.board, 왼쪽) 위에
-   겹치기 시작한다 — 그림판 크기가 확정 사양(GAME_RULES.md)이라 줄일 수
-   없는 이상, 이 여백 폭이 이 이미지가 가질 수 있는 절대적인 상한이다. */
-.game-mascot-left {
-  position: fixed;
-  left: 3px;
-  top: 50%;
-  transform: translateY(-50%);
-  width: calc(50vw - 600px - 6px);
-  aspect-ratio: 1 / 1;
-  object-fit: contain;
-  pointer-events: none;
-  user-select: none;
-  z-index: 0;
-}
 
 /* ---------- 홈 화면 히어로 ---------- */
 
@@ -354,6 +303,17 @@ h1 {
   margin: 0;
   font-size: 0.85rem;
   box-shadow: 0 8px 20px -12px rgba(30, 41, 59, 0.35);
+  /* ⚠️ 개정(2026-09-19): 게임 화면 격자가 이 자리를 비워둘 수 있도록 크기를
+     "약속"으로 못 박았다(--toggle-w/h, 게임 화면 레이아웃 절 참고). 원래는
+     내용에 맞는 자동 크기(실측 254x59.6px)였고 게임 화면 쪽이 그 값을 몰래
+     가정하고 있었다. */
+  box-sizing: border-box;
+  width: var(--toggle-w);
+  height: var(--toggle-h);
+  flex-wrap: nowrap;
+  align-items: center;
+  justify-content: center;
+  padding-block: 0;
 }
 
 .icon-toggle {
@@ -594,59 +554,217 @@ button:disabled {
   color: var(--accent-dark);
 }
 
-/* ---------- 게임 화면 ---------- */
+/* ---------- 게임 화면: 모듈형 격자 레이아웃 ----------
+   ⚠️ 개정(2026-09-19, "각 요소가 겹치지 않고 자기 자리를 지키도록 모듈화" 요청):
+   이전에는 토글·시간 바·상태 표시·왼쪽 마스코트·그림판 아래 이미지가 저마다
+   position: fixed와 "1366/1920 두 해상도에서 실측해 맞춘 1차식"으로 놓여
+   있었다(서로의 위치를 모른 채 각자 가정만 갖고 있어서, 두 해상도 밖에서는
+   시간 바가 토글 위로, 상태 표시가 오답 그림판 위로 겹쳤다). 지금은 게임
+   화면 전체를 하나의 격자(.stage)로 두고 각 요소가 자기 칸 안에서만 크기를
+   갖는다 — 칸끼리는 서로를 밀어낼 뿐 겹칠 수 없다.
 
-/* ⚠️ 개정(2026-09-18, "상태 표시줄을 오른쪽 빈 공간으로" 요청): 원래는
-   #game-screen 플렉스 흐름의 두 번째 칸(보드 밑)에 있었는데, 왼쪽 상단
-   토글(.toggle-row-fixed, position:fixed, top:1.6vh, left:1.6vw)과 대칭이
-   되도록 top:1.6vh, right:1.6vw로 뷰포트 오른쪽 위 모서리에 고정했다.
-   이 카드(152~169px 폭)가 오른쪽 여백(.screen이 가운데 정렬되며 남는 폭,
-   1366px 기준 약 83px)보다 넓어서 1366px에서는 오답 이미지(.board, 오른쪽)
-   위로 살짝 걸치는데, 토글이 반대편(왼쪽)에서 이미 같은 이유로 그림판 위에
-   걸치고 있어 좌우 대칭으로 일관된 동작이다.
-   ⚠️ 플렉스 흐름에서 빠지면(position:fixed) #boards가 이 칸이 차지하던
-   높이까지 전부 차지해버려 확정 사양인 .board 크기가 달라진다 — 그래서
-   #game-screen의 height를 이 칸이 차지하던 만큼(아래 참고) 그대로 줄여
-   .board 크기가 이전과 똑같이 유지되도록 보정했다(#game-screen 규칙 참고). */
-/* ⚠️ 개정(2026-09-18, "상태 표시줄 최상단/최하단을 기준·오답 이미지 최상단/
-   최하단에 맞춰달라" 요청): top:1.6vh(토글과 같은 높이)를 버리고, .board의
-   실제 top/bottom에 맞춘다. .board 위치는 aspect-ratio+max-height 상호작용
-   때문에 vh에 선형으로 비례하지 않아(.board-side-slot/.panel-box 때와 같은
-   이유) 1366×768/1920×1080 두 지점 실측값을 지나는 1차식으로 근사했다:
-   top(위에서부터) ≈ 23.1971vh - 76.71px, bottom(위에서부터) ≈
-   75.39558vh - 55.444px. CSS의 bottom 속성은 "뷰포트 아래에서부터"의
-   거리이므로 100vh에서 뺀 24.60442vh + 55.444px을 쓴다. top과 bottom을
-   동시에 지정하고 height는 생략하면(.board-side-slot과 같은 방식) 카드
-   높이가 정확히 그 구간만큼 자동으로 늘어난다 — 내용(단계/찾은개수/버튼)은
-   짧아서 위쪽에 붙고 아래쪽은 여백으로 남는다. */
-/* ⚠️ 개정(2026-09-18, "각 항목 사이 간격을 동일하게, 단계는 그대로 위, 다시
-   시작은 맨 아래" 요청): gap(고정 간격)만으로는 카드 높이가 보드 높이에
-   맞춰 늘어난 만큼(내용은 짧고 박스는 길어서) 아래쪽에 빈 여백만 남고
-   항목들은 위에 몰려 있었다. justify-content: space-between으로 바꿔
-   첫 항목(단계)은 위 끝, 마지막 항목(다시 시작)은 아래 끝에 고정하고,
-   그 사이 3개 간격이 남는 공간을 정확히 3등분해서 동일하게 나눈다. */
-#status-bar {
+   구조(위 → 아래, 왼쪽 → 오른쪽):
+     #game-screen  뷰포트 전체(position: fixed; inset: 0)이자 컨테이너(cq 단위의 기준)
+       .stage      격자: 열 [왼쪽 여백 | 문제 모듈 | 오른쪽 여백], 행 [시간 바 | 본문]
+         .stage-mascot   왼쪽 여백 칸(assets/stage-side1.png)
+         #time-bar-track 시간 바 — 문제 모듈과 같은 열(좌/우 끝이 그림판 끝과 정렬)
+         #boards         문제 모듈 = [기준 이미지 모듈 | 오답 이미지 모듈]
+           .image-module   그림판(.board) + 그 아래 장식 이미지(.board-side-image)
+         #status-bar     오른쪽 여백 칸(그림판과 위/아래 끝이 같은 높이)
+
+   모든 크기는 아래 .stage 맨 위 변수 몇 개에서 나온다. 뷰포트가 바뀌면
+   --bh(그림판 높이) 하나가 "가로 여유 / 세로 여유 / 1200px 상한" 중 가장 빡빡한
+   쪽에 맞춰 줄어들고, 나머지(그림판 폭·아래 이미지·열 폭·정렬)는 전부 --bh에서
+   파생되므로 어떤 조합에서도 서로 어긋나지 않는다. */
+:root {
+  /* 접근성 토글(.toggle-row-fixed)은 모든 화면에서 왼쪽 위에 고정된 전역
+     요소라 게임 격자 밖에 있다. 격자가 그 자리를 "약속된 크기"로 비워두도록
+     크기를 여기서 못 박는다(내용 크기에 우연히 기대지 않음). */
+  --toggle-w: 260px;
+  --toggle-h: 60px;
+}
+
+#game-screen {
+  --pad-x: 1.6vw; /* 토글의 left와 같은 값 */
+  --pad-y: 1.6vh; /* 토글의 top과 같은 값 — 시간 바가 토글과 같은 수직선상에 놓인다 */
   position: fixed;
-  top: calc(23.1971vh - 76.71px);
-  bottom: calc(24.60442vh + 55.444px);
-  right: 1.6vw;
-  z-index: 20;
+  inset: 0;
+  max-width: none;
+  margin: 0;
+  padding: var(--pad-y) var(--pad-x);
+  container-type: size; /* .stage가 100cqw/100cqh로 "게임 영역 크기"를 쓰기 위한 기준 */
+}
+
+.stage {
+  /* ---- 조정 가능한 값(여기만 바꾸면 전체가 같이 움직인다) ---- */
+  --bar-h: var(--toggle-h);        /* 시간 바 높이 = 토글 높이 */
+  --gap-bar: 24px;                 /* 시간 바 ~ 그림판 최소 간격 */
+  --gap-b: 2vw;                    /* 기준 ~ 오답 그림판 사이 간격 */
+  --gap-side: clamp(8px, 1.5vh, 16px); /* 그림판 ~ 아래 이미지 간격 */
+  --side-k: 0.46;                  /* 아래 이미지 높이 / 그림판 높이 */
+  --status-w: 190px;               /* 상태 표시 내용 폭(실측 183px + 여유) — 칸 폭 예산용 */
+  --status-gap: 16px;              /* 상태 표시 좌/우 공백의 "최소" 값(좁은 창에서 보장) */
+  /* 오른쪽 칸 최소 폭: 좌/우 공백이 각각 --status-gap 이상 나오는 폭. 상태 표시는
+     오답 그림판 오른쪽 끝 ~ 화면(뷰포트) 오른쪽 끝 사이에 가운데 놓이는데, 이 구간은
+     칸 폭 + 화면 여백(--pad-x)이므로 (칸 - 폭 + pad)/2 >= gap 에서 나온 식이다. */
+  --status-col: calc(var(--status-w) + 2 * var(--status-gap) - var(--pad-x));
+  --toggle-gap: 12px;              /* 토글 ~ 시간 바 최소 간격 */
+
+  /* ---- 파생 값 ---- */
+  /* 그림판 높이: 세 가지 한도 중 가장 작은 값. 바닥(120px)은 초소형 창에서
+     음수/0이 되는 것만 막는 안전장치다.
+       1) 가로: 두 그림판 + 사이 간격 + 오른쪽 상태 칸이 가로에 들어갈 것
+       2) 상한: 두 그림판 묶음이 1200px를 넘지 않을 것(기존 .screen 폭)
+       3) 세로: 시간 바 + 간격 + 그림판 + 아래 이미지가 세로에 들어갈 것 */
+  --bh: max(120px, min(
+    calc((100cqw - var(--gap-b) - var(--status-col)) / 2 * 553 / 549),
+    calc((1200px - var(--gap-b)) / 2 * 553 / 549),
+    calc((100cqh - var(--bar-h) - var(--gap-bar) - var(--gap-side)) / (1 + var(--side-k)))
+  ));
+  --bw: calc(var(--bh) * 549 / 553);                       /* 그림판 폭(비율 고정) */
+  --mod-h: calc(var(--bh) * (1 + var(--side-k)) + var(--gap-side)); /* 모듈 전체 높이 */
+  --lead: max(var(--gap-bar), calc((100cqh - var(--bar-h) - var(--mod-h)) / 2)); /* 본문 위 여백(남으면 세로 중앙) */
+  --rest: calc(100cqw - 2 * var(--bw) - var(--gap-b));     /* 그림판 묶음 좌우에 남는 폭 */
+  --c1: max(0px, min(calc(var(--rest) / 2), calc(var(--rest) - var(--status-col)))); /* 왼쪽 여백 폭 */
+
+  display: grid;
+  height: 100%;
+  /* 왼쪽 여백 | 문제 모듈 | 오른쪽 여백(나머지, 항상 --status-col 이상) */
+  grid-template-columns: var(--c1) calc(2 * var(--bw) + var(--gap-b)) minmax(0, 1fr);
+  grid-template-rows: var(--bar-h) minmax(0, 1fr);
+  align-items: start;
+}
+
+/* 왼쪽 여백 칸: 남는 폭이 없으면(좁은 창) 폭이 0이 되어 그냥 안 보인다. */
+.stage-mascot {
+  grid-column: 1;
+  grid-row: 2;
+  align-self: center;
+  /* 격자 왼쪽 바깥의 화면 여백(--pad-x)까지 3px만 남기고 최대한 쓴다(이전 배치와
+     같은 크기). 여백이 좁으면(왼쪽 칸 폭 < --pad-x) 확장분이 칸 폭만큼으로 줄어
+     0이 되어 그림판을 침범하지 않는다. */
+  justify-self: start;
+  margin-left: calc(3px - min(var(--pad-x), 100%));
+  width: max(0px, calc(100% - 6px + min(var(--pad-x), 100%)));
+  max-height: 100%;
+  aspect-ratio: 1 / 1;
+  object-fit: contain;
+  pointer-events: none;
+  user-select: none;
+}
+
+/* 시간 바: 문제 모듈과 같은 열이라 좌/우 끝이 그림판 끝과 맞는다. 다만 왼쪽
+   여백이 좁아 토글 자리(--toggle-w)까지 침범하면 그만큼만 오른쪽으로 물러나
+   토글과 절대 겹치지 않는다(오른쪽 끝은 그대로). */
+#time-bar-track {
+  grid-column: 2;
+  grid-row: 1;
+  margin-left: max(0px, calc(var(--toggle-w) + var(--toggle-gap) - var(--c1)));
+  height: var(--bar-h);
+  background: #e7e9f0;
+  border-radius: 999px;
+  /* 바 끝에 붙는 클로드 아이콘(#time-bar-icon)이 바 높이보다 위아래로 살짝
+     튀어나오므로 clip하지 않는다(#time-bar-fill이 border-radius:inherit로
+     스스로 알약 모양을 그려서 막대 모양은 유지된다). */
+  overflow: visible;
+  box-shadow: 0 8px 20px -12px rgba(30, 41, 59, 0.35);
+}
+
+#time-bar-fill {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, var(--accent), var(--accent-2));
+  border-radius: inherit;
+  transform-origin: left center;
+  transition: width 0.2s linear;
+}
+
+/* 캐릭터(assets/claude-icon.png, 492x322)를 #time-bar-fill 오른쪽 끝(left:100%)에
+   고정한다. 위치가 부모(#time-bar-fill) 기준 퍼센트라 JS가 바 너비를 바꿀 때마다
+   (updateStatusBar) 별도 동기화 없이 항상 바 끝을 따라간다. */
+#time-bar-icon {
+  position: absolute;
+  left: 100%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  width: auto;
+  height: 80px;
+  aspect-ratio: 492 / 322;
+  pointer-events: none;
+  user-select: none;
+  filter: drop-shadow(0 3px 8px rgba(31, 41, 55, 0.35));
+}
+
+/* 문제 모듈: [기준 이미지 모듈 | 오답 이미지 모듈]. 이 안의 크기는 전부
+   --bw/--bh에서 나온다. */
+#boards {
+  grid-column: 2;
+  grid-row: 2;
+  margin-top: var(--lead);
+  height: var(--mod-h);
+  display: grid;
+  grid-template-columns: var(--bw) var(--bw);
+  column-gap: var(--gap-b);
+  align-items: start;
+}
+
+/* 이미지 모듈 하나 = 그림판 + 그 아래 장식 이미지. 세로로 쌓고 가운데 정렬. */
+.image-module {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--gap-side);
+  min-width: 0;
+}
+
+.board {
+  position: relative;
+  flex: none;
+  width: var(--bw);
+  height: var(--bh);
+  background: #fff;
+  border: 3px solid var(--ink);
+  border-radius: 14px;
+  overflow: hidden;
+  box-shadow: 0 14px 28px -16px rgba(30, 41, 59, 0.35);
+}
+
+/* 그림판 아래 장식 이미지(assets/stage-side2.png, stage-side3.png). 높이는
+   그림판 높이에 비례(--side-k), 폭은 원본 비율(3:2)로 자동. */
+.board-side-image {
+  flex: none;
+  height: calc(var(--bh) * var(--side-k));
+  width: auto;
+  max-width: 100%;
+  aspect-ratio: 3 / 2;
+  object-fit: contain;
+  pointer-events: none;
+  user-select: none;
+}
+
+/* 상태 표시: 오른쪽 여백 칸. 위/아래 끝이 그림판 위/아래 끝과 같도록 높이를
+   --bh로 맞추고, 4개 항목은 위 끝~아래 끝 사이에 동일 간격으로 나눈다. */
+/* ⚠️ 개정(2026-09-19, "상태 표시를 오답 이미지에서 더 오른쪽으로, 오답 이미지와의 공백 =
+   화면 오른쪽과의 공백"): 칸(오답 그림판 오른쪽 끝 ~ 격자 오른쪽 끝) 안에서 가운데
+   정렬하되, 오른쪽 공백은 "화면 끝"까지여야 하므로 격자 바깥 여백(--pad-x)만큼
+   오른쪽 margin을 음수로 줘서 정렬 기준 구간을 화면 끝까지 넓힌다. 그러면 왼쪽
+   공백 = 오른쪽 공백이 어떤 해상도에서도 성립한다. 자리가 좁아지면 그림판이
+   먼저 줄어들어(--status-col 참고) 두 공백이 최소 --status-gap 아래로 내려가지 않는다. */
+#status-bar {
+  grid-column: 3;
+  grid-row: 2;
+  margin-top: var(--lead);
+  margin-right: calc(-1 * var(--pad-x));
+  justify-self: center;
+  width: max-content;
+  height: var(--bh);
   display: flex;
   flex-direction: column;
   align-items: flex-start;
   justify-content: space-between;
-  /* ⚠️ 개정(2026-09-18, "테두리랑 흰 배경 제거, 상태 표시들만 남게" 요청):
-     카드 배경/테두리/그림자를 없애고 4개 항목(단계/찾은 개수/일시정지/
-     다시 시작)만 배경 위에 떠 있게 했다. padding은 유지해서(카드 자체는
-     투명해졌어도) top/bottom이 여전히 보드 상/하단에 맞춰진 레이아웃
-     구조는 그대로 유지된다. */
-  padding: 1.2vh 1.5vw;
 }
 
-/* ⚠️ 개정(2026-09-18, "상태 표시 요소들 크기를 1.5배로" 요청): 단계/찾은개수
-   pill과 일시정지/다시 시작 버튼의 font-size·padding을 전부 1.5배 했다
-   (0.92rem→1.38rem, 0.9em→1.35em 등). 컨테이너(#status-bar) 자체의 gap도
-   요소가 커진 만큼 비례해서 0.6em→0.9em으로 늘렸다. */
 #status-stage,
 #status-found {
   display: inline-flex;
@@ -666,14 +784,8 @@ button:disabled {
 }
 
 #status-bar > button {
-  /* ⚠️ 개정(2026-09-18, "항목 사이 간격을 동일하게" 요청 중 발견): 전역
-     `button` 규칙의 margin: 0.3em 0.5em 0.3em 0이 여기 버튼(일시정지/다시
-     시작)에도 그대로 적용되고 있었다. span 항목(단계/찾은 개수)은 margin이
-     없어서, justify-content: space-between이 마진 박스 기준으로 간격을
-     계산하는 바람에 버튼이 낀 간격만 그만큼(위아래 각 0.3em) 더 벌어지고,
-     마지막 항목(다시 시작)은 margin-bottom만큼 카드 맨 아래에 닿지 못했다.
-     margin: 0으로 재설정해 모든 항목이 순수 border-box 기준으로만 동일하게
-     분배되게 했다. */
+  /* 전역 button 규칙의 margin(0.3em 0.5em 0.3em 0)을 지워야 space-between이
+     항목 border-box 기준으로만 간격을 나눈다. */
   margin: 0;
   border: none;
   border-radius: 999px;
@@ -684,261 +796,6 @@ button:disabled {
   background: var(--ink);
   color: #fff;
   box-shadow: none;
-}
-
-#game-screen {
-  display: flex;
-  flex-direction: column;
-  /* body의 상하 padding(8vh + 5vh)을 제외한 높이에 맞춰, 보드 영역이 늘어나도
-     페이지 세로 스크롤이 생기지 않고 위아래 여백(padding)이 항상 남도록 고정한다.
-     1366x768처럼 좁은 화면에서는 body의 8vh 상단 padding만으로는 왼쪽 상단
-     토글(높이 고정, 뷰포트에 비례하지 않음)의 아래쪽 끝보다 약간 위에서
-     시작해버려 겹치므로, 16px을 추가로 확보하고 그만큼 높이에서 뺀다.
-     ⚠️ 개정(2026-09-18, "시간 바와 그림판 사이 공백을 더" + "상태 표시줄을
-     오른쪽으로" 요청, 두 변경을 함께 반영):
-     1) 시간 바~그림판 간격을 24px 더 벌리려고 padding-top을 16px→40px로
-        늘렸다. #boards가 그만큼 위에서 시작하므로, height도 같이 24px
-        줄여야 #boards의 세로 크기(따라서 .board 크기)가 그대로 유지된다.
-     2) #status-bar가 position:fixed로 플렉스 흐름에서 빠지면서(#status-bar
-        규칙 참고) #boards가 그 칸까지 전부 차지하게 됐다. #status-bar가
-        차지하던 만큼(실측: 1366×768에서 213.99px, 1920×1080에서
-        227.72px — 대부분 고정값(약 180.2px, em/rem 기반)이고 나머지는
-        1.2vh(패딩)×2 + 2vh(기존 margin-bottom)만큼 vh에 비례해서
-        "180.2px + 4.4vh" 1차식으로 근사) height에서 그대로 뺐다.
-     (참고: box-sizing:border-box라 height는 padding을 포함한다. padding-top이
-     16px→40px로 24px 늘었지만 그만큼 콘텐츠 높이가 줄지 않도록 height에는
-     -24px가 아니라 +24px를 더해야 한다 — 처음에 부호를 반대로 계산해서
-     .board가 작아지는 회귀가 있었고, 실측(374px≠422px)으로 발견해 고쳤다.)
-     최종: 87vh-16px(기존) - S(180.2px+4.4vh) + 24px(패딩 증가분 보정)
-     = 82.6vh - 172.2px. */
-  padding-top: 40px;
-  height: calc(100vh - 17.4vh - 172.2px);
-}
-
-#boards {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 2vw;
-  width: 100%;
-  flex: 1 1 auto;
-  min-height: 0;
-}
-
-.board-panel {
-  flex: 1 1 45%;
-  min-width: 280px;
-  display: flex;
-  flex-direction: column;
-  min-height: 0;
-  height: 100%;
-  /* ⚠️ 개정(2026-09-18, "기준/오답 이미지 밑에 장식 이미지를 넣어달라" 요청 →
-     이후 "박스 크기 확정 사양 위반" 지적으로 재수정): .board-side-image를 이
-     플렉스 흐름 안(.board 뒤)에 넣었다가 뺐다(위 .board-side-image 규칙 설명
-     참고 — position: fixed로 전환). 그래서 이 컨테이너는 다시 원래대로 자식이
-     .board 하나뿐이고, justify-content: center로 남는 세로 공간을 위아래로
-     고르게 나눠 .board가 세로 중앙에 오도록 하는 원래 동작으로 되돌렸다. */
-  justify-content: center;
-}
-
-/* ⚠️ 개정(2026-09-18, "시간 바를 음소거/움직임 감소 창과 같은 높이·수직선상으로"
-   요청): 원래 게임 화면 안에서 그림판 위에 놓인 일반 블록이었던 것을, 왼쪽 위
-   접근성 토글(.toggle-row-fixed, position:fixed, top:1.6vh)과 같은 높이·같은
-   top 위치가 되도록 position:fixed로 바꿨다. 토글 박스의 실제 렌더링 크기를
-   재보니 253.984 x 59.578px로 두 해상도(1366x768, 1920x1080)에서 폭/높이가
-   완전히 동일했다(내부 요소들이 vw/vh가 아닌 rem/em·고정 아이콘 크기라서
-   뷰포트에 비례하지 않기 때문). 그래서 "254px + 여백"만큼 오른쪽에서 시작하는
-   left 값을, 토글 박스의 left(1.6vw)에 그 폭을 더하는 형태로 계산해 항상
-   토글 바로 오른쪽에 붙게 하고, 높이도 그 값(60px)에 맞췄다. 화면 밖 시간
-   바 자리가 빈 채로 남지 않도록, 그림판(#boards) 쪽에 그만큼 위쪽 여백을
-   추가해뒀다(#boards 규칙 참고). */
-/* ⚠️ 개정(2026-09-18, "시간 바 시작/끝을 기준/오답 이미지 좌/우 끝에 맞춰달라"
-   요청): 기존에는 왼쪽 위 토글 박스 오른쪽부터 시작했지만, 이제 기준
-   이미지(.board, 왼쪽) 왼쪽 끝 ~ 오답 이미지(.board, 오른쪽) 오른쪽 끝과
-   정확히 같은 x좌표를 쓴다. .board-side-slot과 같은 방식으로, .screen이
-   max-width:1200px에서 가운데 정렬될 때 보드 패널이 시작/끝나는 x좌표를
-   그대로 계산해 넣었다(1200px, 4vw는 .screen/body 값과 함께 바뀌어야 하는
-   상수). 그 결과 왼쪽 끝은 토글 박스(254px 폭)보다 안쪽이라 1366×768처럼
-   좁은 화면에서는 시간 바가 토글 박스 밑에 깔려 시작한다 — 사용자가 명시적으로
-   요청한 정렬이라 그대로 두었다. */
-#time-bar-track {
-  position: fixed;
-  top: 1.6vh;
-  left: calc(50vw - 600px);
-  right: calc(50vw - 600px);
-  height: 60px;
-  margin: 0;
-  background: #e7e9f0;
-  border-radius: 999px;
-  /* ⚠️ 개정(2026-09-18, "바 끝에 클로드 캐릭터가 붙어서 같이 이동" 요청):
-     #time-bar-icon이 #time-bar-fill 오른쪽 끝(left:100%)에 걸쳐 바 높이보다
-     위아래로 살짝 튀어나오게 그린다. overflow:hidden이면 그 튀어나온 부분이
-     잘린다. #time-bar-fill 자체가 이미 border-radius:inherit(999px)로 자기
-     너비만큼 알약 모양을 그리므로(부모의 클리핑에 기대지 않음), overflow를
-     visible로 바꿔도 막대 모양은 그대로 유지된다. */
-  overflow: visible;
-  z-index: 15;
-  box-shadow: 0 8px 20px -12px rgba(30, 41, 59, 0.35);
-}
-
-#time-bar-fill {
-  position: relative;
-  width: 100%;
-  height: 100%;
-  /* ⚠️ 개정(2026-09-18, "왼쪽 주황, 오른쪽 초록으로 바꿔달라" 요청):
-     var(--accent-2)(초록)·var(--accent)(주황) 순서를 뒤집었다. */
-  background: linear-gradient(90deg, var(--accent), var(--accent-2));
-  border-radius: inherit;
-  transform-origin: left center;
-  transition: width 0.2s linear;
-}
-
-/* assets/claude-icon.png(492x322, 가로가 긴 비율) 캐릭터를 #time-bar-fill의
-   오른쪽 끝(left:100%)에 고정한다. #time-bar-fill의 너비가 JS로 바뀔 때마다
-   (updateStatusBar의 el.timeBarFill.style.width) 이 아이콘도 그 오른쪽 끝을
-   그대로 따라간다 — 위치 자체가 부모(#time-bar-fill) 기준 퍼센트라 별도의
-   JS 동기화나 리사이즈 처리 없이도 항상 막대 끝과 일치한다. */
-#time-bar-icon {
-  position: absolute;
-  left: 100%;
-  /* ⚠️ 개정(2026-09-18, "시간 제한 바의 높이만큼 키워달라" 요청): #time-bar-track
-     의 높이(60px)에 맞춰 height를 직접 지정하고, width는 aspect-ratio(492:322)로
-     자동 계산되게 했다(고정 46px → 높이 기준 가변 폭).
-     ⚠️ 개정(2026-09-18, "조금만 더 크게" 요청): 60px → 80px.
-     ⚠️ 개정(2026-09-18, "다리 사이에 바가 안 보이게 조금만 더" 요청): 시간 바는
-     세로로 아이콘 중앙(top:50%)에 겹쳐 있는데, 캐릭터의 다리는 원본 이미지
-     (492x322) 기준 아래쪽 약 30% 지점(y≈225px)부터 시작한다. 바 높이(60px,
-     아이콘 높이와 무관하게 고정)가 아이콘 중앙 기준 위아래로 30px씩 차지하므로,
-     다리 시작 지점이 그 30px 아래로 완전히 내려가려면(이미지 좌표로 226px 이상
-     여유) 아이콘 높이가 대략 150px는 넘어야 한다(30px × 322/H < 322-225 →
-     H > 30×322/97 ≈ 151px). 80px에서는 다리 윗부분이 여전히 바 범위 안에
-     걸쳐 있어 다리 사이 틈으로 바가 보였다. 160px로 키워 다리 전체가 바
-     아래로 완전히 벗어나게 했다.
-     ⚠️ 개정(2026-09-18, "상단으로만 자라게 해서 잘림 해결" 요청): top:50% +
-     translateY(-50%)로 세로 중앙 정렬했더니, 시간 바가 뷰포트 맨 위(위쪽
-     여백 12px)에 붙어 있어 160px짜리 아이콘이 위로 넘쳐 머리가 화면 밖으로
-     잘렸다(실측 top -37.7px). 정렬 기준을 "바 세로 중앙"에서 "바 상단"으로
-     바꿔(top:0, translateY 제거) 아이콘이 위로는 전혀 안 자라고 아래로만
-     (그림판 쪽으로) 자라게 했다 — 어차피 다리를 가리는 목적은 바 상단부터
-     아래로 겹치는 구간이면 충분하다.
-     ⚠️ 개정(2026-09-18, "직전 크기로 줄여달라" 요청): 160px(다리 사이 틈
-     해결용)에서 잘림 문제가 이어져(오른쪽 39px 잘림 등) 그 직전 크기였던
-     80px로, 정렬도 원래의 세로 중앙 정렬(top:50% + translateY(-50%,-50%))로
-     함께 되돌렸다. */
-  top: 50%;
-  transform: translate(-50%, -50%);
-  width: auto;
-  height: 80px;
-  aspect-ratio: 492 / 322;
-  pointer-events: none;
-  user-select: none;
-  filter: drop-shadow(0 3px 8px rgba(31, 41, 55, 0.35));
-}
-
-.board {
-  position: relative;
-  background: #fff;
-  border: 3px solid var(--ink);
-  border-radius: 14px;
-  overflow: hidden;
-  box-shadow: 0 14px 28px -16px rgba(30, 41, 59, 0.35);
-  /* 박스 비율을 image4(549x553, 거의 정사각형)에 고정한다. 세로 공간을 끝까지
-     채우지 않고 이 비율에서 멈추므로, 어떤 이미지 세트가 나오든 패널 하단에
-     동일한 크기의 여백이 생긴다. 비율이 다른 이미지(image1의 가로로 긴 비율,
-     image3/5의 세로로 긴 비율 등)는 이 박스 안에서 object-fit: contain으로
-     레터박스 처리된다.
-     ⚠️ 확정 사양(GAME_RULES.md "보드 박스 비율 고정" 절): 이 박스 크기는
-     1366×768/1920×1080 각각에서 실측·검증된 고정값(약 590px/585px 높이)이다.
-     .board-side-image를 아래에 추가하면서 flex-shrink를 0으로 고정해뒀다
-     — 그렇지 않으면 형제 요소(.board-side-image)와 세로 공간을 나눠 가지면서
-     이 박스 자체가 작아져(기준/오답 이미지 크기 변경) 확정 사양을 깨뜨린다. */
-  flex: 0 0 auto;
-  aspect-ratio: 549 / 553;
-  max-height: 100%;
-  min-height: 0;
-}
-
-/* 기준/오답 이미지(.board) 밑의 빈 공간을 채우는 장식 이미지(assets/stage-side2.png,
-   assets/stage-side3.png).
-   ⚠️ 개정: 처음에는 .board-panel의 플렉스 흐름 안(.board 바로 뒤)에 넣었으나,
-   1366×768에서는 .board가 이미 세로 공간을 거의 다 차지해서(확정 사양이라
-   줄일 수 없음) 상태 표시줄 바로 위까지 남는 틈이 8~10px뿐이라 이미지가
-   실질적으로 안 보이는 얇은 선이 돼버렸다. 그래서 플렉스 흐름에서 완전히
-   빼서(position: fixed) 뷰포트 기준 실제로 비어 있는 영역(상태 표시줄
-   카드 오른쪽, 화면 하단)에 배치한다 — .board-panel/.board 레이아웃에는
-   전혀 영향을 주지 않는다.
-   ⚠️ 개정(2026-09-18, "기준/오답 이미지 중앙에 오도록" 요청): .board는
-   align-items: stretch라 항상 자기 패널 너비를 꽉 채우므로(실측: .board
-   너비 == .board-panel 너비), "이미지 중앙"과 "패널 중앙"이 같은 x좌표다.
-   .board-side-image를 패널 가로 폭 전체를 덮는 .board-side-slot(고정 위치,
-   #status-bar/#time-bar-track과 같은 방식으로 .screen이 max-width:1200px에서
-   가운데 정렬될 때의 좌/우 보드 패널 시작 x좌표·너비를 계산해 넣음) 안에 넣고
-   그 슬롯을 justify-content: center로 가운데 정렬한다 — 이미지 자체 너비는
-   aspect-ratio(3:2)로 세로 크기에서 자동 계산되므로(가변) 이 방식이 이미지
-   폭을 직접 계산하는 것보다 정확하다. */
-/* ⚠️ 개정(2026-09-18, 크기를 키우다 보니 .board 하단과 겹치는 문제 발견): 처음엔
-   bottom: 5vh만 고정하고 높이를 키웠더니, 1920×1080에서 .board 하단(실측
-   734.83px)과 장식 이미지 상단(실측 680.4px)이 겹쳐 그림판 내용을 가려버렸다.
-   .board 하단 위치는 aspect-ratio+max-height 상호작용 때문에 vh에 선형으로
-   비례하지 않아 깔끔한 수식이 없어서(.panel-box 하단 정렬 때와 같은 방식으로),
-   1366×768/1920×1080 두 지점에서 실측한 값(499.609px/734.828px)을 지나는
-   1차식으로 근사했다: top ≈ 75.3906vh - 79.39px. 슬롯에 이 값을 top으로,
-   기존 bottom: 5vh를 그대로 두면(둘 다 지정 + height 생략) 슬롯 높이가 그
-   차이만큼 자동으로 정해져서, 위로는 .board 하단(+여백), 아래로는 뷰포트
-   하단(5vh)을 절대 넘지 않는다 — 즉 화면·해상도가 달라져도 겹침도, 세로
-   스크롤도 생기지 않는다. 이미지는 그 슬롯 안에서 가운데 정렬되고
-   (align-items/justify-content: center), 슬롯보다 원하는 크기(32vh/400px)가
-   크면 슬롯 높이(100%)에서 자동으로 축소된다(.board-side-image의
-   max-height: 100%). */
-.board-side-slot {
-  position: fixed;
-  /* ⚠️ 개정(2026-09-18, "살짝 밑으로 내려달라" 요청): 슬롯이 이미 위(.board
-     하단)~아래(5vh) 틈을 꽉 채우고 있어(이미지가 항상 max-height:100%로
-     슬롯 높이만큼 꽉 참) 안에서 내릴 여백이 없었다. 그래서 슬롯 자체를
-     아래로 밀되, 위/아래 경계 모두를 동일하게 내려서(top +1.5vh, bottom을
-     5vh→3.5vh로 줄여 그만큼 더 내려감) 슬롯 높이(=이미지 높이)는 거의
-     그대로 유지하면서 위치만 아래로 이동시켰다.
-     ⚠️ 개정(2026-09-18, "시간 바~그림판 간격을 더" + "상태 표시줄을 오른쪽으로"
-     요청으로 #game-screen의 padding-top/height가 바뀌면서 .board 자체가
-     아래로 밀려남에 따라 재측정): .board 하단이 1366×768에서
-     499.609px→523.594px, 1920×1080에서 734.828px→758.828px로 이동했다.
-     이 위치 추정식(1366/1920 두 지점을 지나는 1차식)도 그만큼 다시 맞췄다:
-     top ≈ 75.397vh - 55.46px (+ 기존 1.5vh 여백 그대로). */
-  top: calc(76.897vh - 55.46px);
-  bottom: 3.5vh;
-  width: calc(600px - 1vw);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  pointer-events: none;
-  z-index: 1;
-}
-
-.board-side-slot-left {
-  left: calc(50vw - 600px);
-}
-
-.board-side-slot-right {
-  left: 51vw;
-}
-
-.board-side-image {
-  /* ⚠️ 개정(2026-09-18, "두 배로 키워달라" 요청): 16vh/200px → 32vh/400px.
-     max-height: 100%로 슬롯(.board-side-slot) 높이를 넘지 않게 이중으로
-     막아뒀다(위 슬롯 설명 참고) — 그 결과 해상도에 따라 정확히 2배가 아니라
-     "가능한 한 2배에 가깝게, 그러나 겹침 없이"로 동작한다.
-     ⚠️ 개정(2026-09-18, "떠 보인다" 피드백): border-radius + box-shadow가
-     이 이미지를 배경 위에 얹힌 "카드"처럼 보이게 만들어 붕 떠 보이는
-     느낌을 줬다. 그림자를 없애 배경 위에 그냥 놓인 것처럼 자연스럽게
-     보이도록 했다. (다만 이미지 자체가 자기만의 배경(어두운 초록 그라데이션)을
-     담고 있어 씬 배경과 완전히 하나로 섞이지는 않는다 — 이건 CSS로 고칠 수
-     없는 이미지 소스 자체의 특성이다.) */
-  height: min(32vh, 400px, 100%);
-  max-width: 100%;
-  width: auto;
-  aspect-ratio: 3 / 2;
-  object-fit: contain;
-  pointer-events: none;
-  user-select: none;
 }
 
 .board-canvas {
@@ -1189,12 +1046,3 @@ button:disabled {
 #ranking-table tbody tr:nth-child(2) td:first-child::before { content: "🥈 "; }
 #ranking-table tbody tr:nth-child(3) td:first-child::before { content: "🥉 "; }
 
-/* 좁은 화면 대응: 400px 부근에서도 잘림/가로 스크롤 없도록 */
-@media (max-width: 480px) {
-  #status-bar {
-    justify-content: flex-start;
-  }
-  #status-bar > button {
-    margin-left: 0;
-  }
-}
