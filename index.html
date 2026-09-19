@@ -34,7 +34,12 @@
 <!-- ============ 홈 화면 ============ -->
 <section id="home-screen" class="screen">
   <div class="home-layout">
-    <img class="home-mascot home-mascot-left" src="assets/home-left-image.png" alt="" aria-hidden="true" />
+    <!-- 뷰포트 폭이 1620px 이하일 때 말풍선 글자를 뺀 이미지로 바꾼다(글자가 가운데 카드에
+         가려 잘리는 폭). 1621px 이상은 기존 이미지 그대로. 두 이미지는 캔버스(649x385)가 같아 위치·크기 계산은 동일. -->
+    <picture class="home-mascot-picture">
+      <source media="(max-width: 1620px)" srcset="assets/home-left-image-small-size.png" />
+      <img class="home-mascot home-mascot-left" src="assets/home-left-image.png" alt="" aria-hidden="true" />
+    </picture>
 
     <div class="home-main">
       <header class="hero">

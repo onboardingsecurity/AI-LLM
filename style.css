@@ -109,6 +109,12 @@ body:has(#ranking-screen:not([hidden])) {
   --home-mascot-foot-baseline: 22vh;
 }
 
+/* <picture>가 flex 항목으로 끼어들어 레이아웃이 바뀌지 않도록 자기 박스를 만들지 않게 한다
+   (안의 고정 배치 img는 이전처럼 흐름 밖에서 뷰포트 기준으로 놓인다). */
+.home-mascot-picture {
+  display: contents;
+}
+
 .home-mascot {
   position: fixed;
   object-fit: contain;
@@ -314,6 +320,11 @@ h1 {
   align-items: center;
   justify-content: center;
   padding-block: 0;
+  /* ⚠️ 개정(2026-09-19): 게임 화면에서 --toggle-w가 260px보다 줄어들 때 알약 버튼이
+     같이 작아지도록, 간격/좌우 여백/글자 크기를 폭(--toggle-w) 비율로 줄인다. 260px
+     이상이면 min()이 원래 값(1.2em/1em/0.92rem)을 그대로 골라 이전과 똑같다. */
+  gap: min(1.2em, calc(var(--toggle-w) * 0.063));
+  padding-inline: min(1em, calc(var(--toggle-w) * 0.052));
 }
 
 .icon-toggle {
@@ -326,7 +337,7 @@ h1 {
   padding: 0.4em 1em 0.4em 0.6em;
   margin: 0;
   font-family: inherit;
-  font-size: 0.92rem;
+  font-size: min(0.92rem, calc(var(--toggle-w) * 0.057)); /* 토글 폭이 줄면 같이 줄어든다(위 .toggle-row-fixed 참고) */
   font-weight: 700;
   color: var(--ink);
   box-shadow: none;
@@ -579,24 +590,25 @@ button:disabled {
 :root {
   /* 접근성 토글(.toggle-row-fixed)은 모든 화면에서 왼쪽 위에 고정된 전역
      요소라 게임 격자 밖에 있다. 격자가 그 자리를 "약속된 크기"로 비워두도록
-     크기를 여기서 못 박는다(내용 크기에 우연히 기대지 않음). */
+     크기를 여기서 못 박는다(내용 크기에 우연히 기대지 않음).
+     ⚠️ 개정(2026-09-19, "시간 바를 그림판 너비에 맞추고 토글 너비를 줄여줘" 요청):
+     --toggle-w는 기본 260px이지만 게임 화면에서만 아래 body:has(#game-screen...)가
+     "왼쪽 여백 폭(--c1) - 간격"으로 줄여 시간 바가 그림판 왼쪽 끝까지 늘어나게 한다
+     (최소 --toggle-min-w). 그래서 격자 크기 변수를 .stage가 아니라 여기(:root)에
+     뷰포트 단위로 모아뒀다 — 토글이 격자 밖 요소라 그 폭을 계산하려면 같은 변수가
+     격자 밖에서도 보여야 하기 때문이다. 값의 의미와 식은 이전(.stage 안, cq 단위)과
+     같고, 100cqw/100cqh만 게임 영역(뷰포트 - 좌우/상하 여백)을 뜻하는
+     --stage-w/--stage-h로 바꿨다. */
   --toggle-w: 260px;
   --toggle-h: 60px;
-}
+  --toggle-min-w: 176px;           /* 토글 폭이 줄어들 수 있는 최소값(글자가 읽히는 한계) */
 
-#game-screen {
   --pad-x: 1.6vw; /* 토글의 left와 같은 값 */
   --pad-y: 1.6vh; /* 토글의 top과 같은 값 — 시간 바가 토글과 같은 수직선상에 놓인다 */
-  position: fixed;
-  inset: 0;
-  max-width: none;
-  margin: 0;
-  padding: var(--pad-y) var(--pad-x);
-  container-type: size; /* .stage가 100cqw/100cqh로 "게임 영역 크기"를 쓰기 위한 기준 */
-}
+  --stage-w: calc(100vw - 2 * var(--pad-x)); /* 게임 영역 폭(#game-screen 안쪽) */
+  --stage-h: calc(100vh - 2 * var(--pad-y)); /* 게임 영역 높이 */
 
-.stage {
-  /* ---- 조정 가능한 값(여기만 바꾸면 전체가 같이 움직인다) ---- */
+  /* ---- 조정 가능한 값(여기만 바꾸면 게임 화면 전체가 같이 움직인다) ---- */
   --bar-h: var(--toggle-h);        /* 시간 바 높이 = 토글 높이 */
   --gap-bar: 24px;                 /* 시간 바 ~ 그림판 최소 간격 */
   --gap-b: 2vw;                    /* 기준 ~ 오답 그림판 사이 간격 */
@@ -617,16 +629,36 @@ button:disabled {
        2) 상한: 두 그림판 묶음이 1200px를 넘지 않을 것(기존 .screen 폭)
        3) 세로: 시간 바 + 간격 + 그림판 + 아래 이미지가 세로에 들어갈 것 */
   --bh: max(120px, min(
-    calc((100cqw - var(--gap-b) - var(--status-col)) / 2 * 553 / 549),
+    calc((var(--stage-w) - var(--gap-b) - var(--status-col)) / 2 * 553 / 549),
     calc((1200px - var(--gap-b)) / 2 * 553 / 549),
-    calc((100cqh - var(--bar-h) - var(--gap-bar) - var(--gap-side)) / (1 + var(--side-k)))
+    calc((var(--stage-h) - var(--bar-h) - var(--gap-bar) - var(--gap-side)) / (1 + var(--side-k)))
   ));
   --bw: calc(var(--bh) * 549 / 553);                       /* 그림판 폭(비율 고정) */
   --mod-h: calc(var(--bh) * (1 + var(--side-k)) + var(--gap-side)); /* 모듈 전체 높이 */
-  --lead: max(var(--gap-bar), calc((100cqh - var(--bar-h) - var(--mod-h)) / 2)); /* 본문 위 여백(남으면 세로 중앙) */
-  --rest: calc(100cqw - 2 * var(--bw) - var(--gap-b));     /* 그림판 묶음 좌우에 남는 폭 */
+  --lead: max(var(--gap-bar), calc((var(--stage-h) - var(--bar-h) - var(--mod-h)) / 2)); /* 본문 위 여백(남으면 세로 중앙) */
+  --rest: calc(var(--stage-w) - 2 * var(--bw) - var(--gap-b));     /* 그림판 묶음 좌우에 남는 폭 */
   --c1: max(0px, min(calc(var(--rest) / 2), calc(var(--rest) - var(--status-col)))); /* 왼쪽 여백 폭 */
+}
 
+/* 게임 화면에서만 토글 폭을 줄여, 시간 바가 그림판(기준+오답) 왼쪽 끝까지 늘어나게 한다.
+   왼쪽 여백(--c1)이 충분하면 토글은 기본 260px 그대로, 좁으면 (--c1 - 간격)까지 줄고,
+   그래도 모자라 --toggle-min-w에 닿으면 그때부터는 시간 바가 그만큼만 오른쪽으로
+   물러난다(#time-bar-track의 margin-left 안전장치). */
+body:has(#game-screen:not([hidden])) {
+  --toggle-w: clamp(var(--toggle-min-w), calc(var(--c1) - var(--toggle-gap)), 260px);
+}
+
+#game-screen {
+  position: fixed;
+  inset: 0;
+  max-width: none;
+  margin: 0;
+  padding: var(--pad-y) var(--pad-x);
+  container-type: size; /* .stage가 100cqw/100cqh로 "게임 영역 크기"를 쓰기 위한 기준 */
+}
+
+.stage {
+  /* 크기 변수(--bh, --bw, --c1 등)는 :root로 옮겼다(위 :root 블록 참고). */
   display: grid;
   height: 100%;
   /* 왼쪽 여백 | 문제 모듈 | 오른쪽 여백(나머지, 항상 --status-col 이상) */
@@ -1040,6 +1072,14 @@ button:disabled {
 
 #ranking-table tbody tr:nth-child(odd) {
   background: #fbfbfd;
+}
+
+/* ⚠️ 개정(2026-09-19, "홈으로 버튼이 창 바닥에 너무 붙어있다" 요청): 순위 표(창) 바닥과
+   "홈으로" 버튼 사이 간격을 게임 규칙 화면의 "시작하기 버튼 ~ 창 바닥" 간격과 같은
+   식(.panel-box의 하단 padding = 2 * max(0, 2.2vh - 4px), 창 테두리 1px 포함)으로 벌린다.
+   해상도가 커지면 두 간격이 같이 커진다. 이전에는 버튼 기본 margin(약 5px)뿐이었다. */
+#btn-ranking-home {
+  margin-top: calc(max(0px, calc(2.2vh - 4px)) * 2 + 1px);
 }
 
 #ranking-table tbody tr:nth-child(1) td:first-child::before { content: "🥇 "; }
