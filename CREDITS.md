@@ -16,6 +16,21 @@
 |---|---|---|
 | valid.json, broken-syntax.json, missing-required.json | 본인 제작. 이 앱에서 직접 내보낸 템플릿(안의 이미지는 본인 제작 합성 이미지)으로 만든 시험 자료 | 외부 저작물 없음 |
 
+## 서비스 페이지 배경 (assets/)
+| 파일 | 출처 | 사용 허가 근거 |
+|---|---|---|
+| background.png | 본인 제작(AI 생성). 본인이 ChatGPT(gpt-image)로 직접 생성한 이미지. 원본 파일에 든 생성 정보(콘텐츠 자격 증명)는 제거하고 화소는 그대로 사용 | OpenAI 이용약관 |
+
+## 마우스 커서, 장식 이미지 (assets/)
+| 파일 | 출처 | 사용 허가 근거 |
+|---|---|---|
+| mouse-cursor.png | 본인 제작(AI 생성). 본인이 ChatGPT로 직접 생성한 이미지. 파일에 생성 도구 정보나 위치 정보 같은 메타데이터는 없음 | OpenAI 이용약관 |
+| left.png | 본인 제작(AI 생성). 본인이 ChatGPT로 직접 생성한 이미지. 파일에 생성 도구 정보나 위치 정보 같은 메타데이터는 없음 | OpenAI 이용약관 |
+| right.png | 본인 제작(AI 생성). 본인이 ChatGPT(gpt-image)로 직접 생성한 이미지. 원본 파일에 든 생성 정보(콘텐츠 자격 증명)는 제거하고 화소는 그대로 사용 | OpenAI 이용약관 |
+| templates/template-image1.png | 본인 제작(AI 생성). 본인이 ChatGPT로 직접 생성한 이미지(기본 템플릿 1의 배경). 원본 파일에 든 생성 정보(콘텐츠 자격 증명)는 제거하고 화소는 그대로 사용 | OpenAI 이용약관 |
+| templates/template-image2.png | 본인 제작(AI 생성). 본인이 ChatGPT로 직접 생성한 이미지(기본 템플릿 2의 배경). 원본 파일에 든 생성 정보(콘텐츠 자격 증명)는 제거하고 화소는 그대로 사용 | OpenAI 이용약관 |
+| templates/template-image3.png | 본인 제작(AI 생성). 본인이 ChatGPT로 직접 생성한 이미지(기본 템플릿 3의 배경). 원본 파일에 든 생성 정보(콘텐츠 자격 증명)는 제거하고 화소는 그대로 사용 | OpenAI 이용약관 |
+
 ## 카드 배경 (samples/backgrounds/)
 | 파일 | 출처 | 사용 허가 근거 |
 |---|---|---|

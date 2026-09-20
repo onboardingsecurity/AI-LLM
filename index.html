@@ -10,59 +10,67 @@
   <link rel="preload" href="fonts/gamja-flower-400.woff2" as="font" type="font/woff2" crossorigin>
 </head>
 <body>
-  <header class="topbar">
-    <h1>밈 카드 스튜디오</h1>
-  </header>
+  <h1 class="visually-hidden">밈 카드 스튜디오</h1>
 
   <main class="layout">
     <section class="stage" aria-label="미리보기">
-      <div class="toolbar">
+      <div class="canvas-wrap">
+        <img class="deco-left" src="assets/left.png" alt="" aria-hidden="true" decoding="async">
+        <ul id="tpl-defaults" class="tpl-defaults" aria-label="기본 템플릿"></ul>
+        <canvas id="preview" width="1080" height="1080" tabindex="0"
+                aria-label="미리보기. 문구를 끌어서 옮기거나 화살표 키로 옮길 수 있습니다."></canvas>
         <fieldset class="ratio">
-          <legend>화면비</legend>
+          <legend class="visually-hidden">화면비</legend>
           <label><input type="radio" name="ratio" value="1:1" checked><span>1:1</span></label>
           <label><input type="radio" name="ratio" value="4:5"><span>4:5</span></label>
           <label><input type="radio" name="ratio" value="9:16"><span>9:16</span></label>
         </fieldset>
-        <button type="button" id="download-btn" class="primary">PNG로 내려받기</button>
+        <div class="strip-actions">
+          <button type="button" id="change-image" class="pixel-link change-image" hidden>이미지 바꾸기</button>
+          <button type="button" id="download-btn" class="pixel-link" hidden>내려받기</button>
+        </div>
+        <div id="upload-card" class="upload" role="group" aria-label="이미지 올리기">
+          <button type="button" id="upload-start" class="pixel-btn"><span class="pixel-plus" aria-hidden="true"></span>이미지로 시작</button>
+          <p class="upload-drop">또는 여기에 이미지 끌어다 놓기</p>
+          <button type="button" id="upload-skip" class="pixel-link">이미지 없이 시작</button>
+        </div>
       </div>
-      <div class="canvas-wrap">
-        <canvas id="preview" width="1080" height="1080" tabindex="0"
-                aria-label="미리보기. 문구를 끌어서 옮기거나 화살표 키로 옮길 수 있습니다."></canvas>
+      <input id="file-input" class="visually-hidden" type="file" accept="image/png,image/jpeg,.png,.jpg,.jpeg" tabindex="-1" aria-hidden="true">
+      <div class="notes">
+        <p id="message" class="message" role="status" aria-live="polite"></p>
+        <p id="export-message" class="message" role="status" aria-live="polite"></p>
       </div>
-      <p class="hint">문구를 끌어서 위치를 옮기세요. 화살표 키로도 옮길 수 있습니다.</p>
-      <p id="export-message" class="message" role="status" aria-live="polite"></p>
     </section>
 
     <aside class="tools" aria-label="편집 도구">
-      <section class="tool" aria-labelledby="image-tool-title">
-        <h2 id="image-tool-title">이미지</h2>
-        <label class="file-btn">
-          이미지 불러오기 (PNG, JPEG)
-          <input id="file-input" type="file" accept="image/png,image/jpeg,.png,.jpg,.jpeg">
-        </label>
-        <p id="image-name" class="meta">불러온 이미지가 없습니다.</p>
-        <p id="message" class="message" role="status" aria-live="polite"></p>
-      </section>
-
-      <section class="tool" aria-labelledby="text-tool-title">
+      <section class="tool tool-text" aria-labelledby="text-tool-title">
         <h2 id="text-tool-title">문구</h2>
-        <label class="field">
-          <span>내용</span>
-          <textarea id="text-input" rows="3" maxlength="200">문구를 입력하세요</textarea>
-          <span class="meta"><output id="text-count">0 / 200</output> (200자까지 입력할 수 있습니다)</span>
-        </label>
-        <p id="fit-note" class="message" role="status" aria-live="polite" hidden></p>
-        <label class="field">
-          <span>크기 <output id="size-out">96</output></span>
-          <input id="size-input" type="range" min="24" max="240" step="1" value="96">
-        </label>
-        <label class="field">
-          <span>색 <output id="color-out">#ffffff</output></span>
-          <input id="color-input" type="color" value="#ffffff">
-        </label>
+        <fieldset id="text-fields" class="text-fields" disabled>
+          <label class="field">
+            <span class="visually-hidden">내용</span>
+            <textarea id="text-input" rows="3" maxlength="50" aria-label="문구 내용">문구를 끌어서 위치를 옮기세요.
+화살표 키로도 옮길 수 있습니다.</textarea>
+          </label>
+          <p id="fit-note" class="message" role="status" aria-live="polite" hidden></p>
+          <div class="field">
+            <div class="field-head">
+              <span id="size-label">크기 <output id="size-out">26</output></span>
+              <span class="stepper">
+                <button type="button" id="size-dec" class="step-btn" aria-label="크기 줄이기">&minus;</button>
+                <button type="button" id="size-inc" class="step-btn" aria-label="크기 키우기">+</button>
+              </span>
+              <button type="button" id="text-clear" class="step-btn clear-btn">문구 지우기</button>
+            </div>
+            <input id="size-input" type="range" min="16" max="100" step="1" value="26" aria-labelledby="size-label">
+          </div>
+          <label class="field">
+            <span>색 <output id="color-out">#222222</output></span>
+            <input id="color-input" type="color" value="#222222">
+          </label>
+        </fieldset>
       </section>
 
-      <section class="tool" aria-labelledby="template-tool-title">
+      <section class="tool tool-template" aria-labelledby="template-tool-title">
         <h2 id="template-tool-title">템플릿</h2>
         <label class="field">
           <span>이름 <small>(최대 40자, 비우면 자동 이름)</small></span>
@@ -88,6 +96,7 @@
         </div>
         <ul id="tpl-list" class="tpl-list" aria-label="저장한 템플릿 목록"></ul>
         <p id="tpl-empty" class="meta">저장한 템플릿이 없습니다.</p>
+        <div class="deco-right" aria-hidden="true"><img src="assets/right.png" alt="" decoding="async"></div>
       </section>
     </aside>
   </main>

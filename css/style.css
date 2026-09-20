@@ -12,82 +12,173 @@
   --text: #1c2430;
   --muted: #5b6675;
   --line: #d5dae1;
-  --accent: #2456d6;
+  --accent: #c2410c;      /* 버튼 등 강조색(주황). 흰 바탕 위에서 글씨 대비 5.2 */
+  --on-accent: #ffffff;   /* 강조색 바탕 위의 글씨 */
   --error: #b3261e;
   --ok: #1b6e3c;
   --stage-bg: #dfe3e9;
+  --layout-w: 1200px;   /* 가운데 정렬되는 화면의 최대 폭 */
+  --top-space: 52px;    /* 화면 맨 위 여백(예전에 제목 바가 있던 높이) */
+  --notes-h: 66px;      /* 미리보기 아래 안내 줄(불러온 이미지 이름, 안내, 거부 이유)이 차지하는 높이. 큰 화면의 캔버스 높이 계산에 쓴다 */
+  --ui-scale: 0.85;     /* 큰 화면에서 화면 전체를 줄이는 비율(1이면 화면을 꽉 채운다) */
+  color-scheme: light;   /* 맥이 어두운 모드여도 항상 밝은 화면(스크롤바, 입력 부품 포함) */
 }
-@media (prefers-color-scheme: dark) {
-  :root {
-    --bg: #12161c;
-    --panel: #1b212a;
-    --text: #e8ecf1;
-    --muted: #a3adba;
-    --line: #313a46;
-    --accent: #7ea2ff;
-    --error: #ff8a80;
-    --ok: #7fd6a0;
-    --stage-bg: #0d1116;
-  }
+@media (min-width: 1700px) {
+  :root { --layout-w: 1560px; }
 }
 
 * { box-sizing: border-box; }
+/* 서비스 전체에서 같은 마우스 커서를 쓴다. 클릭 위치는 이미지의 뾰족한 끝(위쪽 가운데)이다. */
+* { cursor: url("../assets/mouse-cursor.png") 4 0, auto; }
 html, body { margin: 0; }
+
 body {
   background: var(--bg);
   color: var(--text);
   font-family: "Gamja Flower", system-ui, -apple-system, "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
   line-height: 1.5;
+  padding-top: var(--top-space);
 }
 
-.topbar { padding: 12px 16px; border-bottom: 1px solid var(--line); background: var(--panel); }
-.topbar h1 { margin: 0; font-size: 18px; }
+/* 서비스 페이지 배경. 스크롤해도 화면에 고정되고, 창 크기에 맞춰 채운다(assets/background.png는 이미지 출처가 CREDITS.md에 있다). */
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  background: url("../assets/background.png") center / cover no-repeat;
+}
+
+/* 화면에는 보이지 않지만 스크린 리더는 읽는 제목(맨 위 제목 바는 없앴다) */
+.visually-hidden { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; border: 0; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 
 .layout {
   display: grid;
   grid-template-columns: minmax(0, 1fr) 320px;
   gap: 16px;
   padding: 16px;
-  max-width: 1200px;
+  max-width: var(--layout-w);
   margin: 0 auto;
   align-items: start;
 }
 
 .stage { min-width: 0; }
 .canvas-wrap {
+  position: relative;
   background: var(--stage-bg);
   border-radius: 8px;
-  padding: 12px;
+  /* 위아래 회색 띠를 같은 높이(--wrap-top)로 둬서 이미지가 사방 가운데에 온다. 위쪽 띠에 "이미지 바꾸기" 버튼이 앉는다(어느 화면비에서도 이미지 위에 겹치지 않는다) */
+  padding: var(--wrap-top) 12px;
   display: flex;
   justify-content: center;
+  align-items: center;
 }
+/* 미리보기 창 바로 바깥 왼쪽 여백의 아래쪽에 서 있는 캐릭터(assets/left.png, 500x500).
+   그림 안의 캐릭터는 가로 18.2%~86%, 세로 20.8%~83.2%이고 나머지는 투명하다.
+   --space는 창 왼쪽 바깥에 남는 폭(가운데 정렬된 화면 --layout-w 바깥 여백 + 화면 안쪽 여백에서 창과의 간격 8px을 뺀 값)이다.
+   캐릭터(그림 폭의 67.8%)가 그 폭에 꼭 맞도록 그림 폭을 잡고, 캐릭터 오른쪽 끝이 창에서 8px 떨어지고 발이 창 아래쪽 끝에 닿게 놓는다. */
+.deco-left {
+  --space: calc((100vw - min(100vw, var(--layout-w))) / 2 + 8px);
+  --w: min(500px, calc(var(--space) / 0.678));
+  position: absolute;
+  width: var(--w);
+  height: auto;
+  right: calc(100% - 0.14 * var(--w) + 8px);
+  bottom: calc(-0.168 * var(--w));
+  pointer-events: none;
+  user-select: none;
+}
+/* 맨 오른쪽 패널(템플릿) 바로 바깥 오른쪽 여백의 아래쪽에 서 있는 캐릭터(assets/right.png, 1230x1279).
+   그림 안의 캐릭터는 (335,162)에서 560x970 크기이고 나머지는 투명하므로, 그 부분만 상자로 잘라 보여 준다(상자 밖으로 삐져나가 가로 스크롤이 생기지 않는다).
+   상자 폭 --cw는 오른쪽 바깥 여백(왼쪽 캐릭터와 같은 --space)에 꼭 맞고, 왼쪽이 패널 테두리에서 8px 떨어지며 발이 패널 아래쪽 끝에 닿는다(패널 테두리 1px를 보정). */
+.tool-template { position: relative; }
+.deco-right {
+  --space: calc((100vw - min(100vw, var(--layout-w))) / 2 + 8px);
+  --cw: min(560px, var(--space));
+  position: absolute; left: calc(100% + 9px); bottom: -1px;
+  width: var(--cw); height: calc(var(--cw) * 970 / 560);
+  overflow: hidden; pointer-events: none; user-select: none;
+}
+.deco-right img {
+  position: absolute; max-width: none; height: auto;
+  width: calc(var(--cw) * 1230 / 560);
+  left: calc(var(--cw) * -335 / 560); top: calc(var(--cw) * -162 / 560);
+}
+@media (max-width: 1279px) {
+  .deco-left, .deco-right { display: none; } /* 바깥 여백이 좁아 캐릭터가 너무 작아지면 숨긴다 */
+}
+/* 이미지 올리기 카드(픽셀 아트): 이미지를 불러오기 전에 미리보기 창 안을 채운다.
+   테두리는 네 방향으로 4px씩 어긋난 단색 그림자로 그려서 모서리가 계단처럼 깎여 보이게 하고, 그림자는 흐리지 않고 딱딱하게 둔다. */
+:root { --pixel-ink: #3b2a1e; --wrap-top: 58px; } /* 미리보기 창 위쪽 회색 띠 높이 */
+.upload {
+  position: absolute; inset: 4px; z-index: 1; /* 창 전체를 덮는다(픽셀 테두리 4px가 창 바깥 끝에 닿는다). 이미지를 넣은 뒤의 회색 창과 같은 크기 */
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 18px;
+  background: repeating-conic-gradient(#ffe9d2 0% 25%, #ffffff 0% 50%) 0 0 / 32px 32px;   /* 16px 칸 체크무늬 */
+  image-rendering: pixelated;
+  box-shadow: 0 -4px 0 var(--pixel-ink), 0 4px 0 var(--pixel-ink), -4px 0 0 var(--pixel-ink), 4px 0 0 var(--pixel-ink);
+}
+.upload[hidden] { display: none; }
+/* 회색 창 위쪽 띠의 오른쪽: [이미지 바꾸기/넣기] [내려받기]. 오른쪽 끝(내려받기)은 창 오른쪽 끝에서 왼쪽의 화면비 1:1 버튼과 같은 여백(18px)만큼 띄운다(화면비와 무관하게 고정). */
+.strip-actions { position: absolute; top: 14px; right: 20px; /* 테두리 바깥 기준으로 창 오른쪽 끝에서 18px = 화면비 1:1 버튼의 왼쪽 여백과 같다 */ z-index: 3; display: flex; align-items: center; gap: 8px; }
+/* 내려받기도 화면비 버튼, 이미지 바꾸기 버튼과 같은 픽셀 버튼이다(같은 높이, 글씨 크기). 가로는 넉넉하게 넓혔다. */
+.strip-actions .pixel-link { margin: 0; padding: 10px 9px; font-size: 13px; line-height: 1.25;
+  box-shadow: 0 -2px 0 var(--pixel-ink), 0 2px 0 var(--pixel-ink), -2px 0 0 var(--pixel-ink), 2px 0 0 var(--pixel-ink); }
+.change-image[hidden], #download-btn[hidden] { display: none; }
+#download-btn { min-width: 92px; }
+.canvas-wrap.empty { background: transparent; }   /* 올리기 카드가 열려 있는 동안은 회색 창 바탕을 없앤다 */
+.upload.dragover { background: repeating-conic-gradient(#ffc999 0% 25%, #fff3e6 0% 50%) 0 0 / 32px 32px; outline: 4px dashed var(--accent); outline-offset: 8px; }
+.pixel-btn {
+  font: inherit; font-size: 22px; color: var(--on-accent); background: var(--accent);
+  display: inline-flex; align-items: center; gap: 12px; padding: 14px 30px; margin: 4px; border: 0; border-radius: 0;
+  box-shadow: 0 -4px 0 var(--pixel-ink), 0 4px 0 var(--pixel-ink), -4px 0 0 var(--pixel-ink), 4px 0 0 var(--pixel-ink),
+              inset -4px -4px 0 rgba(0, 0, 0, 0.25), inset 4px 4px 0 rgba(255, 255, 255, 0.3);
+}
+.pixel-btn:hover { filter: brightness(1.1); }
+.pixel-btn:active { transform: translateY(4px); }
+.pixel-btn:focus-visible, .pixel-link:focus-visible { outline: 4px dashed var(--pixel-ink); outline-offset: 8px; }
+.pixel-plus { width: 16px; height: 16px; background: linear-gradient(#fff, #fff) center / 16px 4px no-repeat, linear-gradient(#fff, #fff) center / 4px 16px no-repeat; }
+.upload-drop { margin: 0; font-size: 19px; color: var(--pixel-ink); }   /* 바탕 없이 글씨만 */
+.pixel-link {
+  font: inherit; font-size: 15px; color: var(--pixel-ink); background: #fff; margin: 3px; padding: 5px 14px; border: 0; border-radius: 0;
+  box-shadow: 0 -3px 0 var(--pixel-ink), 0 3px 0 var(--pixel-ink), -3px 0 0 var(--pixel-ink), 3px 0 0 var(--pixel-ink);
+}
+.pixel-link:hover { background: #ffe9d2; }
+.pixel-link:active { transform: translateY(3px); }
 #preview {
   display: block;
   --ratio: 1;
   width: min(100%, 640px, calc((100vh - 250px) * var(--ratio)));
   height: auto;
   background: #888;
-  cursor: grab;
   touch-action: none;
   border-radius: 4px;
 }
-#preview.dragging { cursor: grabbing; }
 #preview:focus-visible,
+textarea:focus-visible,
+input[type="text"]:focus-visible,
 .ratio input:focus-visible + span,
 button.primary:focus-visible,
 button.secondary:focus-visible,
 .tpl-actions button:focus-visible,
 .file-btn:focus-within { outline: 3px solid var(--accent); outline-offset: 2px; }
-.toolbar { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 12px; margin-bottom: 8px; }
-.ratio { display: flex; align-items: center; gap: 6px; margin: 0; padding: 0; border: 0; min-width: 0; }
-.ratio legend { float: left; padding: 0 8px 0 0; font-size: 14px; font-weight: 700; }
+.ratio { display: flex; align-items: center; gap: 10px; margin: 0; padding: 0; border: 0; min-width: 0; }
+/* 화면비 선택은 미리보기 창 안 위쪽 띠의 왼쪽에 있다(오른쪽에는 "이미지 바꾸기" 버튼). 올리기 카드가 열려 있어도 카드 위에서 눌러 바꿀 수 있다. */
+.canvas-wrap > .ratio { position: absolute; left: 12px; top: 32px; transform: translateY(-50%); z-index: 3; padding: 3px 8px; border-radius: 6px; }
+.canvas-wrap.empty > .ratio { background: #fff; }
 .ratio label { position: relative; }
-.ratio input { position: absolute; opacity: 0; inset: 0; margin: 0; cursor: pointer; }
-.ratio span { display: block; min-width: 52px; text-align: center; padding: 6px 10px; border: 1px solid var(--line); border-radius: 6px; background: var(--panel); font-size: 14px; font-variant-numeric: tabular-nums; }
-.ratio input:checked + span { border-color: var(--accent); background: var(--accent); color: #fff; font-weight: 700; }
-button.primary { font: inherit; font-weight: 700; padding: 8px 14px; border: 0; border-radius: 6px; background: var(--accent); color: #fff; cursor: pointer; }
-button.primary:disabled { opacity: .6; cursor: progress; }
-.hint { margin: 8px 0 0; font-size: 13px; color: var(--muted); }
+.ratio input { position: absolute; opacity: 0; inset: 0; margin: 0; }
+/* 화면비 선택은 "이미지 바꾸기" 버튼과 같은 픽셀 버튼 모양이다(흰 바탕, 2px 픽셀 테두리, 같은 글씨 크기와 높이). 선택된 것은 주황으로 채운다. */
+.ratio span { display: block; min-width: 57.3px; /* 예전에 "화면비" 글씨가 차지하던 폭(약 52px)을 세 버튼이 나눠 가졌다 */ text-align: center; padding: 10px 9px; border: 0; border-radius: 0; background: #fff; color: var(--pixel-ink); font-size: 13px; line-height: 1.25; font-variant-numeric: tabular-nums;
+  box-shadow: 0 -2px 0 var(--pixel-ink), 0 2px 0 var(--pixel-ink), -2px 0 0 var(--pixel-ink), 2px 0 0 var(--pixel-ink); }
+.ratio label:hover span { background: #ffe9d2; }
+.ratio label:active span { transform: translateY(2px); }
+.ratio input:checked + span { background: var(--accent); color: var(--on-accent); }
+button.primary { font: inherit; font-weight: 700; padding: 8px 14px; border: 0; border-radius: 6px; background: var(--accent); color: var(--on-accent); }
+button.primary:disabled { opacity: .6; }
+/* 미리보기 아래 안내 줄: 불러온 이미지 이름, 이미지 안내·거부 이유, 내려받기 결과를 한 곳에 모은다. 비어 있는 항목은 자리를 차지하지 않는다. */
+.notes { display: flex; flex-wrap: wrap; align-items: baseline; gap: 0 14px; margin-top: 6px; }
+.notes > p { margin: 0; min-height: 0; }
+.notes > p:empty { display: none; }
 
 .tools { display: grid; gap: 12px; }
 .tool {
@@ -105,7 +196,6 @@ button.primary:disabled { opacity: .6; cursor: progress; }
   border: 1px dashed var(--accent);
   color: var(--accent);
   border-radius: 6px;
-  cursor: pointer;
   font-weight: 700;
 }
 .file-btn input { position: absolute; width: 1px; height: 1px; opacity: 0; overflow: hidden; }
@@ -129,10 +219,21 @@ input[type="text"] {
   color: var(--text);
 }
 textarea { resize: vertical; }
-input[type="range"] { width: 100%; }
+input[type="range"] { width: 100%; accent-color: var(--accent); }
 input[type="color"] { width: 100%; height: 36px; padding: 2px; border: 1px solid var(--line); border-radius: 6px; background: var(--bg); }
 
 .field small { color: var(--muted); font-weight: 400; }
+.text-fields { margin: 0; padding: 0; border: 0; min-width: 0; }
+.text-fields:disabled { opacity: .55; } /* 이미지를 넣기 전에는 문구 도구를 쓸 수 없다 */
+.field-head { display: flex; align-items: center; gap: 10px; }
+.stepper { display: inline-flex; gap: 6px; }
+.step-btn {
+  font: inherit; font-weight: 700; font-size: 18px; line-height: 1; width: 32px; height: 28px; padding: 0;
+  border: 1px solid var(--accent); border-radius: 6px; background: transparent; color: var(--accent);
+}
+.clear-btn { width: auto; margin-left: auto; padding: 0 10px; font-size: 13px; } /* 오른쪽 끝 */
+.step-btn:disabled { opacity: .4; }
+.step-btn:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
 .btn-row { display: grid; gap: 8px; margin-top: 8px; }
 .field + .btn-row { margin-top: 0; }
 button.secondary, .tpl-actions button {
@@ -143,13 +244,36 @@ button.secondary, .tpl-actions button {
   background: transparent;
   color: var(--accent);
   font-weight: 700;
-  cursor: pointer;
 }
-button.secondary:disabled { opacity: .5; cursor: not-allowed; }
-.tpl-actions button.danger { border-color: var(--error); color: var(--error); }
+button.secondary:disabled { opacity: .5; }
 .tpl-problems { margin: 4px 0 8px; padding-left: 18px; font-size: 13px; color: var(--error); overflow-wrap: anywhere; }
 .tpl-list { list-style: none; margin: 8px 0 0; padding: 0; display: grid; gap: 8px; }
-.tpl-list li { border: 1px solid var(--line); border-radius: 6px; padding: 8px 10px; background: var(--bg); }
+.tpl-list:empty { display: none; } /* 직접 만든 템플릿이 없으면 빈 자리를 두지 않고 안내 문장이 바로 아래에 온다 */
+.tpl-list li { display: grid; grid-template-columns: 88px minmax(0, 1fr); gap: 10px; align-items: start; border: 1px solid var(--line); border-radius: 6px; padding: 8px 10px; background: var(--bg); }
+/* 목록의 카드 그림: 카드와 같은 화면비 모양으로 높이 88px, 테두리는 올리기 카드와 같은 픽셀 스타일 */
+.tpl-thumb { justify-self: center; height: 88px; margin: 2px; background: #efe7d2;
+  box-shadow: 0 -2px 0 var(--pixel-ink), 0 2px 0 var(--pixel-ink), -2px 0 0 var(--pixel-ink), 2px 0 0 var(--pixel-ink); }
+.tpl-thumb img { display: block; width: 100%; height: 100%; }
+button.tpl-thumb { padding: 0; border: 0; font: inherit; }
+button.tpl-thumb:focus-visible { outline: 3px solid var(--accent); outline-offset: 4px; }
+/* 기본 템플릿: 미리보기 창 바로 바깥 왼쪽 여백에 위에서부터 세로로 놓는다. 왼쪽 캐릭터(.deco-left)는 창 아래쪽 끝에 서 있어서 서로 겹치지 않고,
+   캐릭터의 크기와 위치는 이 목록과 무관하다(둘 다 절대 위치). 폭은 캐릭터와 같은 왼쪽 여백(--space)에 맞춘다. */
+.tpl-defaults {
+  --space: calc((100vw - min(100vw, var(--layout-w))) / 2 + 8px);
+  --dh: min(88px, calc(var(--space) - 8px)); /* 가장 넓은 1:1 그림도 여백 안에 들어오게 그림 높이를 정한다 */
+  list-style: none; margin: 0; padding: 0;
+  position: absolute; top: 0; right: calc(100% + 8px); width: var(--space);
+  display: flex; flex-direction: column; align-items: center; gap: 16px;
+}
+.tpl-defaults li { padding: 3px; }
+.tpl-defaults .tpl-thumb { height: var(--dh); margin: 2px; }
+.tpl-defaults li.selected { outline: 3px solid var(--accent); outline-offset: 1px; }
+@media (max-width: 1279px) {
+  /* 왼쪽 여백이 없으면 기본 템플릿은 창 안쪽 위에 가로로 놓는다 */
+  .canvas-wrap { flex-wrap: wrap; }
+  .tpl-defaults { position: static; width: auto; flex-basis: 100%; flex-direction: row; justify-content: center; margin-bottom: 8px; }
+  .tpl-defaults .tpl-thumb { height: 64px; }
+}
 .tpl-list li.selected { border-color: var(--accent); box-shadow: inset 3px 0 0 var(--accent); }
 .tpl-name { display: block; font-weight: 700; overflow-wrap: anywhere; }
 .tpl-memo { display: block; font-size: 13px; overflow-wrap: anywhere; }
@@ -161,3 +285,32 @@ button.secondary:disabled { opacity: .5; cursor: not-allowed; }
   .layout { grid-template-columns: minmax(0, 1fr); padding: 12px 16px; }
   #preview { width: min(100%, calc(46vh * var(--ratio))); }
 }
+
+/* 큰 화면(폭 1200px 이상, 높이 560px 이상)에서는 스크롤 없이 한 페이지에 다 보이게 한다.
+   화면 높이에 맞춰 위쪽 제목줄 아래를 꽉 채우고, 오른쪽 도구는 두 열(이미지+문구 / 템플릿)로 나눈다.
+   템플릿이 많아지면 페이지가 아니라 목록 안에서만 스크롤된다. 창이 이보다 작으면 위의 기본 배치(스크롤 있음)를 쓴다. */
+@media (min-width: 1200px) and (min-height: 560px) {
+  body { display: flex; flex-direction: column; height: 100vh; height: 100dvh; }
+  /* 배치는 창을 꽉 채우도록 계산하고, 그려질 때 --ui-scale만큼 줄여 가운데에 둔다(사방에 여백이 생긴다). 스크롤 조건은 그대로다. */
+  .layout { transform: scale(var(--ui-scale)); transform-origin: center center; }
+  /* 줄어든 만큼 작은 글씨는 키워서 화면에서 보이는 크기를 12px 안팎으로 맞춘다 */
+  .meta, .field small, .tpl-memo, .tpl-problems { font-size: 14px; }
+  .tpl-info { font-size: 13.5px; }
+  .tpl-actions button { font-size: 14px; }
+  .layout { flex: 1 1 0; min-height: 0; width: 100%; grid-template-columns: minmax(0, 1fr) 616px; grid-template-rows: minmax(0, 1fr); align-items: stretch; }
+  .stage { display: flex; flex-direction: column; min-height: 0; }
+  /* 미리보기 창(회색 창, 이미지 넣기 전에는 올리기 카드)의 높이는 화면 높이에서 정한다: 위쪽 여백 --top-space + 바깥 여백 32 + 안내 줄 --notes-h + 여유 6. 화면비와 이미지 유무에 관계없이 같다.
+     캔버스 높이는 창 높이에서 위아래 띠(--wrap-top씩)를 뺀 값이고, 폭은 화면비로 정한다. 안내 줄이 넘치면 그 안에서만 스크롤된다. */
+  .canvas-wrap { box-sizing: border-box; height: calc(100vh - var(--top-space) - 38px - var(--notes-h)); height: calc(100dvh - var(--top-space) - 38px - var(--notes-h)); }
+  #preview { width: min(100%, calc((100vh - var(--top-space) - 38px - var(--notes-h) - 2 * var(--wrap-top)) * var(--ratio)));  width: min(100%, calc((100dvh - var(--top-space) - 38px - var(--notes-h) - 2 * var(--wrap-top)) * var(--ratio))); }
+  .tools { grid-template-columns: 300px 300px; grid-template-rows: auto minmax(0, 1fr); align-content: start; min-height: 0; }
+  .notes { max-height: calc(var(--notes-h) - 6px); overflow-y: auto; }
+  .tool-text { grid-column: 1; grid-row: 1; align-self: start; }
+  .tool-template { grid-column: 2; grid-row: 1 / span 2; min-height: 0; display: flex; flex-direction: column; }
+  .tool-template .btn-row { grid-template-columns: 1fr 1fr; }
+  .tool-template .btn-row > * { word-break: keep-all; padding-left: 8px; padding-right: 8px; } /* 두 버튼이 반반 폭이라 띄어쓰기에서만 줄을 바꾼다 */
+  .tool-template .tpl-problems { max-height: 84px; overflow-y: auto; }
+  .tool-template .tpl-list { flex: 1 1 0; min-height: 64px; overflow-y: auto; align-content: start; }
+}
+
+#text-input::placeholder { color: var(--text); opacity: .75; } /* 입력이 막혔을 때 이유 안내 */

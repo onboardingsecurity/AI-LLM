@@ -15,35 +15,51 @@
   var TEXT_MAX_W = 0.9;   // 문구 폭 한도 (캔버스 폭 대비)
   var TEXT_MAX_H = 0.9;   // 문구 높이 한도 (캔버스 높이 대비)
   var MIN_FIT_SIZE = 16;  // 자동 축소의 최소 크기
+  var TEXT_LOCK_MESSAGE = "이미지를 넣어주세요.";
+  var SIZE_MIN = 16;      // 문구 크기 조작(슬라이더, +/-)의 범위
+  var SIZE_MAX = 100;
+  var SIZE_DATA_MAX = 240; // 저장 데이터가 허용하는 최대값. 예전에 최대 240까지 저장한 템플릿과 JSON도 계속 읽을 수 있게 그대로 둔다.
+  // 기본 문구와 위치. 처음 열 때, 이미지를 넣을 때, 기본 템플릿을 만들 때 같은 값을 쓴다.
+  var DEFAULT_TEXT = "문구를 끌어서 위치를 옮기세요.\n화살표 키로도 옮길 수 있습니다.";
+  var DEFAULT_SIZE = 26;
+  var DEFAULT_X = 0.5;
+  var DEFAULT_Y = 0.7;    // 가운데에서 아래쪽
 
   // ---- 상태 (화면이 아니라 이 객체가 원본이다) --------------------------------
   var state = {
     ratio: "1:1",
     image: null,       // ImageBitmap 또는 null
     imageName: "",
-    text: "문구를 입력하세요",
-    size: 96,          // 1080 기준 px
-    color: "#ffffff",
-    x: 0.5,            // 캔버스 폭 대비 문구 중심 위치 (0~1)
-    y: 0.5             // 캔버스 높이 대비 문구 중심 위치 (0~1)
+    blank: false,      // 이미지 없이 흰 카드로 시작했는가(이미지가 없어도 문구를 고칠 수 있는 상태)
+    text: DEFAULT_TEXT,
+    size: DEFAULT_SIZE,          // 1080 기준 px
+    color: "#222222",  // 기본 글자색(기본 배경이 흰색이라 어둡게)
+    x: DEFAULT_X,      // 캔버스 폭 대비 문구 중심 위치 (0~1)
+    y: DEFAULT_Y       // 캔버스 높이 대비 문구 중심 위치 (0~1)
   };
 
   // ---- 요소 ----------------------------------------------------------------
   var canvas = document.getElementById("preview");
   var ctx = canvas.getContext("2d");
   var fileInput = document.getElementById("file-input");
-  var imageNameEl = document.getElementById("image-name");
+  var uploadEl = document.getElementById("upload-card");
+  var uploadStartBtn = document.getElementById("upload-start");
+  var uploadSkipBtn = document.getElementById("upload-skip");
+  var changeImageBtn = document.getElementById("change-image");
   var messageEl = document.getElementById("message");
   var textInput = document.getElementById("text-input");
   var sizeInput = document.getElementById("size-input");
   var sizeOut = document.getElementById("size-out");
+  var sizeDecBtn = document.getElementById("size-dec");
+  var sizeIncBtn = document.getElementById("size-inc");
+  var textFieldsEl = document.getElementById("text-fields");
   var colorInput = document.getElementById("color-input");
   var colorOut = document.getElementById("color-out");
   var ratioInputs = document.querySelectorAll('input[name="ratio"]');
   var downloadBtn = document.getElementById("download-btn");
   var exportMessageEl = document.getElementById("export-message");
   var fitNoteEl = document.getElementById("fit-note");
-  var textCountEl = document.getElementById("text-count");
+  var textClearBtn = document.getElementById("text-clear");
   var tplNameInput = document.getElementById("tpl-name");
   var tplMemoInput = document.getElementById("tpl-memo");
   var tplSaveNewBtn = document.getElementById("tpl-save-new");
@@ -51,6 +67,7 @@
   var tplSelectedEl = document.getElementById("tpl-selected");
   var tplMessageEl = document.getElementById("tpl-message");
   var tplListEl = document.getElementById("tpl-list");
+  var tplDefaultsEl = document.getElementById("tpl-defaults"); // 미리보기 창 왼쪽에 세로로 놓이는 기본 템플릿 그림
   var tplEmptyEl = document.getElementById("tpl-empty");
   var tplProblemsEl = document.getElementById("tpl-problems");
   var tplExportBtn = document.getElementById("tpl-export");
@@ -69,10 +86,7 @@
       c.drawImage(image, (w - dw) / 2, (h - dh) / 2, dw, dh);
       return;
     }
-    var g = c.createLinearGradient(0, 0, w, h);
-    g.addColorStop(0, "#3b4658");
-    g.addColorStop(1, "#1f2733");
-    c.fillStyle = g;
+    c.fillStyle = "#ffffff";   // 이미지를 불러오지 않았을 때의 기본 배경
     c.fillRect(0, 0, w, h);
   }
 
@@ -231,8 +245,6 @@
   }
 
   // 저장하지 않은 편집이 있는지. 템플릿을 불러와 덮어쓰기 전에 사용자에게 알리는 데 쓴다.
-  var dirty = false;
-  function markDirty() { dirty = true; }
 
   // ---- 메시지 --------------------------------------------------------------
   function setStatus(el, text, kind) {
@@ -240,6 +252,30 @@
     el.className = "message" + (kind ? " " + kind : "");
   }
   function setMessage(text, kind) { setStatus(messageEl, text, kind); }
+
+  // 이미지를 불러오기 전에 미리보기 창을 채우는 올리기 카드.
+  // 이미지를 불러왔거나, 편집을 시작했거나, "이미지 없이 시작"을 누르면 닫는다. 카드가 덮고 있는 동안 캔버스에는 초점이 가지 않는다.
+  function setUploadOpen(open) {
+    uploadEl.hidden = !open;
+    uploadEl.parentNode.classList.toggle("empty", open); // 카드가 열려 있는 동안은 미리보기 창의 회색 바탕을 없앤다
+    canvas.inert = open;
+    // 카드를 닫으면 미리보기 창 모서리에 이미지를 다시 고르는 버튼을 보여 준다. 이미지가 있으면 "바꾸기", 없으면 "넣기".
+    changeImageBtn.hidden = open;
+    downloadBtn.hidden = open; // "이미지 바꾸기" 버튼이 안 보이면 "내려받기"도 안 보인다
+    changeImageBtn.textContent = state.image ? "이미지 바꾸기" : "이미지 넣기";
+    uploadSkipBtn.textContent = state.image || state.blank ? "돌아가기" : "이미지 없이 시작";
+    if (!open) uploadEl.classList.remove("dragover");
+    updateTextLock();
+  }
+
+  // 이미지를 넣거나 "이미지 없이 시작"(흰 카드)을 누르기 전에는 문구 도구(내용, 크기, 색)를 쓸 수 없다.
+  function updateTextLock() {
+    var locked = !state.image && !state.blank;
+    textFieldsEl.disabled = locked;
+    // 입력이 막혀 있는 동안 입력칸에는 이유를 안내하는 글씨(placeholder)만 보이고, 풀리면 원래 문구가 나타난다.
+    textInput.placeholder = locked ? TEXT_LOCK_MESSAGE : "";
+    textInput.value = locked ? "" : state.text;
+  }
 
   // ---- 파일 검사와 불러오기 ---------------------------------------------------
   function startsWith(bytes, sig, offset) {
@@ -325,8 +361,12 @@
         closeBitmap(state.image);
         state.image = img;
         state.imageName = file.name;
-        markDirty();
-        imageNameEl.textContent = file.name + " (" + img.width + "×" + img.height + ", " + kind.type + ")";
+        // 이미지를 넣을 때마다 문구와 위치를 기본값으로 되돌린다. 크기와 색은 그대로 둔다.
+        state.text = DEFAULT_TEXT;
+        state.x = DEFAULT_X;
+        state.y = DEFAULT_Y;
+        textInput.value = DEFAULT_TEXT;
+        setUploadOpen(false);
         setMessage("\"" + file.name + "\" 이미지를 불러왔습니다.", "ok");
         draw();
       }, function () {
@@ -340,37 +380,55 @@
 
   fileInput.addEventListener("change", function () { loadFile(takeFile(fileInput)); });
 
-  document.addEventListener("dragover", function (e) { e.preventDefault(); });
+  function dragHasFiles(e) { return !!(e.dataTransfer && Array.prototype.indexOf.call(e.dataTransfer.types || [], "Files") !== -1); }
+  uploadStartBtn.addEventListener("click", function () { fileInput.click(); });
+  uploadSkipBtn.addEventListener("click", function () { state.blank = !state.image; setUploadOpen(false); }); // 이미지 없이 시작하면 흰 카드가 이미지 자리를 대신한다
+  changeImageBtn.addEventListener("click", function () { setUploadOpen(true); uploadStartBtn.focus(); });
+  document.addEventListener("dragover", function (e) {
+    e.preventDefault();
+    if (!uploadEl.hidden) uploadEl.classList.toggle("dragover", dragHasFiles(e)); // 파일을 끌고 오면 카드를 강조한다
+  });
+  document.addEventListener("dragleave", function (e) { if (!e.relatedTarget) uploadEl.classList.remove("dragover"); });
   document.addEventListener("drop", function (e) {
     e.preventDefault();
+    uploadEl.classList.remove("dragover");
     var files = e.dataTransfer && e.dataTransfer.files;
     if (files && files.length) loadFile(files[0]);
   });
 
   // ---- 문구 도구 -----------------------------------------------------------
-  function updateTextCount() {
-    textCountEl.textContent = textInput.value.length + " / " + textInput.maxLength;
-  }
-  // 상태(state)의 크기, 색, 글자 수를 화면의 숫자 표시에 반영한다.
+  // 상태(state)의 크기, 색을 화면의 숫자 표시와 +/- 버튼, 문구 지우기 버튼에 반영한다.
   function renderReadouts() {
     sizeOut.textContent = String(state.size);
+    sizeDecBtn.disabled = state.size <= SIZE_MIN;
+    sizeIncBtn.disabled = state.size >= SIZE_MAX;
     colorOut.textContent = state.color;
-    updateTextCount();
+    textClearBtn.disabled = !state.text;
   }
   textInput.addEventListener("input", function () {
-    markDirty();
     state.text = textInput.value;
-    updateTextCount();
-    redraw();
-  });
-  sizeInput.addEventListener("input", function () {
-    markDirty();
-    state.size = Number(sizeInput.value);
     renderReadouts();
     redraw();
   });
+  // 문구 지우기: 문구 내용을 통째로 비운다(크기, 색, 위치는 그대로). 빈 문구는 카드에 글자를 그리지 않는다.
+  textClearBtn.addEventListener("click", function () {
+    state.text = "";
+    textInput.value = "";
+    renderReadouts();
+    redraw();
+    textInput.focus();
+  });
+  // 슬라이더와 +/- 버튼이 같은 곳으로 크기를 바꾼다.
+  function setSize(v) {
+    state.size = Math.min(SIZE_MAX, Math.max(SIZE_MIN, Math.round(v)));
+    sizeInput.value = String(state.size);
+    renderReadouts();
+    redraw();
+  }
+  sizeInput.addEventListener("input", function () { setSize(Number(sizeInput.value)); });
+  sizeDecBtn.addEventListener("click", function () { setSize(state.size - 1); });
+  sizeIncBtn.addEventListener("click", function () { setSize(state.size + 1); });
   colorInput.addEventListener("input", function () {
-    markDirty();
     state.color = colorInput.value;
     renderReadouts();
     draw();
@@ -383,13 +441,11 @@
   canvas.addEventListener("pointerdown", function (e) {
     drag = { id: e.pointerId, px: e.clientX, py: e.clientY };
     canvas.setPointerCapture(e.pointerId);
-    canvas.classList.add("dragging");
     canvas.focus({ preventScroll: true });
   });
   canvas.addEventListener("pointermove", function (e) {
     if (!drag || e.pointerId !== drag.id) return;
     var rect = canvas.getBoundingClientRect();
-    markDirty();
     state.x = clamp01(state.x + (e.clientX - drag.px) / rect.width);
     state.y = clamp01(state.y + (e.clientY - drag.py) / rect.height);
     drag.px = e.clientX;
@@ -399,7 +455,6 @@
   function endDrag(e) {
     if (!drag || e.pointerId !== drag.id) return;
     drag = null;
-    canvas.classList.remove("dragging");
   }
   canvas.addEventListener("pointerup", endDrag);
   canvas.addEventListener("pointercancel", endDrag);
@@ -412,14 +467,13 @@
     else if (e.key === "ArrowUp") state.y = clamp01(state.y - step);
     else if (e.key === "ArrowDown") state.y = clamp01(state.y + step);
     else moved = false;
-    if (moved) { e.preventDefault(); markDirty(); draw(); }
+    if (moved) { e.preventDefault(); draw(); }
   });
 
   // ---- 화면비 선택 -----------------------------------------------------------
   Array.prototype.forEach.call(ratioInputs, function (input) {
     input.addEventListener("change", function () {
       if (!input.checked) return;
-      markDirty();
       state.ratio = input.value;
       applyRatio();
     });
@@ -485,7 +539,7 @@
   // 글자 수 한도는 입력칸(maxlength)과 같은 값을 쓴다.
   var NAME_MAX = tplNameInput.maxLength;
   var MEMO_MAX = tplMemoInput.maxLength;
-  var TEXT_MAX = textInput.maxLength;
+  var TEXT_MAX = 200; // 저장 데이터가 허용하는 문구 길이. 화면에서 입력하는 길이는 입력칸의 maxlength(50)로 제한하고, 예전에 더 길게 저장한 템플릿도 읽을 수 있게 그대로 둔다.
 
   var FILE_FORMAT = "meme-card-studio-templates"; // JSON 파일 맨 위의 format 값
   var FILE_VERSION = 1;
@@ -526,7 +580,7 @@
     need(errs, t, "", "updatedAt", "고친 시각", isTime, "날짜와 시각 문자열이어야 합니다.");
     need(errs, t, "", "ratio", "화면비", function (v) { return isStr(v) && Object.prototype.hasOwnProperty.call(RATIOS, v); }, "\"1:1\", \"4:5\", \"9:16\" 중 하나여야 합니다.");
     need(errs, t, "", "text", "문구", function (v) { return isStr(v) && v.length <= TEXT_MAX; }, "0~" + TEXT_MAX + "자 문자열이어야 합니다.");
-    need(errs, t, "", "size", "문구 크기", function (v) { return isNum(v) && v >= Number(sizeInput.min) && v <= Number(sizeInput.max); }, sizeInput.min + "~" + sizeInput.max + " 사이의 숫자여야 합니다.");
+    need(errs, t, "", "size", "문구 크기", function (v) { return isNum(v) && v >= SIZE_MIN && v <= SIZE_DATA_MAX; }, SIZE_MIN + "~" + SIZE_DATA_MAX + " 사이의 숫자여야 합니다.");
     need(errs, t, "", "color", "문구 색", function (v) { return isStr(v) && /^#[0-9a-fA-F]{6}$/.test(v); }, "#rrggbb 형식이어야 합니다.");
     need(errs, t, "", "x", "문구 가로 위치", isUnit, "0~1 사이의 숫자여야 합니다.");
     need(errs, t, "", "y", "문구 세로 위치", isUnit, "0~1 사이의 숫자여야 합니다.");
@@ -673,9 +727,6 @@
     sizeInput.value = String(state.size);
     colorInput.value = state.color;
     Array.prototype.forEach.call(ratioInputs, function (i) { i.checked = i.value === state.ratio; });
-    imageNameEl.textContent = state.image
-      ? state.imageName + " (" + state.image.width + "×" + state.image.height + ", 템플릿에서 복원)"
-      : "불러온 이미지가 없습니다.";
     renderReadouts();
     applyRatio();
     ensureFontThenDraw();
@@ -691,11 +742,9 @@
       state.image = img;
       state.imageName = rec.image ? rec.image.name : "";
       state.ratio = rec.ratio;
-      state.text = rec.text;
-      state.size = rec.size;
-      state.color = rec.color;
-      state.x = rec.x;
-      state.y = rec.y;
+      // 문구(내용, 크기, 색, 위치)는 템플릿 것으로 바꾸지 않고 지금 것을 그대로 유지한다(사용자 요청). 저장된 문구 등은 템플릿 데이터에 그대로 남는다.
+      state.blank = !img; // 이미지 없는 템플릿은 흰 카드로 시작한 것과 같다
+      setUploadOpen(false);
       syncControlsFromState();
     }, function () {
       throw new Error("저장된 이미지를 열 수 없습니다.");
@@ -737,27 +786,106 @@
     return b;
   }
 
+  // 기본 템플릿(처음 열 때 넣어 주는 3개)은 삭제 버튼이 없고 삭제도 막는다. 사용자가 만든 템플릿은 삭제할 수 있다.
+  function isDefaultTemplate(id) {
+    return DEFAULT_TEMPLATES.some(function (d) { return d.id === id; });
+  }
+
+  // 목록에 보여 줄 작은 그림. 템플릿의 카드 모양(화면비대로 꽉 채워 중앙을 자른 모습)을 미리 그려 둔다. 글자는 그리지 않는다.
+  // 같은 템플릿(같은 수정 시각, 화면비, 이미지)은 다시 만들지 않고, 없어지거나 바뀐 템플릿의 그림은 메모리에서 지운다.
+  var thumbCache = {};        // id -> { key, url, promise }
+  var thumbQueue = Promise.resolve();
+
+  function thumbKey(r) { return r.updatedAt + "|" + r.ratio + "|" + (r.image ? r.image.blob.size : 0); }
+
+  function makeThumb(rec) {
+    var ratio = RATIOS[rec.ratio];
+    var h = 176, w = Math.round(h * ratio.w / ratio.h);
+    var c = document.createElement("canvas");
+    c.width = w;
+    c.height = h;
+    var cx = c.getContext("2d");
+    cx.imageSmoothingQuality = "high";
+    function done(img) {
+      drawBackground(cx, w, h, img);   // 이미지가 없으면 카드 기본 배경(흰색)
+      closeBitmap(img);
+      return canvasToPngBlob(c).then(function (blob) { return URL.createObjectURL(blob); });
+    }
+    return rec.image ? decodeImage(rec.image.blob).then(done) : done(null);
+  }
+
+  // 목록 그림의 주소를 돌려준다. 만드는 일은 하나씩 차례로 해서 화면이 멈추지 않게 한다.
+  function thumbFor(rec) {
+    var key = thumbKey(rec), hit = thumbCache[rec.id];
+    if (hit && hit.key === key) return hit;
+    if (hit && hit.url) URL.revokeObjectURL(hit.url);
+    var entry = { key: key, url: null, promise: null };
+    entry.promise = new Promise(function (resolve) {
+      thumbQueue = thumbQueue.then(function () {
+        return makeThumb(rec).then(function (url) { entry.url = url; resolve(url); }, function () { resolve(null); });
+      });
+    });
+    thumbCache[rec.id] = entry;
+    return entry;
+  }
+
+  function dropStaleThumbs(records) {
+    var alive = {};
+    records.forEach(function (r) { alive[r.id] = true; });
+    Object.keys(thumbCache).forEach(function (id) {
+      if (alive[id]) return;
+      if (thumbCache[id].url) URL.revokeObjectURL(thumbCache[id].url);
+      delete thumbCache[id];
+    });
+  }
+
   // 저장소에 있는 내용을 그대로 읽어 목록을 다시 그린다. 화면 상태를 원본으로 삼지 않는다.
   function renderList(records) {
     sortByCreated(records);
     var sel = records.filter(function (r) { return r.id === selectedId; })[0];
     selectedId = sel ? sel.id : null;
     tplListEl.textContent = "";
+    tplDefaultsEl.textContent = "";
     records.forEach(function (r) {
       var li = document.createElement("li");
       li.dataset.id = r.id; // 수정과 삭제는 이 ID로만 대상을 찾는다.
       if (r.id === selectedId) li.className = "selected";
-      addSpan(li, "tpl-name", String(r.name));
-      if (r.memo) addSpan(li, "tpl-memo", String(r.memo));
-      addSpan(li, "tpl-info", [r.ratio, r.image ? "이미지 있음" : "이미지 없음", fmtTime(r.updatedAt)].filter(Boolean).join(" · "));
+      var isDefault = isDefaultTemplate(r.id);
+      // 기본 템플릿은 그림만 보여 주고, 그림을 누르면 불러온다(이름, 설명, 화면비, 불러오기 버튼은 두지 않는다).
+      var thumb = document.createElement(isDefault ? "button" : "div");
+      thumb.className = "tpl-thumb";
+      if (isDefault) {
+        thumb.type = "button";
+        thumb.dataset.action = "load";
+        thumb.setAttribute("aria-label", String(r.name) + " 불러오기"); // 눈에는 안 보이고 스크린 리더만 읽는다
+      }
+      var ratio = RATIOS[r.ratio];
+      if (ratio) thumb.style.aspectRatio = ratio.w + " / " + ratio.h; // 카드와 같은 모양
+      var img = document.createElement("img");
+      img.alt = "";
+      thumb.appendChild(img);
+      li.appendChild(thumb);
+      if (ratio) {
+        var t = thumbFor(r);
+        if (t.url) img.src = t.url;
+        else t.promise.then(function (url) { if (url) img.src = url; });
+      }
+      if (isDefault) { tplDefaultsEl.appendChild(li); return; }
+      var body = document.createElement("div");
+      body.className = "tpl-body";
+      addSpan(body, "tpl-name", String(r.name));
+      if (r.memo) addSpan(body, "tpl-memo", String(r.memo));
+      addSpan(body, "tpl-info", [r.ratio, r.image ? "이미지 있음" : "이미지 없음", fmtTime(r.updatedAt)].filter(Boolean).join(" · "));
       var actions = document.createElement("div");
       actions.className = "tpl-actions";
       actions.appendChild(makeButton("불러오기", "load"));
       actions.appendChild(makeButton("삭제", "delete", "danger"));
-      li.appendChild(actions);
+      body.appendChild(actions);
+      li.appendChild(body);
       tplListEl.appendChild(li);
     });
-    tplEmptyEl.hidden = records.length > 0;
+    dropStaleThumbs(records);
+    tplEmptyEl.hidden = !!tplListEl.firstChild; // 기본 템플릿은 창 왼쪽에 따로 있으므로, 이 목록은 직접 만든 것만 센다
     tplSelectedEl.textContent = sel ? "선택한 템플릿: " + sel.name + " (수정 저장을 누르면 이 템플릿을 지금 편집 내용으로 덮어씁니다.)" : "선택한 템플릿이 없습니다. 목록에서 불러오면 선택됩니다.";
     tplSaveUpdateBtn.disabled = !sel;
   }
@@ -785,7 +913,6 @@
         return buildRecord(null, name).then(function (rec) {
           return dbAdd(rec).then(function () {
             selectedId = rec.id;
-            dirty = false;
             tplNameInput.value = rec.name;
             setTplMessage("\"" + rec.name + "\" 템플릿을 저장했습니다.", "ok");
           });
@@ -815,7 +942,6 @@
             if (!saved) {
               selectedGone();
             } else {
-              dirty = false;
               setTplMessage("\"" + rec.name + "\" 템플릿을 수정했습니다.", "ok");
             }
             return refreshList();
@@ -832,17 +958,12 @@
           setTplMessage("템플릿이 이미 삭제되어 불러오지 못했습니다.", "error");
           return refreshList();
         }
-        if (dirty && !window.confirm("저장하지 않은 편집 내용이 있습니다. \"" + rec.name + "\" 템플릿을 불러오면 지금 편집 내용이 사라집니다. 불러올까요?")) {
-          setTplMessage("불러오기를 취소했습니다. 지금 편집 내용은 그대로입니다.", "");
-          return;
-        }
         return restoreTemplate(rec).then(function () {
           selectedId = rec.id;
-          dirty = false;
           tplNameInput.value = rec.name;
           tplMemoInput.value = rec.memo;
           setMessage("", "");
-          setTplMessage("\"" + rec.name + "\" 템플릿을 불러왔습니다.", "ok");
+          setTplMessage("\"" + rec.name + "\" 템플릿을 불러왔습니다. 문구는 지금 것을 그대로 유지했습니다.", "ok");
           return refreshList();
         });
       });
@@ -850,6 +971,10 @@
   }
 
   function deleteTemplate(id) {
+    if (isDefaultTemplate(id)) {
+      setTplMessage("기본 템플릿은 삭제할 수 없습니다.", "error");
+      return Promise.resolve();
+    }
     return runTpl(function () {
       return dbGet(id).then(function (rec) {
         if (!rec) {
@@ -871,13 +996,15 @@
 
   tplSaveNewBtn.addEventListener("click", saveNewTemplate);
   tplSaveUpdateBtn.addEventListener("click", updateSelectedTemplate);
-  tplListEl.addEventListener("click", function (e) {
+  function onTemplateListClick(e) {
     var btn = e.target.closest && e.target.closest("button[data-action]");
     var li = btn && btn.closest("li[data-id]");
     if (!li) return;
     if (btn.dataset.action === "load") loadTemplate(li.dataset.id);
     else if (btn.dataset.action === "delete") deleteTemplate(li.dataset.id);
-  });
+  }
+  tplListEl.addEventListener("click", onTemplateListClick);
+  tplDefaultsEl.addEventListener("click", onTemplateListClick);
 
   // ---- 템플릿: JSON 내보내기와 가져오기 ---------------------------------------------------
   // 파일 모양: { format, version, exportedAt, templates: [ 템플릿... ] }. 템플릿 항목은 docs/template-schema.md와 같고,
@@ -1096,8 +1223,87 @@
   tplExportBtn.addEventListener("click", exportTemplates);
   tplImportInput.addEventListener("change", function () { importFile(takeFile(tplImportInput)); });
 
+  // ---- 기본 템플릿 ----------------------------------------------------------------
+  // assets/templates의 이미지로 만든 기본 템플릿 3개는 삭제할 수 없고, 열 때마다 저장소에 없는 것만 다시 채운다(수정한 것은 그대로 둔다).
+  // 세 이미지는 넓은 배경 가운데에 캐릭터가 있어서, 어느 화면비(1:1, 4:5, 9:16)로 바꿔도 캐릭터가 잘리지 않는다.
+  var DEFAULT_TEMPLATES = [
+    { id: "default-template-1", name: "기본 템플릿 1", file: "assets/templates/template-image1.png", ratio: "1:1", memo: "1:1 · 누워 있는 공룡과 주황 캐릭터" },
+    { id: "default-template-2", name: "기본 템플릿 2", file: "assets/templates/template-image2.png", ratio: "4:5", memo: "4:5 · 주황 캐릭터를 안은 공룡" },
+    { id: "default-template-3", name: "기본 템플릿 3", file: "assets/templates/template-image3.png", ratio: "9:16", memo: "9:16 · 꽃을 머리에 인 공룡" }
+  ];
+
+  function loadDefaultTemplate(d, order) {
+    return fetch(d.file).then(function (res) {
+      if (!res.ok) throw new Error("fetch");
+      return res.blob();
+    }).then(function (blob) {
+      return sniffBlob(blob).then(function (kind) {
+        if (kind.type !== "PNG") throw new Error("not-png");
+        return decodeImage(blob);
+      }).then(function (img) {
+        var w = img.width, h = img.height;
+        closeBitmap(img);
+        var t = new Date(order.base + order.index).toISOString(); // 만든 순서대로 목록 맨 위에 온다
+        return {
+          id: d.id, version: TEMPLATE_VERSION, name: d.name, memo: d.memo, createdAt: t, updatedAt: t,
+          ratio: d.ratio, text: DEFAULT_TEXT, size: DEFAULT_SIZE, color: "#222222", x: DEFAULT_X, y: DEFAULT_Y,
+          image: { name: d.file.split("/").pop(), width: w, height: h, mime: "image/png", blob: blob }
+        };
+      });
+    });
+  }
+
+  // 이미 있는 id는 건너뛰고 없는 것만 한 트랜잭션으로 추가한다(탭 여러 개를 동시에 열어도 기본 템플릿이 중복되지 않는다).
+  function dbAddMissing(records) {
+    return withStore("readwrite", function (st) {
+      var k = st.getAllKeys();
+      k.onsuccess = function () {
+        var used = {};
+        k.result.forEach(function (id) { used[id] = true; });
+        records.forEach(function (r) { if (!used[r.id]) st.add(r); });
+      };
+    });
+  }
+
+  function dbKeys() {
+    return withStore("readonly", function (st, set) { var r = st.getAllKeys(); r.onsuccess = function () { set(r.result); }; });
+  }
+
+  // 기본 템플릿의 문구, 크기, 위치가 지금 기본값과 다르면 맞춘다. 사용자가 수정 저장한 것(고친 시각이 만든 시각과 다른 것)은 건드리지 않는다.
+  // 고친 시각은 그대로 둬서, 앞으로 기본값이 바뀌어도 계속 따라간다.
+  function syncDefaultTemplates() {
+    var ids = DEFAULT_TEMPLATES.map(function (d) { return d.id; });
+    return withStore("readwrite", function (st) {
+      ids.forEach(function (id) {
+        var g = st.get(id);
+        g.onsuccess = function () {
+          var r = g.result;
+          if (!r || r.updatedAt !== r.createdAt) return;
+          if (r.text === DEFAULT_TEXT && r.size === DEFAULT_SIZE && r.x === DEFAULT_X && r.y === DEFAULT_Y) return;
+          r.text = DEFAULT_TEXT; r.size = DEFAULT_SIZE; r.x = DEFAULT_X; r.y = DEFAULT_Y;
+          st.put(r);
+        };
+      });
+    });
+  }
+
+  function ensureDefaultTemplates() {
+    return dbKeys().then(function (keys) {
+      var have = {};
+      keys.forEach(function (id) { have[id] = true; });
+      var base = Date.now();
+      var todo = DEFAULT_TEMPLATES.map(function (d, i) { return { d: d, index: i }; }).filter(function (x) { return !have[x.d.id]; });
+      if (!todo.length) return null; // 모두 있으면 이미지를 받지 않는다
+      return Promise.all(todo.map(function (x) { return loadDefaultTemplate(x.d, { base: base, index: x.index }); })).then(function (recs) {
+        recs.forEach(function (r) { var errs = validateTemplate(r); if (errs.length) throw new Error(errs[0]); });
+        return dbAddMissing(recs);
+      });
+    });
+  }
+
   function startTemplates() {
-    refreshList().catch(function () {
+    // 기본 템플릿을 채우지 못해도(파일을 못 받는 등) 나머지 기능은 그대로 쓴다. 다음에 열 때 다시 시도한다.
+    ensureDefaultTemplates().then(null, function () {}).then(syncDefaultTemplates).then(null, function () {}).then(refreshList).catch(function () {
       // 저장소를 쓸 수 없는 환경(예: 일부 사생활 보호 모드)에서도 편집과 내려받기는 그대로 쓸 수 있다.
       tplSaveNewBtn.disabled = true;
       tplExportBtn.disabled = true;
@@ -1108,8 +1314,9 @@
   }
 
   // ---- 시작 ----------------------------------------------------------------
+  setUploadOpen(true);
   startTemplates();
-  updateTextCount();
+  renderReadouts();
   applyRatio();
   ensureFontThenDraw();
   if (document.fonts && document.fonts.ready) document.fonts.ready.then(draw);
