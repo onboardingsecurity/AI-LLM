@@ -1,0 +1,97 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>밈 카드 스튜디오</title>
+  <meta name="description" content="이미지에 한글 문구를 얹어 밈·카드·SNS 이미지를 만드는 도구">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 100 100%27%3E%3Ctext y=%27.9em%27 font-size=%2790%27%3E%F0%9F%96%BC%EF%B8%8F%3C/text%3E%3C/svg%3E">
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="preload" href="fonts/gamja-flower-400.woff2" as="font" type="font/woff2" crossorigin>
+</head>
+<body>
+  <header class="topbar">
+    <h1>밈 카드 스튜디오</h1>
+  </header>
+
+  <main class="layout">
+    <section class="stage" aria-label="미리보기">
+      <div class="toolbar">
+        <fieldset class="ratio">
+          <legend>화면비</legend>
+          <label><input type="radio" name="ratio" value="1:1" checked><span>1:1</span></label>
+          <label><input type="radio" name="ratio" value="4:5"><span>4:5</span></label>
+          <label><input type="radio" name="ratio" value="9:16"><span>9:16</span></label>
+        </fieldset>
+        <button type="button" id="download-btn" class="primary">PNG로 내려받기</button>
+      </div>
+      <div class="canvas-wrap">
+        <canvas id="preview" width="1080" height="1080" tabindex="0"
+                aria-label="미리보기. 문구를 끌어서 옮기거나 화살표 키로 옮길 수 있습니다."></canvas>
+      </div>
+      <p class="hint">문구를 끌어서 위치를 옮기세요. 화살표 키로도 옮길 수 있습니다.</p>
+      <p id="export-message" class="message" role="status" aria-live="polite"></p>
+    </section>
+
+    <aside class="tools" aria-label="편집 도구">
+      <section class="tool" aria-labelledby="image-tool-title">
+        <h2 id="image-tool-title">이미지</h2>
+        <label class="file-btn">
+          이미지 불러오기 (PNG, JPEG)
+          <input id="file-input" type="file" accept="image/png,image/jpeg,.png,.jpg,.jpeg">
+        </label>
+        <p id="image-name" class="meta">불러온 이미지가 없습니다.</p>
+        <p id="message" class="message" role="status" aria-live="polite"></p>
+      </section>
+
+      <section class="tool" aria-labelledby="text-tool-title">
+        <h2 id="text-tool-title">문구</h2>
+        <label class="field">
+          <span>내용</span>
+          <textarea id="text-input" rows="3" maxlength="200">문구를 입력하세요</textarea>
+          <span class="meta"><output id="text-count">0 / 200</output> (200자까지 입력할 수 있습니다)</span>
+        </label>
+        <p id="fit-note" class="message" role="status" aria-live="polite" hidden></p>
+        <label class="field">
+          <span>크기 <output id="size-out">96</output></span>
+          <input id="size-input" type="range" min="24" max="240" step="1" value="96">
+        </label>
+        <label class="field">
+          <span>색 <output id="color-out">#ffffff</output></span>
+          <input id="color-input" type="color" value="#ffffff">
+        </label>
+      </section>
+
+      <section class="tool" aria-labelledby="template-tool-title">
+        <h2 id="template-tool-title">템플릿</h2>
+        <label class="field">
+          <span>이름 <small>(최대 40자, 비우면 자동 이름)</small></span>
+          <input id="tpl-name" type="text" maxlength="40" autocomplete="off">
+        </label>
+        <label class="field">
+          <span>메모 <small>(최대 100자)</small></span>
+          <input id="tpl-memo" type="text" maxlength="100" autocomplete="off">
+        </label>
+        <div class="btn-row">
+          <button type="button" id="tpl-save-new" class="primary">새 템플릿으로 저장</button>
+          <button type="button" id="tpl-save-update" class="secondary" disabled>선택한 템플릿 수정 저장</button>
+        </div>
+        <p id="tpl-selected" class="meta">선택한 템플릿이 없습니다. 목록에서 불러오면 선택됩니다.</p>
+        <p id="tpl-message" class="message" role="status" aria-live="polite"></p>
+        <ul id="tpl-problems" class="tpl-problems" aria-label="가져오지 못한 이유" hidden></ul>
+        <div class="btn-row">
+          <button type="button" id="tpl-export" class="secondary">JSON 내보내기</button>
+          <label class="file-btn">
+            JSON 가져오기
+            <input id="tpl-import-input" type="file" accept=".json,application/json">
+          </label>
+        </div>
+        <ul id="tpl-list" class="tpl-list" aria-label="저장한 템플릿 목록"></ul>
+        <p id="tpl-empty" class="meta">저장한 템플릿이 없습니다.</p>
+      </section>
+    </aside>
+  </main>
+
+  <script src="js/app.js"></script>
+</body>
+</html>

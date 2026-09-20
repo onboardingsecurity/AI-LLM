@@ -1,0 +1,438 @@
+{
+  "phase": "before",
+  "date": "2026-09-20",
+  "results": [
+    {
+      "id": "E01",
+      "ok": false,
+      "checks": [
+        {
+          "key": "P1",
+          "ok": true,
+          "detail": "PNG 1080×1080"
+        },
+        {
+          "key": "P2",
+          "ok": true,
+          "detail": "다른 픽셀 0건"
+        },
+        {
+          "key": "P3",
+          "ok": true,
+          "detail": "문구 유지, 슬라이더 96"
+        },
+        {
+          "key": "P5",
+          "ok": false,
+          "detail": "글자 영역 x 0~1079 (안전 43~1037), y 494~590 (안전 22~1058)"
+        },
+        {
+          "key": "줄바꿈",
+          "ok": false,
+          "detail": "글자 줄 1개 (기대 2개 이상)"
+        },
+        {
+          "key": "축소 알림",
+          "ok": false,
+          "detail": "알림 없음"
+        },
+        {
+          "key": "P4",
+          "ok": true,
+          "detail": "fake-image.png: 유지/이유 표시, unsupported.gif: 유지/이유 표시, corrupt.png: 유지/이유 표시"
+        }
+      ]
+    },
+    {
+      "id": "E02",
+      "ok": false,
+      "checks": [
+        {
+          "key": "P1",
+          "ok": true,
+          "detail": "PNG 1080×1920"
+        },
+        {
+          "key": "P2",
+          "ok": true,
+          "detail": "다른 픽셀 0건"
+        },
+        {
+          "key": "P3",
+          "ok": true,
+          "detail": "문구 유지, 슬라이더 96"
+        },
+        {
+          "key": "P5",
+          "ok": false,
+          "detail": "글자 영역 x 0~1079 (안전 43~1037), y 914~1009 (안전 38~1882)"
+        },
+        {
+          "key": "줄바꿈",
+          "ok": false,
+          "detail": "글자 줄 1개 (기대 2개 이상)"
+        },
+        {
+          "key": "P4",
+          "ok": true,
+          "detail": "fake-image.png: 유지/이유 표시, unsupported.gif: 유지/이유 표시, corrupt.png: 유지/이유 표시"
+        }
+      ]
+    },
+    {
+      "id": "E03",
+      "ok": false,
+      "checks": [
+        {
+          "key": "P1",
+          "ok": true,
+          "detail": "PNG 1080×1350"
+        },
+        {
+          "key": "P2",
+          "ok": true,
+          "detail": "다른 픽셀 0건"
+        },
+        {
+          "key": "P3",
+          "ok": true,
+          "detail": "문구 유지, 슬라이더 120"
+        },
+        {
+          "key": "P5",
+          "ok": false,
+          "detail": "글자 영역 x 6~1079 (안전 43~1037), y 623~752 (안전 27~1323)"
+        },
+        {
+          "key": "줄바꿈",
+          "ok": false,
+          "detail": "글자 줄 1개 (기대 2개 이상)"
+        },
+        {
+          "key": "P4",
+          "ok": true,
+          "detail": "fake-image.png: 유지/이유 표시, unsupported.gif: 유지/이유 표시, corrupt.png: 유지/이유 표시"
+        }
+      ]
+    },
+    {
+      "id": "E04",
+      "ok": false,
+      "checks": [
+        {
+          "key": "P1",
+          "ok": true,
+          "detail": "PNG 1080×1080"
+        },
+        {
+          "key": "P2",
+          "ok": true,
+          "detail": "다른 픽셀 0건"
+        },
+        {
+          "key": "P3",
+          "ok": true,
+          "detail": "문구 유지, 슬라이더 96"
+        },
+        {
+          "key": "P5",
+          "ok": false,
+          "detail": "글자 영역 x 0~1079 (안전 43~1037), y 503~596 (안전 22~1058)"
+        },
+        {
+          "key": "줄바꿈",
+          "ok": true,
+          "detail": "글자 줄 2개 (기대 2개 이상)"
+        },
+        {
+          "key": "P4",
+          "ok": true,
+          "detail": "fake-image.png: 유지/이유 표시, unsupported.gif: 유지/이유 표시, corrupt.png: 유지/이유 표시"
+        }
+      ]
+    },
+    {
+      "id": "E05",
+      "ok": true,
+      "checks": [
+        {
+          "key": "P1",
+          "ok": true,
+          "detail": "PNG 1080×1080"
+        },
+        {
+          "key": "P2",
+          "ok": true,
+          "detail": "다른 픽셀 0건"
+        },
+        {
+          "key": "P3",
+          "ok": true,
+          "detail": "문구 유지, 슬라이더 96"
+        },
+        {
+          "key": "P5",
+          "ok": true,
+          "detail": "글자 영역 x 398~681 (안전 43~1037), y 314~769 (안전 22~1058)"
+        },
+        {
+          "key": "빈 줄 유지",
+          "ok": true,
+          "detail": "글자 줄 3개, 1~2번째 줄 간격 240px (기대 240±15%), 축소 알림 없음"
+        },
+        {
+          "key": "P4",
+          "ok": true,
+          "detail": "fake-image.png: 유지/이유 표시, unsupported.gif: 유지/이유 표시, corrupt.png: 유지/이유 표시"
+        }
+      ]
+    },
+    {
+      "id": "E06",
+      "ok": false,
+      "checks": [
+        {
+          "key": "P1",
+          "ok": true,
+          "detail": "PNG 1080×1080"
+        },
+        {
+          "key": "P2",
+          "ok": true,
+          "detail": "다른 픽셀 0건"
+        },
+        {
+          "key": "P3",
+          "ok": true,
+          "detail": "문구 유지, 슬라이더 96"
+        },
+        {
+          "key": "P5",
+          "ok": false,
+          "detail": "글자 영역 x 0~1079 (안전 43~1037), y 494~590 (안전 22~1058)"
+        },
+        {
+          "key": "P4",
+          "ok": true,
+          "detail": "fake-image.png: 유지/이유 표시, unsupported.gif: 유지/이유 표시, corrupt.png: 유지/이유 표시"
+        }
+      ]
+    },
+    {
+      "id": "E07",
+      "ok": true,
+      "checks": [
+        {
+          "key": "P1",
+          "ok": true,
+          "detail": "PNG 1080×1080"
+        },
+        {
+          "key": "P2",
+          "ok": true,
+          "detail": "다른 픽셀 0건"
+        },
+        {
+          "key": "P3",
+          "ok": true,
+          "detail": "문구 유지, 슬라이더 96"
+        },
+        {
+          "key": "빈 문구",
+          "ok": true,
+          "detail": "문구 없는 캔버스와 다른 픽셀 0건"
+        },
+        {
+          "key": "P4",
+          "ok": true,
+          "detail": "fake-image.png: 유지/이유 표시, unsupported.gif: 유지/이유 표시, corrupt.png: 유지/이유 표시"
+        }
+      ]
+    },
+    {
+      "id": "E08",
+      "ok": true,
+      "checks": [
+        {
+          "key": "P1",
+          "ok": true,
+          "detail": "PNG 1080×1080"
+        },
+        {
+          "key": "P2",
+          "ok": true,
+          "detail": "다른 픽셀 0건"
+        },
+        {
+          "key": "P3",
+          "ok": true,
+          "detail": "문구 유지, 슬라이더 96"
+        },
+        {
+          "key": "P5",
+          "ok": true,
+          "detail": "글자 영역 x 211~862 (안전 43~1037), y 494~589 (안전 22~1058)"
+        },
+        {
+          "key": "이미지 잘림",
+          "ok": true,
+          "detail": "흰 테두리가 남는 가장자리가 수식 예측과 같음"
+        },
+        {
+          "key": "P4",
+          "ok": true,
+          "detail": "fake-image.png: 유지/이유 표시, unsupported.gif: 유지/이유 표시, corrupt.png: 유지/이유 표시"
+        }
+      ]
+    },
+    {
+      "id": "E09",
+      "ok": true,
+      "checks": [
+        {
+          "key": "P1",
+          "ok": true,
+          "detail": "PNG 1080×1920"
+        },
+        {
+          "key": "P2",
+          "ok": true,
+          "detail": "다른 픽셀 0건"
+        },
+        {
+          "key": "P3",
+          "ok": true,
+          "detail": "문구 유지, 슬라이더 96"
+        },
+        {
+          "key": "P5",
+          "ok": true,
+          "detail": "글자 영역 x 211~863 (안전 43~1037), y 915~1010 (안전 38~1882)"
+        },
+        {
+          "key": "이미지 잘림",
+          "ok": true,
+          "detail": "흰 테두리가 남는 가장자리가 수식 예측과 같음"
+        },
+        {
+          "key": "P4",
+          "ok": true,
+          "detail": "fake-image.png: 유지/이유 표시, unsupported.gif: 유지/이유 표시, corrupt.png: 유지/이유 표시"
+        }
+      ]
+    },
+    {
+      "id": "E10",
+      "ok": true,
+      "checks": [
+        {
+          "key": "P1",
+          "ok": true,
+          "detail": "PNG 1080×1080"
+        },
+        {
+          "key": "P2",
+          "ok": true,
+          "detail": "다른 픽셀 0건"
+        },
+        {
+          "key": "P3",
+          "ok": true,
+          "detail": "문구 유지, 슬라이더 96"
+        },
+        {
+          "key": "P5",
+          "ok": true,
+          "detail": "글자 영역 x 307~765 (안전 43~1037), y 493~591 (안전 22~1058)"
+        },
+        {
+          "key": "투명 유지",
+          "ok": true,
+          "detail": "파일 알파: 투명 영역 0, 불투명 영역 255"
+        },
+        {
+          "key": "P4",
+          "ok": true,
+          "detail": "fake-image.png: 유지/이유 표시, unsupported.gif: 유지/이유 표시, corrupt.png: 유지/이유 표시"
+        }
+      ]
+    },
+    {
+      "id": "E11",
+      "ok": false,
+      "checks": [
+        {
+          "key": "P1",
+          "ok": true,
+          "detail": "PNG 1080×1350"
+        },
+        {
+          "key": "P2",
+          "ok": false,
+          "detail": "다른 픽셀 10건"
+        },
+        {
+          "key": "P3",
+          "ok": true,
+          "detail": "문구 유지, 슬라이더 240"
+        },
+        {
+          "key": "P5",
+          "ok": false,
+          "detail": "글자 영역 x 0~1079 (안전 43~1037), y 263~1097 (안전 27~1323)"
+        },
+        {
+          "key": "축소 알림",
+          "ok": false,
+          "detail": "알림 없음"
+        },
+        {
+          "key": "P4",
+          "ok": true,
+          "detail": "fake-image.png: 유지/이유 표시, unsupported.gif: 유지/이유 표시, corrupt.png: 유지/이유 표시"
+        }
+      ]
+    },
+    {
+      "id": "E12",
+      "ok": false,
+      "checks": [
+        {
+          "key": "P1",
+          "ok": true,
+          "detail": "PNG 1080×1350"
+        },
+        {
+          "key": "P2",
+          "ok": true,
+          "detail": "다른 픽셀 0건"
+        },
+        {
+          "key": "P3",
+          "ok": true,
+          "detail": "문구 유지, 슬라이더 96"
+        },
+        {
+          "key": "P5",
+          "ok": false,
+          "detail": "글자 영역 x 0~1079 (안전 43~1037), y 628~726 (안전 27~1323)"
+        },
+        {
+          "key": "줄바꿈",
+          "ok": false,
+          "detail": "글자 줄 1개 (기대 2개 이상)"
+        },
+        {
+          "key": "투명 유지",
+          "ok": true,
+          "detail": "파일 알파: 투명 영역 0, 불투명 영역 255"
+        },
+        {
+          "key": "P4",
+          "ok": true,
+          "detail": "fake-image.png: 유지/이유 표시, unsupported.gif: 유지/이유 표시, corrupt.png: 유지/이유 표시"
+        }
+      ]
+    }
+  ]
+}
