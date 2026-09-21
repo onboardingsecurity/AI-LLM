@@ -73,12 +73,12 @@
       <section class="tool tool-template" aria-labelledby="template-tool-title">
         <h2 id="template-tool-title">템플릿</h2>
         <label class="field">
-          <span>이름 <small>(최대 40자, 비우면 자동 이름)</small></span>
-          <input id="tpl-name" type="text" maxlength="40" autocomplete="off">
+          <span>이름 <small>(최대 10자, 비우면 자동 이름)</small></span>
+          <input id="tpl-name" type="text" maxlength="10" autocomplete="off">
         </label>
         <label class="field">
-          <span>메모 <small>(최대 100자)</small></span>
-          <input id="tpl-memo" type="text" maxlength="100" autocomplete="off">
+          <span>메모 <small>(최대 20자)</small></span>
+          <input id="tpl-memo" type="text" maxlength="20" autocomplete="off">
         </label>
         <div class="btn-row">
           <button type="button" id="tpl-save-new" class="primary">새 템플릿으로 저장</button>
@@ -94,8 +94,12 @@
             <input id="tpl-import-input" type="file" accept=".json,application/json">
           </label>
         </div>
+      </section>
+
+      <section class="tool tool-saved" aria-labelledby="saved-tool-title">
+        <h2 id="saved-tool-title">저장한 템플릿 <small class="limit-note">(최대 3개)</small></h2>
         <ul id="tpl-list" class="tpl-list" aria-label="저장한 템플릿 목록"></ul>
-        <p id="tpl-empty" class="meta">저장한 템플릿이 없습니다.</p>
+        <img id="tpl-empty" class="tpl-empty" src="assets/templates/template-empty-image.png" alt="저장한 템플릿이 없습니다." decoding="async">
         <div class="deco-right" aria-hidden="true"><img src="assets/right.png" alt="" decoding="async"></div>
       </section>
     </aside>

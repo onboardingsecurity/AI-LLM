@@ -65,8 +65,10 @@ body::before {
 .stage { min-width: 0; }
 .canvas-wrap {
   position: relative;
-  background: var(--stage-bg);
+  background: rgba(255, 255, 255, 0.8); /* 투명도 20%(불투명 80%) */
+  border: 1px solid var(--line);
   border-radius: 8px;
+  box-shadow: 0 1px 2px rgba(28,36,48,.14), 0 4px 10px rgba(28,36,48,.12), inset 0 1px 0 #fff; /* 저장한 템플릿 카드와 같은 흰 바탕과 그림자 */
   /* 위아래 회색 띠를 같은 높이(--wrap-top)로 둬서 이미지가 사방 가운데에 온다. 위쪽 띠에 "이미지 바꾸기" 버튼이 앉는다(어느 화면비에서도 이미지 위에 겹치지 않는다) */
   padding: var(--wrap-top) 12px;
   display: flex;
@@ -91,7 +93,7 @@ body::before {
 /* 맨 오른쪽 패널(템플릿) 바로 바깥 오른쪽 여백의 아래쪽에 서 있는 캐릭터(assets/right.png, 1230x1279).
    그림 안의 캐릭터는 (335,162)에서 560x970 크기이고 나머지는 투명하므로, 그 부분만 상자로 잘라 보여 준다(상자 밖으로 삐져나가 가로 스크롤이 생기지 않는다).
    상자 폭 --cw는 오른쪽 바깥 여백(왼쪽 캐릭터와 같은 --space)에 꼭 맞고, 왼쪽이 패널 테두리에서 8px 떨어지며 발이 패널 아래쪽 끝에 닿는다(패널 테두리 1px를 보정). */
-.tool-template { position: relative; }
+.tool-saved { position: relative; }
 .deco-right {
   --space: calc((100vw - min(100vw, var(--layout-w))) / 2 + 8px);
   --cw: min(560px, var(--space));
@@ -125,7 +127,7 @@ body::before {
   box-shadow: 0 -2px 0 var(--pixel-ink), 0 2px 0 var(--pixel-ink), -2px 0 0 var(--pixel-ink), 2px 0 0 var(--pixel-ink); }
 .change-image[hidden], #download-btn[hidden] { display: none; }
 #download-btn { min-width: 92px; }
-.canvas-wrap.empty { background: transparent; }   /* 올리기 카드가 열려 있는 동안은 회색 창 바탕을 없앤다 */
+.canvas-wrap.empty { background: transparent; border-color: transparent; box-shadow: none; }   /* 올리기 카드가 열려 있는 동안은 회색 창 바탕을 없앤다 */
 .upload.dragover { background: repeating-conic-gradient(#ffc999 0% 25%, #fff3e6 0% 50%) 0 0 / 32px 32px; outline: 4px dashed var(--accent); outline-offset: 8px; }
 .pixel-btn {
   font: inherit; font-size: 22px; color: var(--on-accent); background: var(--accent);
@@ -152,6 +154,7 @@ body::before {
   background: #888;
   touch-action: none;
   border-radius: 4px;
+  box-shadow: 0 0 0 1px var(--line), 0 2px 8px rgba(28,36,48,.18); /* 흰 바탕 위에서도 카드 가장자리가 보이게 */
 }
 #preview:focus-visible,
 textarea:focus-visible,
@@ -188,6 +191,7 @@ button.primary:disabled { opacity: .6; }
   padding: 12px 14px;
 }
 .tool h2 { margin: 0 0 8px; font-size: 15px; }
+.tool h2 .limit-note { font-size: 12px; font-weight: 400; color: var(--muted); }
 
 .file-btn {
   display: block;
@@ -249,7 +253,10 @@ button.secondary:disabled { opacity: .5; }
 .tpl-problems { margin: 4px 0 8px; padding-left: 18px; font-size: 13px; color: var(--error); overflow-wrap: anywhere; }
 .tpl-list { list-style: none; margin: 8px 0 0; padding: 0; display: grid; gap: 8px; }
 .tpl-list:empty { display: none; } /* 직접 만든 템플릿이 없으면 빈 자리를 두지 않고 안내 문장이 바로 아래에 온다 */
-.tpl-list li { display: grid; grid-template-columns: 88px minmax(0, 1fr); gap: 10px; align-items: start; border: 1px solid var(--line); border-radius: 6px; padding: 8px 10px; background: var(--bg); }
+.tpl-empty { display: block; width: 100%; height: auto; margin-top: 8px; pointer-events: none; user-select: none; }
+.tpl-empty[hidden] { display: none; }
+.tpl-list li { display: grid; grid-template-columns: minmax(0, 1fr); gap: 8px; /* 카드 그림 위, 이름·메모·버튼은 그림 아래 */ align-items: start; border: 1px solid var(--line); border-radius: 8px; padding: 10px; background: #fff; /* 흰 카드가 떠 보이도록 겹친 그림자 */
+  box-shadow: 0 1px 2px rgba(28,36,48,.14), 0 4px 10px rgba(28,36,48,.12), inset 0 1px 0 #fff; }
 /* 목록의 카드 그림: 카드와 같은 화면비 모양으로 높이 88px, 테두리는 올리기 카드와 같은 픽셀 스타일 */
 .tpl-thumb { justify-self: center; height: 88px; margin: 2px; background: #efe7d2;
   box-shadow: 0 -2px 0 var(--pixel-ink), 0 2px 0 var(--pixel-ink), -2px 0 0 var(--pixel-ink), 2px 0 0 var(--pixel-ink); }
@@ -274,12 +281,16 @@ button.tpl-thumb:focus-visible { outline: 3px solid var(--accent); outline-offse
   .tpl-defaults { position: static; width: auto; flex-basis: 100%; flex-direction: row; justify-content: center; margin-bottom: 8px; }
   .tpl-defaults .tpl-thumb { height: 64px; }
 }
-.tpl-list li.selected { border-color: var(--accent); box-shadow: inset 3px 0 0 var(--accent); }
-.tpl-name { display: block; font-weight: 700; overflow-wrap: anywhere; }
-.tpl-memo { display: block; font-size: 13px; overflow-wrap: anywhere; }
+.tpl-list li.selected { border-color: var(--accent); box-shadow: inset 3px 0 0 var(--accent), 0 1px 2px rgba(28,36,48,.14), 0 4px 10px rgba(28,36,48,.12); }
+.tpl-name { display: block; text-align: center; font-weight: 700; overflow-wrap: anywhere; }
+.tpl-memo { display: block; text-align: center; font-size: 13px; overflow-wrap: anywhere; }
 .tpl-info { display: block; font-size: 12px; color: var(--muted); }
-.tpl-actions { display: flex; gap: 6px; margin-top: 6px; }
+.tpl-actions { display: flex; flex-wrap: wrap; justify-content: center; gap: 6px; margin-top: 6px; }
 .tpl-actions button { padding: 4px 10px; font-size: 13px; }
+.tpl-actions button.img-btn { padding: 0; border: 0; background: none; line-height: 0; border-radius: 0; }
+.tpl-actions button.img-btn img { display: block; height: 24px; width: auto; image-rendering: pixelated; pointer-events: none; }
+.tpl-actions button.img-btn:hover img { filter: brightness(1.08); }
+.tpl-actions button.img-btn:active img { transform: translateY(1px); }
 
 @media (max-width: 760px) {
   .layout { grid-template-columns: minmax(0, 1fr); padding: 12px 16px; }
@@ -303,14 +314,19 @@ button.tpl-thumb:focus-visible { outline: 3px solid var(--accent); outline-offse
      캔버스 높이는 창 높이에서 위아래 띠(--wrap-top씩)를 뺀 값이고, 폭은 화면비로 정한다. 안내 줄이 넘치면 그 안에서만 스크롤된다. */
   .canvas-wrap { box-sizing: border-box; height: calc(100vh - var(--top-space) - 38px - var(--notes-h)); height: calc(100dvh - var(--top-space) - 38px - var(--notes-h)); }
   #preview { width: min(100%, calc((100vh - var(--top-space) - 38px - var(--notes-h) - 2 * var(--wrap-top)) * var(--ratio)));  width: min(100%, calc((100dvh - var(--top-space) - 38px - var(--notes-h) - 2 * var(--wrap-top)) * var(--ratio))); }
-  .tools { grid-template-columns: 300px 300px; grid-template-rows: auto minmax(0, 1fr); align-content: start; min-height: 0; }
+  .tools { grid-template-columns: 300px 240px; grid-template-rows: auto minmax(0, 1fr); align-content: start; min-height: 0; align-self: start; height: calc(100vh - var(--top-space) - 38px - var(--notes-h)); height: calc(100dvh - var(--top-space) - 38px - var(--notes-h)); } /* 회색 창(.canvas-wrap)과 같은 높이라 템플릿 창 아래 끝이 창 아래 끝과 맞는다 */
   .notes { max-height: calc(var(--notes-h) - 6px); overflow-y: auto; }
   .tool-text { grid-column: 1; grid-row: 1; align-self: start; }
-  .tool-template { grid-column: 2; grid-row: 1 / span 2; min-height: 0; display: flex; flex-direction: column; }
+  .tool-template { grid-column: 1; grid-row: 2; min-height: 0; display: flex; flex-direction: column; overflow-y: auto; } /* 창이 낮아 내용이 넘치면 창 안에서 스크롤된다(창 밖으로 삐져나오지 않는다) */
+  .tool-template .field { margin-bottom: 6px; }
+  .tool-template .btn-row > * { padding-top: 6px; padding-bottom: 6px; }
+  .tool-saved { grid-column: 2; grid-row: 1 / span 2; min-height: 0; display: flex; flex-direction: column; }
   .tool-template .btn-row { grid-template-columns: 1fr 1fr; }
   .tool-template .btn-row > * { word-break: keep-all; padding-left: 8px; padding-right: 8px; } /* 두 버튼이 반반 폭이라 띄어쓰기에서만 줄을 바꾼다 */
   .tool-template .tpl-problems { max-height: 84px; overflow-y: auto; }
-  .tool-template .tpl-list { flex: 1 1 0; min-height: 64px; overflow-y: auto; align-content: start; }
+  .tool-saved .tpl-empty { margin: auto 0; } /* 제목 아래 남는 공간의 세로 가운데 */
+  .tool-saved .tpl-list { flex: 1 1 0; min-height: 64px; overflow-y: auto; align-content: start; grid-auto-rows: minmax(min-content, calc((100% - 2 * 8px) / 3)); } /* 3개가 창 높이를 꽉 채우도록 한 칸이 3분의 1씩 차지한다 */
+  .tool-saved .tpl-list li { align-content: center; }
 }
 
 #text-input::placeholder { color: var(--text); opacity: .75; } /* 입력이 막혔을 때 이유 안내 */

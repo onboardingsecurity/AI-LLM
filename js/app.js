@@ -537,8 +537,9 @@
   var STORE = "templates";
   var TEMPLATE_VERSION = 1;
   // 글자 수 한도는 입력칸(maxlength)과 같은 값을 쓴다.
-  var NAME_MAX = tplNameInput.maxLength;
-  var MEMO_MAX = tplMemoInput.maxLength;
+  // 새로 입력하는 이름과 메모는 입력칸 제한(10자, 20자)만 따르고, 저장 데이터가 허용하는 길이는 예전 그대로(40자, 100자)다: 예전에 길게 저장한 템플릿과 JSON도 읽힌다.
+  var NAME_MAX = 40;
+  var MEMO_MAX = 100;
   var TEXT_MAX = 200; // 저장 데이터가 허용하는 문구 길이. 화면에서 입력하는 길이는 입력칸의 maxlength(50)로 제한하고, 예전에 더 길게 저장한 템플릿도 읽을 수 있게 그대로 둔다.
 
   var FILE_FORMAT = "meme-card-studio-templates"; // JSON 파일 맨 위의 format 값
@@ -689,6 +690,11 @@
     });
   }
 
+  // 사용자가 저장할 수 있는 템플릿은 최대 3개다(기본 템플릿 3개는 세지 않는다). 예전에 더 많이 저장된 것은 지우지 않고 그대로 둔다.
+  var USER_TEMPLATE_MAX = 3;
+  function userCount(records) { return records.filter(function (r) { return !isDefaultTemplate(r.id); }).length; }
+  var LIMIT_ALERT = "저장한 템플릿은 최대 " + USER_TEMPLATE_MAX + "개입니다.";
+
   function cleanName(v) { return v.replace(/\s+/g, " ").trim().slice(0, NAME_MAX); }
 
   function autoName(records) {
@@ -777,12 +783,23 @@
     parent.appendChild(el);
   }
 
-  function makeButton(label, action, cls) {
+  function makeButton(label, action, cls, iconSrc) {
     var b = document.createElement("button");
     b.type = "button";
-    b.textContent = label;
     b.dataset.action = action;
     if (cls) b.className = cls;
+    if (iconSrc) {
+      // 글씨 대신 그림 버튼. 스크린 리더는 label을 읽는다.
+      b.classList.add("img-btn");
+      b.setAttribute("aria-label", label);
+      var img = document.createElement("img");
+      img.src = iconSrc;
+      img.alt = "";
+      img.decoding = "async";
+      b.appendChild(img);
+    } else {
+      b.textContent = label;
+    }
     return b;
   }
 
@@ -875,11 +892,10 @@
       body.className = "tpl-body";
       addSpan(body, "tpl-name", String(r.name));
       if (r.memo) addSpan(body, "tpl-memo", String(r.memo));
-      addSpan(body, "tpl-info", [r.ratio, r.image ? "이미지 있음" : "이미지 없음", fmtTime(r.updatedAt)].filter(Boolean).join(" · "));
       var actions = document.createElement("div");
       actions.className = "tpl-actions";
-      actions.appendChild(makeButton("불러오기", "load"));
-      actions.appendChild(makeButton("삭제", "delete", "danger"));
+      actions.appendChild(makeButton("불러오기", "load", "", "assets/button/button-load-crop.png"));
+      actions.appendChild(makeButton("삭제", "delete", "danger", "assets/button/button-delete-crop.png"));
       body.appendChild(actions);
       li.appendChild(body);
       tplListEl.appendChild(li);
@@ -909,7 +925,10 @@
     return runTpl(function () {
       // 이름을 비워 두었을 때만 자동 이름을 정하려고 저장된 이름을 읽는다.
       var typed = cleanName(tplNameInput.value);
-      return (typed ? Promise.resolve(typed) : dbGetAll().then(autoName)).then(function (name) {
+      return dbGetAll().then(function (all) {
+        if (userCount(all) >= USER_TEMPLATE_MAX) { var e = new Error("limit"); e.limit = true; throw e; } // 알림창으로만 알리고 템플릿 창에는 문구를 남기지 않는다
+        return typed || autoName(all);
+      }).then(function (name) {
         return buildRecord(null, name).then(function (rec) {
           return dbAdd(rec).then(function () {
             selectedId = rec.id;
@@ -918,7 +937,10 @@
           });
         });
       }).then(refreshList);
-    }).catch(function (e) { tplFail(e, "템플릿을 저장하지 못했습니다."); });
+    }).catch(function (e) {
+      if (e && e.limit) { setTplMessage("", ""); window.alert(LIMIT_ALERT); return; }
+      tplFail(e, "템플릿을 저장하지 못했습니다.");
+    });
   }
 
   function selectedGone() {
@@ -963,7 +985,7 @@
           tplNameInput.value = rec.name;
           tplMemoInput.value = rec.memo;
           setMessage("", "");
-          setTplMessage("\"" + rec.name + "\" 템플릿을 불러왔습니다. 문구는 지금 것을 그대로 유지했습니다.", "ok");
+          setTplMessage("", "");
           return refreshList();
         });
       });
@@ -1201,6 +1223,17 @@
       setTplMessage("\"" + file.name + "\" 확인 중...", "");
       return dbCount().then(function (n0) {
         return prepareImport(file).then(function (res) {
+          if (res.ok) {
+            // 가져온 것은 모두 사용자 템플릿으로 센다(기본 템플릿과 id가 같으면 새 id로 추가된다). 넘으면 아무것도 저장하지 않는다.
+            var over = dbGetAll().then(function (all) {
+              var have = userCount(all);
+              if (have + res.records.length <= USER_TEMPLATE_MAX) return null;
+              return { ok: false, kind: "limit", headline: "저장한 템플릿은 최대 " + USER_TEMPLATE_MAX + "개라서 아무것도 가져오지 않았습니다(지금 " + have + "개, 파일 " + res.records.length + "개).", problems: [] };
+            });
+            return over.then(function (o) { return o ? o : res; }).then(function (r2) { res = r2; return go(); });
+          }
+          return go();
+          function go() {
           return (res.ok ? dbAddMany(res.records) : Promise.resolve(null)).then(function (done) {
             // 성공이든 실패든 저장소를 다시 읽어 가져오기 전후 건수를 함께 알려 준다.
             return dbGetAll().then(function (after) {
@@ -1215,6 +1248,7 @@
               renderList(after);
             });
           });
+          }
         });
       });
     }).catch(function (e) { tplFail(e, "템플릿을 가져오지 못했습니다. 저장된 템플릿은 그대로입니다."); });
@@ -1227,9 +1261,9 @@
   // assets/templates의 이미지로 만든 기본 템플릿 3개는 삭제할 수 없고, 열 때마다 저장소에 없는 것만 다시 채운다(수정한 것은 그대로 둔다).
   // 세 이미지는 넓은 배경 가운데에 캐릭터가 있어서, 어느 화면비(1:1, 4:5, 9:16)로 바꿔도 캐릭터가 잘리지 않는다.
   var DEFAULT_TEMPLATES = [
-    { id: "default-template-1", name: "기본 템플릿 1", file: "assets/templates/template-image1.png", ratio: "1:1", memo: "1:1 · 누워 있는 공룡과 주황 캐릭터" },
-    { id: "default-template-2", name: "기본 템플릿 2", file: "assets/templates/template-image2.png", ratio: "4:5", memo: "4:5 · 주황 캐릭터를 안은 공룡" },
-    { id: "default-template-3", name: "기본 템플릿 3", file: "assets/templates/template-image3.png", ratio: "9:16", memo: "9:16 · 꽃을 머리에 인 공룡" }
+    { id: "default-template-1", name: "기본 템플릿 1", file: "assets/templates/template-image1.png", ratio: "1:1", memo: "누워 있는 공룡과 주황 캐릭터" },
+    { id: "default-template-2", name: "기본 템플릿 2", file: "assets/templates/template-image2.png", ratio: "4:5", memo: "주황 캐릭터를 안은 공룡" },
+    { id: "default-template-3", name: "기본 템플릿 3", file: "assets/templates/template-image3.png", ratio: "9:16", memo: "꽃을 머리에 인 공룡" }
   ];
 
   function loadDefaultTemplate(d, order) {
@@ -1279,8 +1313,9 @@
         g.onsuccess = function () {
           var r = g.result;
           if (!r || r.updatedAt !== r.createdAt) return;
-          if (r.text === DEFAULT_TEXT && r.size === DEFAULT_SIZE && r.x === DEFAULT_X && r.y === DEFAULT_Y) return;
-          r.text = DEFAULT_TEXT; r.size = DEFAULT_SIZE; r.x = DEFAULT_X; r.y = DEFAULT_Y;
+          var d = DEFAULT_TEMPLATES.filter(function (x) { return x.id === id; })[0];
+          if (r.text === DEFAULT_TEXT && r.size === DEFAULT_SIZE && r.x === DEFAULT_X && r.y === DEFAULT_Y && r.memo === d.memo) return;
+          r.text = DEFAULT_TEXT; r.size = DEFAULT_SIZE; r.x = DEFAULT_X; r.y = DEFAULT_Y; r.memo = d.memo;
           st.put(r);
         };
       });
