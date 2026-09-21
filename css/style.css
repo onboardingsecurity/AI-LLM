@@ -21,6 +21,8 @@
   --top-space: 52px;    /* 화면 맨 위 여백(예전에 제목 바가 있던 높이) */
   --notes-h: 66px;      /* 미리보기 아래 안내 줄(불러온 이미지 이름, 안내, 거부 이유)이 차지하는 높이. 큰 화면의 캔버스 높이 계산에 쓴다 */
   --ui-scale: 0.85;     /* 큰 화면에서 화면 전체를 줄이는 비율(1이면 화면을 꽉 채운다) */
+  /* 왼쪽·오른쪽 공룡(캐릭터), 왼쪽 기본 템플릿 창이 함께 쓰는 "창 바깥 여백" 폭. 화면 폭에서만 정해진다(화면 높이, 배율과 무관). */
+  --space: calc((100vw - min(100vw, var(--layout-w))) / 2 + 8px);
   color-scheme: light;   /* 맥이 어두운 모드여도 항상 밝은 화면(스크롤바, 입력 부품 포함) */
 }
 @media (min-width: 1700px) {
@@ -62,7 +64,7 @@ body::before {
   align-items: start;
 }
 
-.stage { min-width: 0; }
+.stage { min-width: 0; position: relative; }
 .canvas-wrap {
   position: relative;
   background: var(--panel); /* 다른 흰 바탕(도구 창, 저장한 템플릿 카드 등)과 같은 투명도 */
@@ -298,8 +300,7 @@ button.tpl-thumb:focus-visible { outline: 3px solid var(--accent); outline-offse
 .tpl-defaults li.selected { border-color: var(--accent); box-shadow: inset 0 0 0 2px var(--accent), 0 1px 2px rgba(28,36,48,.14), 0 4px 10px rgba(28,36,48,.12); }
 @media (max-width: 1279px) {
   /* 왼쪽 여백이 없으면 기본 템플릿은 창 안쪽 위에 가로로 놓는다 */
-  .canvas-wrap { flex-wrap: wrap; }
-  .tpl-defaults-win { position: static; bottom: auto; overflow: visible; width: auto; flex-basis: 100%; margin-bottom: 8px; }
+  .tpl-defaults-win { order: -1; position: static; bottom: auto; overflow: visible; width: auto; flex-basis: 100%; margin-bottom: 8px; }
   .tpl-defaults { flex-direction: row; justify-content: center; align-items: center; container-type: normal; }
   .tpl-defaults li { width: auto; height: auto; display: block; }
   .tpl-defaults .tpl-thumb { width: auto; height: 64px; max-width: none; }
@@ -331,15 +332,27 @@ button.tpl-thumb:focus-visible { outline: 3px solid var(--accent); outline-offse
   .meta, .field small, .tpl-memo { font-size: 14px; }
   .tpl-info { font-size: 13.5px; }
   .tpl-actions button { font-size: 14px; }
-  .layout { flex: 1 1 0; min-height: 0; width: 100%; grid-template-columns: minmax(0, 1fr) 616px; grid-template-rows: minmax(0, 1fr); align-items: stretch; }
+  /* 배치 높이는 화면을 억지로 꽉 채우지 않고 내용(오른쪽 템플릿 창, JSON 버튼까지) 높이만큼만 차지한다.
+     위아래 남는 공간은 반반 자동 여백(margin:auto)으로 나눠 페이지 위/아래 여백을 같게 만든다. 예전 제목 바 높이(--top-space)는
+     위쪽에만 치우친 여백이라 이 화면 크기부터는 없앤다(반반 여백이 진짜로 같아지려면 위아래 시작 조건이 같아야 한다). */
+  body { padding-top: 0; }
+  /* 왼쪽·오른쪽 공룡(캐릭터)이 서로 다른 그림·비율이라 창 바깥 여백 속으로 들어오는 정도가 다르다(왼쪽이 더 깊이 들어온다).
+     창 전체를 --space(화면 폭에서 정해지는 바깥 여백)에 비례해 오른쪽으로 옮겨서, 왼쪽은 왼쪽 공룡 왼쪽 끝까지, 오른쪽은
+     오른쪽 공룡 오른쪽 끝까지 여백이 서로 같아지게 맞춘다(1920×1080에서 실측한 비율 0.258을 그대로 쓴다, 화면 폭이 달라지면 --space도 같이 바뀐다). */
+  .layout {
+    flex: none; margin-top: auto; margin-bottom: auto;
+    margin-left: calc((100vw - var(--layout-w)) / 2 + 0.258 * var(--space));
+    margin-right: calc((100vw - var(--layout-w)) / 2 - 0.258 * var(--space));
+    width: 100%; grid-template-columns: minmax(0, 1fr) 616px; grid-template-rows: min-content; align-content: start; align-items: stretch;
+  }
   .stage { display: flex; flex-direction: column; min-height: 0; }
-  /* 미리보기 창(회색 창, 이미지 넣기 전에는 올리기 카드)의 높이는 화면 높이에서 정한다: 위쪽 여백 --top-space + 바깥 여백 32 + 안내 줄 --notes-h + 여유 6. 화면비와 이미지 유무에 관계없이 같다.
-     캔버스 높이는 창 높이에서 위아래 띠(--wrap-top씩)를 뺀 값이고, 폭은 화면비로 정한다. 안내 줄이 넘치면 그 안에서만 스크롤된다. */
-  .canvas-wrap { box-sizing: border-box; height: calc(100vh - var(--top-space) - 38px - var(--notes-h)); height: calc(100dvh - var(--top-space) - 38px - var(--notes-h)); }
-  #preview { width: min(100%, calc((100vh - var(--top-space) - 38px - var(--notes-h) - 2 * var(--wrap-top)) * var(--ratio)));  width: min(100%, calc((100dvh - var(--top-space) - 38px - var(--notes-h) - 2 * var(--wrap-top)) * var(--ratio))); }
-  .tools { grid-template-columns: 300px 240px; grid-template-rows: auto minmax(0, 1fr); align-content: start; min-height: 0; align-self: start; height: calc(100vh - var(--top-space) - 38px - var(--notes-h)); height: calc(100dvh - var(--top-space) - 38px - var(--notes-h)); } /* 회색 창(.canvas-wrap)과 같은 높이라 템플릿 창 아래 끝이 창 아래 끝과 맞는다 */
+  /* 미리보기 창(회색 창, 이미지 넣기 전에는 올리기 카드)의 높이는 오른쪽 도구 창(.tools)의 내용 높이를 따라간다(아래에서 정한다).
+     캔버스 높이는 창 높이에서 위아래 띠(--wrap-top씩)를 뺀 값이고, 폭은 화면비로 정한다. */
+  .canvas-wrap { box-sizing: border-box; flex: 1 1 0; min-height: 0; container-type: size; } /* 아래 끝은 오른쪽 도구 창의 아래 끝을 따라간다(템플릿 창이 길어지면 같이 늘어난다). 기본 템플릿 창과 공룡은 이 창 기준이라 같이 내려간다 */
+  #preview { width: min(100%, calc(100cqh * var(--ratio))); }
+  .tools { grid-template-columns: 300px 240px; grid-template-rows: auto min-content; align-content: start; align-self: start; height: auto; min-height: 0; } /* 내용(왼쪽 템플릿 창)만큼만 높이를 쓴다. 회색 창(.canvas-wrap)이 이 높이를 따라가 템플릿 창 아래 끝과 맞는다 */
   .tool-text { grid-column: 1; grid-row: 1; align-self: start; }
-  .tool-template { grid-column: 1; grid-row: 2; min-height: 0; display: flex; flex-direction: column; overflow-y: auto; } /* 창이 낮아 내용이 넘치면 창 안에서 스크롤된다(창 밖으로 삐져나오지 않는다) */
+  .tool-template { grid-column: 1; grid-row: 2; align-self: start; display: flex; flex-direction: column; } /* 창 높이를 내용(JSON 버튼까지)만큼만 쓰고, 남는 자리는 늘리지 않는다. 창이 낮아 내용이 넘치면 창 안에서 스크롤된다(창 밖으로 삐져나오지 않는다) */
   .tool-template .btn-row > * { padding-top: 6px; padding-bottom: 6px; }
   .tool-saved { grid-column: 2; grid-row: 1 / span 2; min-height: 0; display: flex; flex-direction: column; }
   .tool-template .btn-row { grid-template-columns: 1fr 1fr; }
@@ -349,6 +362,19 @@ button.tpl-thumb:focus-visible { outline: 3px solid var(--accent); outline-offse
   .tool-saved .tpl-empty { margin: auto 0; } /* 제목 아래 남는 공간의 세로 가운데 */
   .tool-saved .tpl-list { flex: 1 1 0; min-height: 64px; overflow-y: auto; align-content: start; grid-auto-rows: minmax(min-content, calc((100% - 2 * 8px) / 3)); } /* 3개가 창 높이를 꽉 채우도록 한 칸이 3분의 1씩 차지한다 */
   .tool-saved .tpl-list li { align-content: center; }
+}
+
+/* 1366×768급 화면(폭 1440px 이하, 높이 800px 이하): 이미지 보여주는 창(회색 창)의 세로를 줄여 정사각형으로 만든다.
+   창 아래 끝은 오른쪽 도구 창보다 위에서 끝난다. 이미지는 창 높이에서 위아래 띠를 뺀 크기 안에 들어간다(100cqh는 위아래 띠를 뺀 안쪽 높이). */
+@media (min-width: 1200px) and (min-height: 560px) and (max-width: 1440px) and (max-height: 800px) {
+  .canvas-wrap { flex: none; min-height: 0; aspect-ratio: 1 / 1; container-type: size; }
+  #preview { width: min(100%, calc(100cqh * var(--ratio))); }
+  /* 기본 템플릿 창은 미리보기 창 아래로 옮기고 그림 3개를 가로로 나란히 놓는다. 높이는 오른쪽 도구 창의 아래 끝까지 */
+  .tpl-defaults-win { position: static; order: 0; flex: 1 1 0; min-height: 0; width: auto; margin-top: 8px; }
+  .tpl-defaults { flex-direction: row; align-items: center; justify-content: space-evenly; } /* 그림 3개를 가로로 나란히 */
+  .tpl-defaults li { width: calc((100cqw - 8px) / 3 * 0.96); height: calc(100cqh * 0.98); }
+  /* 템플릿 창(.tool-template) 내용이 페이지 전체 높이를 정한다. 간격을 줄여 페이지 아래로 넘치는 만큼(약 55px) 줄인다 */
+  .tool-template { --tpl-gap-wide: 12px; --tpl-gap-help: 10px; }
 }
 
 #text-input::placeholder { color: var(--text); opacity: .75; } /* 입력이 막혔을 때 이유 안내 */

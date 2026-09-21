@@ -27,6 +27,9 @@
 | mouse-cursor.png | 본인 제작(AI 생성). 본인이 ChatGPT로 직접 생성한 이미지. 파일에 생성 도구 정보나 위치 정보 같은 메타데이터는 없음 | OpenAI 이용약관 |
 | left.png | 본인 제작(AI 생성). 본인이 ChatGPT로 직접 생성한 이미지. 파일에 생성 도구 정보나 위치 정보 같은 메타데이터는 없음 | OpenAI 이용약관 |
 | right.png | 본인 제작(AI 생성). 본인이 ChatGPT(gpt-image)로 직접 생성한 이미지. 원본 파일에 든 생성 정보(콘텐츠 자격 증명)는 제거하고 화소는 그대로 사용 | OpenAI 이용약관 |
+| button/button-load-crop.png, button/button-delete-crop.png | 본인 제작(AI 생성). 본인이 ChatGPT로 직접 생성한 이미지(직접 만든 템플릿 목록의 불러오기, 삭제 버튼). 파일에 생성 도구 정보나 위치 정보 같은 메타데이터는 없음 | OpenAI 이용약관 |
+| button/button-load.png, button/button-delete.png | 본인 제작(AI 생성). 본인이 ChatGPT(gpt-image)로 직접 생성한 이미지(현재 앱에서는 쓰지 않음). 원본 파일에 든 생성 정보(콘텐츠 자격 증명)는 제거하고 화소는 그대로 사용 | OpenAI 이용약관 |
+| templates/template-empty-image.png | 본인 제작(AI 생성). 본인이 ChatGPT(gpt-image)로 직접 생성한 이미지(직접 만든 템플릿이 없을 때 오른쪽 목록 자리에 보이는 그림). 원본 파일에 든 생성 정보(콘텐츠 자격 증명)는 제거하고 화소는 그대로 사용 | OpenAI 이용약관 |
 | templates/template-image1.png | 본인 제작(AI 생성). 본인이 ChatGPT로 직접 생성한 이미지(기본 템플릿 1의 배경). 원본 파일에 든 생성 정보(콘텐츠 자격 증명)는 제거하고 화소는 그대로 사용 | OpenAI 이용약관 |
 | templates/template-image2.png | 본인 제작(AI 생성). 본인이 ChatGPT로 직접 생성한 이미지(기본 템플릿 2의 배경). 원본 파일에 든 생성 정보(콘텐츠 자격 증명)는 제거하고 화소는 그대로 사용 | OpenAI 이용약관 |
 | templates/template-image3.png | 본인 제작(AI 생성). 본인이 ChatGPT로 직접 생성한 이미지(기본 템플릿 3의 배경). 원본 파일에 든 생성 정보(콘텐츠 자격 증명)는 제거하고 화소는 그대로 사용 | OpenAI 이용약관 |

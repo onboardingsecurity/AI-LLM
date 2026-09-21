@@ -15,11 +15,6 @@
   <main class="layout">
     <section class="stage" aria-label="미리보기">
       <div class="canvas-wrap">
-        <img class="deco-left" src="assets/left.png" alt="" aria-hidden="true" decoding="async">
-        <section class="tool tpl-defaults-win" aria-labelledby="tpl-defaults-title">
-          <h2 id="tpl-defaults-title">기본 템플릿</h2>
-          <ul id="tpl-defaults" class="tpl-defaults"></ul>
-        </section>
         <canvas id="preview" width="1080" height="1080" tabindex="0"
                 aria-label="미리보기. 문구를 끌어서 옮기거나 화살표 키로 옮길 수 있습니다."></canvas>
         <fieldset class="ratio">
@@ -38,6 +33,14 @@
           <button type="button" id="upload-skip" class="pixel-link">이미지 없이 시작</button>
         </div>
       </div>
+      <!-- 왼쪽 캐릭터: .stage 기준 절대 위치. 큰 화면에서는 미리보기 창(canvas-wrap)과 .stage 크기가 같아 창 아래쪽 끝에 서고,
+           1366×768급에서는 기본 템플릿 창이 그 아래에 이어져 .stage가 더 길어지므로 기본 템플릿 창 왼쪽으로 내려간다. -->
+      <img class="deco-left" src="assets/left.png" alt="" aria-hidden="true" decoding="async">
+      <!-- 기본 템플릿 창: 큰 화면에서는 미리보기 창 바깥 왼쪽(절대 위치, .stage 기준), 1366×768급에서는 미리보기 창 아래 -->
+      <section class="tool tpl-defaults-win" aria-labelledby="tpl-defaults-title">
+        <h2 id="tpl-defaults-title">기본 템플릿</h2>
+        <ul id="tpl-defaults" class="tpl-defaults"></ul>
+      </section>
       <input id="file-input" class="visually-hidden" type="file" accept="image/png,image/jpeg,.png,.jpg,.jpeg" tabindex="-1" aria-hidden="true">
     </section>
 
