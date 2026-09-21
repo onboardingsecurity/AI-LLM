@@ -16,7 +16,10 @@
     <section class="stage" aria-label="미리보기">
       <div class="canvas-wrap">
         <img class="deco-left" src="assets/left.png" alt="" aria-hidden="true" decoding="async">
-        <ul id="tpl-defaults" class="tpl-defaults" aria-label="기본 템플릿"></ul>
+        <section class="tool tpl-defaults-win" aria-labelledby="tpl-defaults-title">
+          <h2 id="tpl-defaults-title">기본 템플릿</h2>
+          <ul id="tpl-defaults" class="tpl-defaults"></ul>
+        </section>
         <canvas id="preview" width="1080" height="1080" tabindex="0"
                 aria-label="미리보기. 문구를 끌어서 옮기거나 화살표 키로 옮길 수 있습니다."></canvas>
         <fieldset class="ratio">
