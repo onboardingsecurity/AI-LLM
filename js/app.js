@@ -46,7 +46,6 @@
   var uploadStartBtn = document.getElementById("upload-start");
   var uploadSkipBtn = document.getElementById("upload-skip");
   var changeImageBtn = document.getElementById("change-image");
-  var messageEl = document.getElementById("message");
   var textInput = document.getElementById("text-input");
   var sizeInput = document.getElementById("size-input");
   var sizeOut = document.getElementById("size-out");
@@ -57,19 +56,14 @@
   var colorOut = document.getElementById("color-out");
   var ratioInputs = document.querySelectorAll('input[name="ratio"]');
   var downloadBtn = document.getElementById("download-btn");
-  var exportMessageEl = document.getElementById("export-message");
-  var fitNoteEl = document.getElementById("fit-note");
   var textClearBtn = document.getElementById("text-clear");
   var tplNameInput = document.getElementById("tpl-name");
   var tplMemoInput = document.getElementById("tpl-memo");
   var tplSaveNewBtn = document.getElementById("tpl-save-new");
   var tplSaveUpdateBtn = document.getElementById("tpl-save-update");
-  var tplSelectedEl = document.getElementById("tpl-selected");
-  var tplMessageEl = document.getElementById("tpl-message");
   var tplListEl = document.getElementById("tpl-list");
   var tplDefaultsEl = document.getElementById("tpl-defaults"); // 미리보기 창 왼쪽에 세로로 놓이는 기본 템플릿 그림
   var tplEmptyEl = document.getElementById("tpl-empty");
-  var tplProblemsEl = document.getElementById("tpl-problems");
   var tplExportBtn = document.getElementById("tpl-export");
   var tplImportInput = document.getElementById("tpl-import-input");
 
@@ -190,19 +184,15 @@
   }
 
   var fitKey = null;
+  // 글자가 최소 크기로도 넘치면 알림 창으로만 알린다. (크기를 줄여 그린 경우는 캔버스에서 바로 보이므로 알리지 않는다.)
   function showFitNote(lay) {
     var msg = "";
     if (lay && lay.overflow) {
       msg = "문구가 너무 길어 최소 크기(" + lay.size + ")로도 다 들어가지 않습니다. 문구를 줄여 주세요.";
-    } else if (lay && lay.shrunk) {
-      msg = "문구가 길어 크기 " + state.size + " 대신 " + lay.size + "로 줄여 그렸습니다. 내려받는 파일도 같습니다.";
     }
-    var kind = lay && lay.overflow ? "error" : "";
-    var key = kind + "|" + msg;
-    if (key === fitKey) return; // 그릴 때마다 같은 내용을 다시 쓰지 않는다.
-    fitKey = key;
-    setStatus(fitNoteEl, msg, kind);
-    fitNoteEl.hidden = !msg;
+    if (msg === fitKey) return; // 그릴 때마다 같은 내용을 다시 알리지 않는다.
+    fitKey = msg;
+    if (msg) notifyTpl(msg);
   }
 
   function draw() {
@@ -246,13 +236,6 @@
 
   // 저장하지 않은 편집이 있는지. 템플릿을 불러와 덮어쓰기 전에 사용자에게 알리는 데 쓴다.
 
-  // ---- 메시지 --------------------------------------------------------------
-  function setStatus(el, text, kind) {
-    el.textContent = text;
-    el.className = "message" + (kind ? " " + kind : "");
-  }
-  function setMessage(text, kind) { setStatus(messageEl, text, kind); }
-
   // 이미지를 불러오기 전에 미리보기 창을 채우는 올리기 카드.
   // 이미지를 불러왔거나, 편집을 시작했거나, "이미지 없이 시작"을 누르면 닫는다. 카드가 덮고 있는 동안 캔버스에는 초점이 가지 않는다.
   function setUploadOpen(open) {
@@ -269,12 +252,14 @@
   }
 
   // 이미지를 넣거나 "이미지 없이 시작"(흰 카드)을 누르기 전에는 문구 도구(내용, 크기, 색)를 쓸 수 없다.
+  var tplStorageBroken = false;
   function updateTextLock() {
     var locked = !state.image && !state.blank;
     textFieldsEl.disabled = locked;
     // 입력이 막혀 있는 동안 입력칸에는 이유를 안내하는 글씨(placeholder)만 보이고, 풀리면 원래 문구가 나타난다.
     textInput.placeholder = locked ? TEXT_LOCK_MESSAGE : "";
     textInput.value = locked ? "" : state.text;
+    tplSaveNewBtn.disabled = !uploadEl.hidden || tplStorageBroken; // 올리기 카드가 보이는 동안에는 새 템플릿 저장을 막는다
   }
 
   // ---- 파일 검사와 불러오기 ---------------------------------------------------
@@ -332,14 +317,13 @@
 
   function reject(file, reason) {
     // 기존 작업(state)은 건드리지 않는다.
-    setMessage("\"" + file.name + "\" 파일을 불러오지 못했습니다. " + reason + " 기존 작업은 그대로 유지됩니다.", "error");
+    notifyTpl("\"" + file.name + "\" 파일을 불러오지 못했습니다. " + reason + " 기존 작업은 그대로 유지됩니다.");
   }
 
   var loadSeq = 0;
   function loadFile(file) {
     if (!file) return;
     var seq = ++loadSeq;
-    setMessage("\"" + file.name + "\" 확인 중...", "");
 
     if (file.size === 0) return reject(file, "빈 파일입니다.");
     if (file.size > MAX_FILE_BYTES) {
@@ -367,7 +351,6 @@
         state.y = DEFAULT_Y;
         textInput.value = DEFAULT_TEXT;
         setUploadOpen(false);
-        setMessage("\"" + file.name + "\" 이미지를 불러왔습니다.", "ok");
         draw();
       }, function () {
         if (seq !== loadSeq) return;
@@ -488,8 +471,6 @@
     return d.getFullYear() + p(d.getMonth() + 1) + p(d.getDate()) + "-" + p(d.getHours()) + p(d.getMinutes()) + p(d.getSeconds());
   }
 
-  function setExportMessage(text, kind) { setStatus(exportMessageEl, text, kind); }
-
   function canvasToPngBlob(c) {
     return new Promise(function (resolve, reject) {
       c.toBlob(function (blob) { blob ? resolve(blob) : reject(new Error("toBlob")); }, "image/png");
@@ -509,7 +490,6 @@
 
   function exportPng() {
     downloadBtn.disabled = true;
-    setExportMessage("파일을 만드는 중...", "");
     return fontsReadyForCurrentText().then(function () {
       var r = RATIOS[state.ratio];
       draw(); // 글꼴이 준비된 상태로 미리보기도 다시 그려 화면과 파일을 맞춘다.
@@ -520,10 +500,10 @@
       return canvasToPngBlob(off).then(function (blob) {
         var name = "meme-card-" + r.file + "-" + timestamp() + ".png";
         downloadBlob(blob, name);
-        setExportMessage(name + " (" + r.w + "×" + r.h + ") 을 내려받았습니다.", "ok");
+        notifyTpl(name + " (" + r.w + "×" + r.h + ") 을 내려받았습니다.");
       });
     }).catch(function () {
-      setExportMessage("파일을 만들지 못했습니다. 다시 시도해 주세요.", "error");
+      notifyTpl("파일을 만들지 못했습니다. 다시 시도해 주세요.");
     }).then(function () {
       downloadBtn.disabled = false;
     });
@@ -537,7 +517,7 @@
   var STORE = "templates";
   var TEMPLATE_VERSION = 1;
   // 글자 수 한도는 입력칸(maxlength)과 같은 값을 쓴다.
-  // 새로 입력하는 이름과 메모는 입력칸 제한(10자, 20자)만 따르고, 저장 데이터가 허용하는 길이는 예전 그대로(40자, 100자)다: 예전에 길게 저장한 템플릿과 JSON도 읽힌다.
+  // 새로 입력하는 이름과 메모는 입력칸 제한(15자, 20자)만 따르고, 저장 데이터가 허용하는 길이는 예전 그대로(40자, 100자)다: 예전에 길게 저장한 템플릿과 JSON도 읽힌다.
   var NAME_MAX = 40;
   var MEMO_MAX = 100;
   var TEXT_MAX = 200; // 저장 데이터가 허용하는 문구 길이. 화면에서 입력하는 길이는 입력칸의 maxlength(50)로 제한하고, 예전에 더 길게 저장한 템플릿도 읽을 수 있게 그대로 둔다.
@@ -693,7 +673,7 @@
   // 사용자가 저장할 수 있는 템플릿은 최대 3개다(기본 템플릿 3개는 세지 않는다). 예전에 더 많이 저장된 것은 지우지 않고 그대로 둔다.
   var USER_TEMPLATE_MAX = 3;
   function userCount(records) { return records.filter(function (r) { return !isDefaultTemplate(r.id); }).length; }
-  var LIMIT_ALERT = "저장한 템플릿은 최대 " + USER_TEMPLATE_MAX + "개입니다.";
+  var LIMIT_ALERT = "저장 가능한 템플릿은 최대 " + USER_TEMPLATE_MAX + "개입니다.";
 
   function cleanName(v) { return v.replace(/\s+/g, " ").trim().slice(0, NAME_MAX); }
 
@@ -761,7 +741,46 @@
   var selectedId = null;
   var tplBusy = false;
 
-  function setTplMessage(text, kind) { setStatus(tplMessageEl, text, kind); }
+  // 템플릿 창(저장 버튼 아래)에는 글씨를 띄우지 않고 알림 창으로만 알린다.
+  // 브라우저 기본 alert/confirm 대신 화면 스타일에 맞춘 <dialog>를 쓴다. 여러 개가 겹치면 차례로 띄운다.
+  var dlg = document.getElementById("app-dialog");
+  var dlgQueue = Promise.resolve();
+  var WARN_WORDS = /실패|못했|없습니다|없어|삭제할 수 없|최대|이미 삭제|손상/;
+
+  function showDialog(text, confirmMode, warn) {
+    var run = function () {
+      return new Promise(function (resolve) {
+        var icon = document.getElementById("dlg-icon");
+        var cancelBtn = document.getElementById("dlg-cancel");
+        document.getElementById("dlg-title").textContent = confirmMode ? "확인" : (warn ? "알림" : "완료");
+        document.getElementById("dlg-text").textContent = text;
+        icon.textContent = confirmMode ? "?" : (warn ? "!" : "\u2713");
+        dlg.className = "dlg " + (confirmMode ? "dlg-ask" : (warn ? "dlg-warn" : "dlg-ok"));
+        cancelBtn.hidden = !confirmMode;
+        dlg.addEventListener("close", function onClose() {
+          dlg.removeEventListener("close", onClose);
+          resolve(dlg.returnValue === "ok");
+        });
+        if (typeof dlg.showModal === "function") {
+          dlg.returnValue = "cancel";
+          dlg.showModal();
+        } else {
+          resolve(confirmMode ? window.confirm(text) : (window.alert(text), true));
+        }
+      });
+    };
+    var p = dlgQueue.then(run);
+    dlgQueue = p.catch(function () {});
+    return p;
+  }
+
+  function notifyTpl(text) { return showDialog(text, false, WARN_WORDS.test(text)); }
+  function confirmTpl(text) { return showDialog(text, true, false); }
+
+  // 어두운 배경(::backdrop)을 눌러도 알림은 닫힌다. 확인 질문은 실수로 닫히지 않게 둔다.
+  dlg.addEventListener("click", function (e) {
+    if (e.target === dlg && document.getElementById("dlg-cancel").hidden) dlg.close("ok");
+  });
 
   var timeFormat = null;
   function fmtTime(iso) {
@@ -902,7 +921,6 @@
     });
     dropStaleThumbs(records);
     tplEmptyEl.hidden = !!tplListEl.firstChild; // 기본 템플릿은 창 왼쪽에 따로 있으므로, 이 목록은 직접 만든 것만 센다
-    tplSelectedEl.textContent = sel ? "선택한 템플릿: " + sel.name + " (수정 저장을 누르면 이 템플릿을 지금 편집 내용으로 덮어씁니다.)" : "선택한 템플릿이 없습니다. 목록에서 불러오면 선택됩니다.";
     tplSaveUpdateBtn.disabled = !sel;
   }
 
@@ -910,8 +928,8 @@
     return dbGetAll().then(renderList);
   }
 
-  function tplFail(err, prefix) {
-    setTplMessage(prefix + (err && err.message && !/^(no-indexeddb|blocked|abort|toBlob)$/.test(err.message) ? " " + err.message : ""), "error");
+  function errReason(err) {
+    return err && err.message && !/^(no-indexeddb|blocked|abort|toBlob)$/.test(err.message) ? err.message : "";
   }
 
   // 한 번에 하나의 저장 작업만 한다(연타로 중복 저장되는 것을 막는다).
@@ -922,6 +940,7 @@
   }
 
   function saveNewTemplate() {
+    var addedName = "";
     return runTpl(function () {
       // 이름을 비워 두었을 때만 자동 이름을 정하려고 저장된 이름을 읽는다.
       var typed = cleanName(tplNameInput.value);
@@ -933,19 +952,21 @@
           return dbAdd(rec).then(function () {
             selectedId = rec.id;
             tplNameInput.value = rec.name;
-            setTplMessage("\"" + rec.name + "\" 템플릿을 저장했습니다.", "ok");
+            addedName = rec.name;
           });
         });
-      }).then(refreshList);
+      }).then(refreshList).then(function () {
+        notifyTpl("\"" + addedName + "\" 템플릿이 추가되었습니다."); // 목록이 새로 그려진 뒤에 알린다
+      });
     }).catch(function (e) {
-      if (e && e.limit) { setTplMessage("", ""); window.alert(LIMIT_ALERT); return; }
-      tplFail(e, "템플릿을 저장하지 못했습니다.");
+      if (e && e.limit) { notifyTpl(LIMIT_ALERT); return; }
+      notifyTpl(errReason(e) || "템플릿 저장에 실패했습니다.");
     });
   }
 
   function selectedGone() {
     selectedId = null;
-    setTplMessage("선택한 템플릿이 이미 삭제되어 저장하지 않았습니다.", "error");
+    notifyTpl("선택한 템플릿이 이미 삭제되어 저장하지 않았습니다.");
   }
 
   function updateSelectedTemplate() {
@@ -961,59 +982,53 @@
         return buildRecord(existing, name).then(function (rec) {
           // 저장 시점에 대상이 여전히 있는지 다시 확인한다. 없으면 새로 만들지 않는다.
           return dbReplace(rec).then(function (saved) {
-            if (!saved) {
-              selectedGone();
-            } else {
-              setTplMessage("\"" + rec.name + "\" 템플릿을 수정했습니다.", "ok");
-            }
+            if (!saved) selectedGone();
             return refreshList();
           });
         });
       });
-    }).catch(function (e) { tplFail(e, "템플릿을 수정하지 못했습니다."); });
+    }).catch(function (e) { notifyTpl("템플릿 수정에 실패했습니다."); });
   }
 
   function loadTemplate(id) {
     return runTpl(function () {
       return dbGet(id).then(function (rec) {
         if (!rec) {
-          setTplMessage("템플릿이 이미 삭제되어 불러오지 못했습니다.", "error");
+          notifyTpl("템플릿이 이미 삭제되었습니다.");
           return refreshList();
         }
-        return restoreTemplate(rec).then(function () {
-          selectedId = rec.id;
-          tplNameInput.value = rec.name;
-          tplMemoInput.value = rec.memo;
-          setMessage("", "");
-          setTplMessage("", "");
-          return refreshList();
+        // 직접 저장한 템플릿만 묻는다. 기본 템플릿(왼쪽 그림)은 바로 불러온다.
+        var ask = isDefaultTemplate(id) ? Promise.resolve(true) : confirmTpl("\"" + rec.name + "\" 템플릿을 불러오시겠습니까?");
+        return ask.then(function (ok) {
+          if (!ok) return;
+          return restoreTemplate(rec).then(function () {
+            selectedId = rec.id;
+            tplNameInput.value = rec.name;
+            tplMemoInput.value = rec.memo;
+            return refreshList();
+          });
         });
       });
-    }).catch(function (e) { tplFail(e, "템플릿을 불러오지 못했습니다. 지금 편집 내용은 그대로입니다."); });
+    }).catch(function (e) { notifyTpl("템플릿을 불러오지 못했습니다. 지금 편집 내용은 그대로입니다." + (errReason(e) ? " " + errReason(e) : "")); });
   }
 
   function deleteTemplate(id) {
     if (isDefaultTemplate(id)) {
-      setTplMessage("기본 템플릿은 삭제할 수 없습니다.", "error");
+      notifyTpl("기본 템플릿은 삭제할 수 없습니다.");
       return Promise.resolve();
     }
     return runTpl(function () {
       return dbGet(id).then(function (rec) {
-        if (!rec) {
-          setTplMessage("템플릿이 이미 삭제되어 있습니다.", "");
-          return refreshList();
-        }
-        if (!window.confirm("\"" + rec.name + "\" 템플릿을 삭제할까요? 삭제하면 되돌릴 수 없습니다.")) {
-          setTplMessage("삭제를 취소했습니다.", "");
-          return;
-        }
-        return dbDelete(id).then(function () {
-          if (selectedId === id) selectedId = null;
-          setTplMessage("\"" + rec.name + "\" 템플릿을 삭제했습니다.", "ok");
-          return refreshList();
+        if (!rec) return refreshList();
+        return confirmTpl("\"" + rec.name + "\" 템플릿을 삭제할까요?").then(function (ok) {
+          if (!ok) return;
+          return dbDelete(id).then(function () {
+            if (selectedId === id) selectedId = null;
+            return refreshList();
+          });
         });
       });
-    }).catch(function (e) { tplFail(e, "템플릿을 삭제하지 못했습니다."); });
+    }).catch(function (e) { notifyTpl("템플릿 삭제에 실패했습니다."); });
   }
 
   tplSaveNewBtn.addEventListener("click", saveNewTemplate);
@@ -1047,21 +1062,6 @@
     return new Blob([bytes], { type: "image/png" });
   }
 
-  function setProblems(list, more) {
-    tplProblemsEl.textContent = "";
-    list.forEach(function (t) {
-      var li = document.createElement("li");
-      li.textContent = t;
-      tplProblemsEl.appendChild(li);
-    });
-    if (more > 0) {
-      var li2 = document.createElement("li");
-      li2.textContent = "그 밖에 " + more + "건이 더 있습니다.";
-      tplProblemsEl.appendChild(li2);
-    }
-    tplProblemsEl.hidden = list.length === 0;
-  }
-
   // 저장된 모습(이미지 본체는 Blob)을 파일 안의 모습(Base64 문자열)으로 바꾼다.
   function toFileForm(r) {
     var copy = Object.assign({}, r);
@@ -1075,22 +1075,26 @@
 
   function exportTemplates() {
     return runTpl(function () {
-      setProblems([], 0);
       return dbGetAll().then(function (records) {
-        var good = sortByCreated(records).filter(function (r) { return validateTemplate(r).length === 0; });
-        var skipped = records.length - good.length;
+        var mine = records.filter(function (r) { return !isDefaultTemplate(r.id); });
+        var good = sortByCreated(mine).filter(function (r) { return validateTemplate(r).length === 0; });
+        var skipped = mine.length - good.length;
         if (!good.length) {
-          setTplMessage(skipped ? "내보낼 수 있는 템플릿이 없습니다. 저장된 " + skipped + "건이 손상되어 있습니다." : "내보낼 템플릿이 없습니다.", "error");
+          if (skipped) {
+            notifyTpl("저장된 " + skipped + "건이 손상되어 내보내기에 실패했습니다.");
+          } else {
+            notifyTpl("내보내기 할 템플릿이 없습니다.");
+          }
           return;
         }
         return Promise.all(good.map(toFileForm)).then(function (out) {
           var payload = { format: FILE_FORMAT, version: FILE_VERSION, exportedAt: new Date().toISOString(), templates: out };
           var name = "meme-card-templates-" + timestamp() + ".json";
           downloadBlob(new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" }), name);
-          setTplMessage(name + " 으로 템플릿 " + out.length + "건을 내보냈습니다." + (skipped ? " 손상된 " + skipped + "건은 제외했습니다." : ""), skipped ? "error" : "ok");
+          notifyTpl(skipped ? "손상된 " + skipped + "건을 제외한 템플릿 " + out.length + "건을 " + name + "으로 내보냈습니다." : name + "으로 템플릿 " + out.length + "건을 내보냈습니다.");
         });
       });
-    }).catch(function (e) { tplFail(e, "템플릿을 내보내지 못했습니다."); });
+    }).catch(function (e) { notifyTpl("템플릿 내보내기에 실패했습니다."); });
   }
 
   // 글자 위치(줄, 칸)를 알려 주기 위해 오류 메시지에서 위치를 뽑는다. 브라우저마다 메시지 모양이 다르다.
@@ -1219,8 +1223,6 @@
   function importFile(file) {
     if (!file) return Promise.resolve();
     return runTpl(function () {
-      setProblems([], 0);
-      setTplMessage("\"" + file.name + "\" 확인 중...", "");
       return dbCount().then(function (n0) {
         return prepareImport(file).then(function (res) {
           if (res.ok) {
@@ -1235,23 +1237,23 @@
           return go();
           function go() {
           return (res.ok ? dbAddMany(res.records) : Promise.resolve(null)).then(function (done) {
-            // 성공이든 실패든 저장소를 다시 읽어 가져오기 전후 건수를 함께 알려 준다.
+            // 성공이든 실패든 저장소를 다시 읽어 목록을 새로 그린다.
             return dbGetAll().then(function (after) {
+              var text;
               if (!done) {
-                var shownProblems = res.problems.slice(0, 30);
-                setTplMessage("\"" + file.name + "\": " + res.headline + " 저장된 템플릿은 그대로입니다(가져오기 전 " + n0 + "건, 후 " + after.length + "건).", "error");
-                setProblems(shownProblems, res.problems.length - shownProblems.length);
+                text = res.kind === "limit" ? LIMIT_ALERT : "JSON 가져오기에 실패했습니다.";
               } else {
-                setTplMessage("\"" + file.name + "\"에서 템플릿 " + done.added + "건을 가져왔습니다(가져오기 전 " + n0 + "건, 후 " + after.length + "건)." +
-                  (done.renamed ? " 그중 " + done.renamed + "건은 id가 이미 있어 새 id로 추가했습니다." : ""), "ok");
+                text = "\"" + file.name + "\"에서 템플릿 " + done.added + "건을 가져왔습니다." +
+                  (done.renamed ? " 그중 " + done.renamed + "건은 id가 이미 있어 새 id로 추가했습니다." : "");
               }
               renderList(after);
+              notifyTpl(text); // 목록이 새로 그려진 뒤에 알린다
             });
           });
           }
         });
       });
-    }).catch(function (e) { tplFail(e, "템플릿을 가져오지 못했습니다. 저장된 템플릿은 그대로입니다."); });
+    }).catch(function (e) { notifyTpl("템플릿 가져오기에 실패했습니다."); });
   }
 
   tplExportBtn.addEventListener("click", exportTemplates);
@@ -1340,11 +1342,12 @@
     // 기본 템플릿을 채우지 못해도(파일을 못 받는 등) 나머지 기능은 그대로 쓴다. 다음에 열 때 다시 시도한다.
     ensureDefaultTemplates().then(null, function () {}).then(syncDefaultTemplates).then(null, function () {}).then(refreshList).catch(function () {
       // 저장소를 쓸 수 없는 환경(예: 일부 사생활 보호 모드)에서도 편집과 내려받기는 그대로 쓸 수 있다.
+      tplStorageBroken = true;
       tplSaveNewBtn.disabled = true;
       tplExportBtn.disabled = true;
       tplImportInput.disabled = true;
       tplEmptyEl.hidden = true;
-      setTplMessage("이 브라우저에서는 템플릿을 저장할 수 없습니다. 편집과 내려받기는 그대로 사용할 수 있습니다.", "error");
+      notifyTpl("해당 브라우저에서는 템플릿을 저장할 수 없습니다.");
     });
   }
 

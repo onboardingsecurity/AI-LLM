@@ -39,10 +39,6 @@
         </div>
       </div>
       <input id="file-input" class="visually-hidden" type="file" accept="image/png,image/jpeg,.png,.jpg,.jpeg" tabindex="-1" aria-hidden="true">
-      <div class="notes">
-        <p id="message" class="message" role="status" aria-live="polite"></p>
-        <p id="export-message" class="message" role="status" aria-live="polite"></p>
-      </div>
     </section>
 
     <aside class="tools" aria-label="편집 도구">
@@ -54,7 +50,6 @@
             <textarea id="text-input" rows="3" maxlength="50" aria-label="문구 내용">문구를 끌어서 위치를 옮기세요.
 화살표 키로도 옮길 수 있습니다.</textarea>
           </label>
-          <p id="fit-note" class="message" role="status" aria-live="polite" hidden></p>
           <div class="field">
             <div class="field-head">
               <span id="size-label">크기 <output id="size-out">26</output></span>
@@ -76,21 +71,26 @@
       <section class="tool tool-template" aria-labelledby="template-tool-title">
         <h2 id="template-tool-title">템플릿</h2>
         <label class="field">
-          <span>이름 <small>(최대 10자, 비우면 자동 이름)</small></span>
-          <input id="tpl-name" type="text" maxlength="10" autocomplete="off">
+          <span>이름 <small>(최대 15자, 비우면 자동 이름)</small></span>
+          <input id="tpl-name" type="text" maxlength="15" autocomplete="off">
         </label>
         <label class="field">
           <span>메모 <small>(최대 20자)</small></span>
           <input id="tpl-memo" type="text" maxlength="20" autocomplete="off">
         </label>
-        <div class="btn-row">
-          <button type="button" id="tpl-save-new" class="primary">새 템플릿으로 저장</button>
-          <button type="button" id="tpl-save-update" class="secondary" disabled>선택한 템플릿 수정 저장</button>
+        <div class="btn-row save-row">
+          <button type="button" id="tpl-save-new" class="primary" aria-describedby="tpl-help-new">새 템플릿으로 저장</button>
+          <ul id="tpl-help-new" class="tpl-help">
+            <li>새로 만든 이미지를 템플릿으로 저장합니다.</li>
+            <li>불러온 템플릿은 새로운 템플릿으로 저장됩니다.</li>
+          </ul>
+          <button type="button" id="tpl-save-update" class="secondary" disabled aria-describedby="tpl-help-update">불러온 템플릿 수정</button>
+          <ul id="tpl-help-update" class="tpl-help">
+            <li>불러온 템플릿 수정은 기존 템플릿에 반영됩니다.</li>
+            <li>작업 중인 템플릿은 테두리 표시로 구분합니다.</li>
+          </ul>
         </div>
-        <p id="tpl-selected" class="meta">선택한 템플릿이 없습니다. 목록에서 불러오면 선택됩니다.</p>
-        <p id="tpl-message" class="message" role="status" aria-live="polite"></p>
-        <ul id="tpl-problems" class="tpl-problems" aria-label="가져오지 못한 이유" hidden></ul>
-        <div class="btn-row">
+        <div class="btn-row json-row">
           <button type="button" id="tpl-export" class="secondary">JSON 내보내기</button>
           <label class="file-btn">
             JSON 가져오기
@@ -107,6 +107,17 @@
       </section>
     </aside>
   </main>
+
+  <dialog id="app-dialog" class="dlg" aria-labelledby="dlg-title" aria-describedby="dlg-text">
+    <form method="dialog" class="dlg-box">
+      <div class="dlg-bar"><span id="dlg-icon" class="dlg-icon" aria-hidden="true"></span><h2 id="dlg-title" class="dlg-title">알림</h2></div>
+      <p id="dlg-text" class="dlg-text"></p>
+      <div class="dlg-actions">
+        <button type="submit" value="cancel" id="dlg-cancel" class="pixel-link dlg-btn">취소</button>
+        <button type="submit" value="ok" id="dlg-ok" class="pixel-btn dlg-btn" autofocus>확인</button>
+      </div>
+    </form>
+  </dialog>
 
   <script src="js/app.js"></script>
 </body>
