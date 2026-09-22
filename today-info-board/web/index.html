@@ -1,0 +1,984 @@
+<!--
+  오늘의 실제 정보판 (T04) — 구조 안내
+
+  화면 섹션 (위→아래):
+    1. 실시간 조회 카드      — 서울 현재 기온, C03~C10
+    2. 전일 대비 카드        — 서로 다른 실제 날짜 기록 2건 + 재계산, C22~C24
+    3. 최근 기온 추이 (보강) — 채점 기준 밖의 추가 기능
+    4. 합성 실패 재생 콘솔   — C12~C21, C26 (시험용, 실제 데이터 아님)
+
+  스크립트 블록 4개와 각각의 원본(단일 진실 공급원):
+    1. 실시간 조회 로직      — 이 파일이 유일한 원본. 별도 원본 없음.
+    2. 최근 기온 추이(보강)  — 이 파일이 유일한 원본. Open-Meteo를 그때그때 다시 조회.
+    3. 전일 대비 데이터      — 원본: data/weather/*.json. 동기화 확인: scripts/verify_daily_records_sync.mjs
+    4. 합성 콘솔 adapter/fixture — 원본: assets/studio-task-assets/t04-real-information-board/
+                                    동기화 확인: scripts/verify_fixture_sync.mjs
+       (원본이 CommonJS라 브라우저에 그대로 못 붙여서 옮겨 적었음 — 두 스크립트가 자동으로 대조한다)
+
+  전체 검증: scripts/run_all_checks.sh 하나로 위 스크립트 전부 + 테스트 실행.
+-->
+<title>서울 기온 조회</title>
+<style>
+  :root{
+    --bg:#f6f4ef;
+    --surface:#ffffff;
+    --ink:#1c1b19;
+    --ink-dim:#5c584f;
+    --line:#e4ded2;
+    --accent:#c0532a;
+    --accent-soft:#f3e2d8;
+    --mono:#7a756a;
+    --ok:#2f6b4f;
+    --warn:#9a6b1f;
+    --warn-soft:#f2e6cf;
+  }
+  @media (prefers-color-scheme: dark){
+    :root:not([data-theme="light"]){
+      --bg:#171512;
+      --surface:#211e1a;
+      --ink:#f1ede4;
+      --ink-dim:#b3aa9a;
+      --line:#3a352c;
+      --accent:#e07a4a;
+      --accent-soft:#3a271c;
+      --mono:#9a9284;
+      --ok:#6bbd93;
+      --warn:#d9a94a;
+      --warn-soft:#3a2f18;
+    }
+  }
+  :root[data-theme="dark"]{
+    --bg:#171512;
+    --surface:#211e1a;
+    --ink:#f1ede4;
+    --ink-dim:#b3aa9a;
+    --line:#3a352c;
+    --accent:#e07a4a;
+    --accent-soft:#3a271c;
+    --mono:#9a9284;
+    --ok:#6bbd93;
+    --warn:#d9a94a;
+    --warn-soft:#3a2f18;
+  }
+
+  *{box-sizing:border-box}
+  body{
+    background:var(--bg);
+    color:var(--ink);
+    font-family:'Source Serif 4', Georgia, 'Noto Serif KR', serif;
+    padding:32px 16px;
+    display:flex;
+    justify-content:center;
+  }
+  .page{ width:100%; max-width:560px; display:flex; flex-direction:column; gap:20px; }
+
+  .eyebrow{
+    font-family:'IBM Plex Mono', ui-monospace, monospace;
+    font-size:12px;
+    letter-spacing:.12em;
+    text-transform:uppercase;
+    color:var(--mono);
+  }
+  h1{
+    margin:0;
+    font-size:22px;
+    font-weight:600;
+    letter-spacing:-.01em;
+    text-wrap:balance;
+  }
+
+  .card{
+    background:var(--surface);
+    border:1px solid var(--line);
+    border-radius:14px;
+    padding:28px 24px;
+  }
+
+  .status{
+    display:inline-flex;
+    align-items:center;
+    gap:6px;
+    font-family:'IBM Plex Mono', ui-monospace, monospace;
+    font-size:12px;
+    color:var(--ink-dim);
+  }
+  .dot{ width:7px; height:7px; border-radius:50%; background:var(--mono); flex:none; }
+  .dot.ok{ background:var(--ok); }
+  .dot.err{ background:var(--accent); }
+  .dot.warn{ background:var(--warn); }
+
+  .value-row{
+    display:flex;
+    align-items:baseline;
+    gap:10px;
+    margin-top:18px;
+    flex-wrap:wrap;
+  }
+  .value{
+    font-size:64px;
+    font-weight:600;
+    letter-spacing:-.02em;
+    font-variant-numeric: tabular-nums;
+    line-height:1;
+  }
+  .value-row.sim .value{ font-size:44px; }
+  .unit{
+    font-size:22px;
+    color:var(--ink-dim);
+    font-weight:500;
+  }
+  .stale-badge{
+    font-family:'IBM Plex Mono', ui-monospace, monospace;
+    font-size:11px;
+    letter-spacing:.04em;
+    color:var(--warn);
+    background:var(--warn-soft);
+    padding:3px 8px;
+    border-radius:999px;
+    align-self:center;
+  }
+
+  .fields{
+    margin-top:22px;
+    display:grid;
+    grid-template-columns: auto 1fr;
+    row-gap:10px;
+    column-gap:16px;
+    font-size:14px;
+  }
+  .fields dt{
+    color:var(--ink-dim);
+    font-family:'IBM Plex Mono', ui-monospace, monospace;
+    font-size:11px;
+    letter-spacing:.06em;
+    text-transform:uppercase;
+    padding-top:2px;
+    white-space:nowrap;
+  }
+  .fields dd{
+    margin:0;
+    font-variant-numeric: tabular-nums;
+    word-break:break-word;
+  }
+
+  .divider{ height:1px; background:var(--line); margin:22px 0; }
+
+  .note{
+    font-size:13px;
+    color:var(--ink-dim);
+    line-height:1.6;
+  }
+  .note a{ color:var(--accent); }
+
+  .error-box{
+    display:none;
+    margin-top:18px;
+    padding:14px 16px;
+    border-radius:10px;
+    background:var(--accent-soft);
+    color:var(--ink);
+    font-size:13.5px;
+    line-height:1.6;
+  }
+  .error-box.show{ display:block; }
+
+  .tip-line{
+    margin-top:14px;
+    font-size:13.5px;
+    color:var(--ink-dim);
+    padding-top:12px;
+    border-top:1px dashed var(--line);
+  }
+  .tip-line b{ color:var(--ink); font-weight:600; }
+
+  h2{
+    margin:0;
+    font-size:17px;
+    font-weight:600;
+    letter-spacing:-.01em;
+    text-wrap:balance;
+  }
+
+  .msg-box{
+    margin-top:18px;
+    padding:14px 16px;
+    border-radius:10px;
+    font-size:13.5px;
+    line-height:1.6;
+  }
+  .msg-box.tone-warn{ background:var(--warn-soft); color:var(--ink); }
+  .msg-box .next-action{ display:block; margin-top:6px; font-weight:600; }
+
+  .btn-grid{ display:flex; flex-wrap:wrap; gap:8px; }
+  .btn{
+    font-family:'IBM Plex Mono', ui-monospace, monospace;
+    font-size:12px;
+    border:1px solid var(--line);
+    background:var(--bg);
+    color:var(--ink);
+    padding:8px 12px;
+    border-radius:8px;
+    cursor:pointer;
+  }
+  .btn:hover{ border-color:var(--accent); }
+  .btn:focus-visible{ outline:2px solid var(--accent); outline-offset:2px; }
+  .btn.primary{ background:var(--accent); color:var(--surface); border-color:var(--accent); }
+  .btn.ghost{ opacity:.75; }
+  .btn.retry{ background:var(--accent); color:#fff; border-color:var(--accent); margin-top:14px; }
+
+  .records{
+    margin-top:16px;
+    padding-top:14px;
+    border-top:1px dashed var(--line);
+    font-family:'IBM Plex Mono', ui-monospace, monospace;
+    font-size:12px;
+    color:var(--ink-dim);
+  }
+  .records ul{ margin:6px 0 0; padding-left:18px; }
+  .records li{ margin-top:2px; }
+
+  /* 표 스타일 공통 베이스. 개별 표는 .data-table에 아래 수정자(day-table/chart-table)를 덧붙여 쓴다. */
+  .data-table{ width:100%; border-collapse:collapse; font-size:13px; }
+  .data-table th, .data-table td{ text-align:left; padding:6px 8px 6px 0; border-bottom:1px solid var(--line); vertical-align:top; }
+  .data-table th{ color:var(--ink-dim); font-family:'IBM Plex Mono', ui-monospace, monospace; font-size:11px; letter-spacing:.05em; text-transform:uppercase; font-weight:500; }
+  .data-table a{ color:var(--accent); word-break:break-all; }
+
+  .day-table{ margin-top:16px; }
+
+  .delta-row{
+    margin-top:18px;
+    padding:14px 16px;
+    border-radius:10px;
+    background:var(--accent-soft);
+    display:flex;
+    align-items:baseline;
+    gap:10px;
+    flex-wrap:wrap;
+  }
+  .delta-value{ font-size:28px; font-weight:600; font-variant-numeric: tabular-nums; }
+  .delta-label{ font-size:13px; color:var(--ink-dim); }
+
+  .chart-wrap{ position:relative; }
+  .chart-wrap svg{ display:block; width:100%; height:auto; overflow:visible; }
+  .chart-grid{ stroke:var(--line); stroke-width:1; }
+  .chart-tick{ font-family:'IBM Plex Mono', ui-monospace, monospace; font-size:9px; fill:var(--ink-dim); }
+  .chart-area{ fill:var(--accent); opacity:.1; }
+  .chart-line{ fill:none; stroke:var(--accent); stroke-width:2; stroke-linecap:round; stroke-linejoin:round; }
+  .chart-dot{ fill:var(--accent); stroke:var(--surface); stroke-width:2; }
+  .chart-hit{ fill:transparent; cursor:pointer; }
+  .chart-hit:focus-visible{ outline:2px solid var(--accent); outline-offset:2px; }
+  .chart-crosshair{ stroke:var(--ink-dim); stroke-width:1; opacity:0; pointer-events:none; }
+  .chart-endlabel{ font-family:'IBM Plex Mono', ui-monospace, monospace; font-size:11px; font-weight:600; fill:var(--ink); }
+
+  .chart-tooltip{
+    position:absolute;
+    pointer-events:none;
+    background:var(--surface);
+    border:1px solid var(--line);
+    border-radius:8px;
+    padding:6px 10px;
+    font-size:12px;
+    line-height:1.5;
+    box-shadow:0 4px 12px rgba(0,0,0,.12);
+    opacity:0;
+    transform:translate(-50%,-100%);
+    white-space:nowrap;
+  }
+  .chart-tooltip b{ font-variant-numeric: tabular-nums; }
+
+  .table-toggle{
+    background:none;
+    border:none;
+    color:var(--accent);
+    font-family:'IBM Plex Mono', ui-monospace, monospace;
+    font-size:11px;
+    cursor:pointer;
+    padding:0;
+    margin-top:12px;
+  }
+  /* .data-table 베이스에 숫자 표(오른쪽 정렬·tabular-nums) 수정자를 덧붙인다 */
+  .chart-table{ margin-top:10px; font-size:12px; }
+  .chart-table th, .chart-table td{ text-align:right; padding:4px 6px; font-variant-numeric: tabular-nums; }
+  .chart-table th:first-child, .chart-table td:first-child{ text-align:left; }
+  .chart-table th{ font-size:10.5px; }
+</style>
+
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Source+Serif+4:wght@500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+
+<div class="page">
+  <div>
+    <div class="eyebrow">오늘의 실제 정보판 · T04</div>
+    <h1>서울 현재 기온</h1>
+  </div>
+
+  <div class="card">
+    <span class="status"><span id="statusDot" class="dot"></span><span id="statusText">조회 중…</span></span>
+
+    <div class="value-row">
+      <span class="value" id="valueOut">—</span>
+      <span class="unit" id="unitOut"></span>
+    </div>
+
+    <dl class="fields">
+      <dt>출처</dt><dd id="sourceOut">—</dd>
+      <dt>출처 시각</dt><dd id="sourceTimeOut">—</dd>
+      <dt>조회 시각</dt><dd id="queryTimeOut">—</dd>
+      <dt>기준 시간대</dt><dd id="tzOut">—</dd>
+    </dl>
+
+    <p class="tip-line" id="tempTipOut" hidden></p>
+
+    <div class="error-box" id="errorBox"></div>
+  </div>
+
+  <p class="note">
+    출처 시각은 API 응답의 관측 시각(15분 간격 갱신)이고, 조회 시각은 이 화면이 방금 요청을 보낸 순간입니다.
+    두 시각이 다를 수 있는 것이 정상입니다. 데이터: <a href="https://open-meteo.com" target="_blank" rel="noopener">Open-Meteo</a> (API 키 불필요, 비개인 공개 좌표: 서울 37.5665, 126.9780).
+  </p>
+
+  <div class="divider"></div>
+
+  <div>
+    <div class="eyebrow">서로 다른 실제 날짜 기록 2건 · T04-C22~C24</div>
+    <h2>전일 대비</h2>
+  </div>
+
+  <div class="card">
+    <table class="data-table day-table">
+      <thead>
+        <tr><th>날짜(KST)</th><th>값</th><th>출처 시각</th><th>출처</th></tr>
+      </thead>
+      <tbody id="dayTableBody"></tbody>
+    </table>
+
+    <div class="delta-row">
+      <span class="delta-value" id="deltaValueOut">—</span>
+      <span class="delta-label" id="deltaLabelOut">두 저장값에서 이 화면이 직접 재계산함</span>
+    </div>
+  </div>
+
+  <p class="note">
+    두 행은 <code>data/weather/2026-09-22.json</code>, <code>data/weather/2026-09-23.json</code>에 저장된 값을 그대로 옮긴 것이고(원자료·저장값과 값 변형 없이 동일),
+    전일 대비는 이 화면의 자바스크립트가 그 두 값으로 지금 다시 계산한다(고정된 숫자를 박아넣지 않음).
+    계산 규칙: <code>델타 = 늦은 날짜 값 − 이른 날짜 값</code>, 부호로 상승/하락을 표시.
+  </p>
+
+  <div class="divider"></div>
+
+  <div>
+    <div class="eyebrow">보강 기능 · 실시간 조회 활용</div>
+    <h2>최근 기온 추이</h2>
+  </div>
+
+  <div class="card">
+    <div class="chart-wrap" id="trendChartWrap">
+      <span class="status" id="trendStatus"><span class="dot"></span><span>추이 조회 중…</span></span>
+    </div>
+    <button class="table-toggle" id="trendTableToggle" hidden>표로 보기</button>
+    <div id="trendTableWrap" hidden></div>
+  </div>
+
+  <p class="note">
+    최근 6일 + 오늘, 하루 평균 기온(°C)을 Open-Meteo에서 다시 조회해 그린다. 위쪽 "전일 대비"의 두 저장값과는 별개로,
+    이 그래프는 화면을 열 때마다 그 시점 기준으로 다시 그려지는 참고용 추이다.
+  </p>
+
+  <div class="divider"></div>
+
+  <div>
+    <div class="eyebrow">합성 실패 재생 콘솔 · T04-C12~C21, C26 (시험용, 실제 데이터 아님)</div>
+    <h2>Adapter 계약 리허설</h2>
+  </div>
+
+  <div class="card">
+    <div class="btn-grid">
+      <button class="btn primary" id="btnDA">D1-A 정상</button>
+      <button class="btn primary" id="btnDB">D1-B 정상</button>
+      <button class="btn primary" id="btnD2">D2 정상</button>
+      <button class="btn" id="btnTimeout">TIMEOUT</button>
+      <button class="btn" id="btnAuth">AUTH-401</button>
+      <button class="btn" id="btnRate">RATE-429</button>
+      <button class="btn" id="btnOffline">OFFLINE</button>
+      <button class="btn" id="btnSchema">SCHEMA-BREAK</button>
+      <button class="btn ghost" id="btnReset">reset</button>
+    </div>
+
+    <span class="status" style="margin-top:16px;"><span id="simDot" class="dot"></span><span id="simStatusText">초기화 안 됨</span></span>
+
+    <div class="value-row sim">
+      <span class="value" id="simValueOut">—</span>
+      <span class="unit" id="simUnitOut"></span>
+      <span class="stale-badge" id="simStaleBadge" hidden>오래됨(stale)</span>
+    </div>
+
+    <dl class="fields">
+      <dt>오류 코드</dt><dd id="simErrorCodeOut">—</dd>
+      <dt>전일 대비</dt><dd id="simDeltaOut">—</dd>
+      <dt>합성 날짜</dt><dd id="simDateOut">—</dd>
+    </dl>
+
+    <div class="msg-box tone-warn" id="simMsgBox" hidden>
+      <span id="simMsgExplain"></span>
+      <span class="next-action" id="simMsgNextAction"></span>
+    </div>
+    <button class="btn retry" id="btnRetry" hidden>다시 시도 (RECOVER-D2 재생)</button>
+
+    <div class="records">
+      합성 일별 기록(adapter 내부 상태, 실제 기록과 무관): <span id="simRecordCount">0</span>건
+      <ul id="simRecordList"></ul>
+    </div>
+  </div>
+
+  <p class="note">
+    이 콘솔은 사용자가 전달한 실제 T04 공개 패키지(<code>assets/studio-task-assets/t04-real-information-board/</code>)의
+    <code>adapter-reset.example.js</code>와 9개 fixture를 그대로 옮겨 재생한다(SHA-256 대조로 원본과 바이트 일치 확인함).
+    합성 날짜(2026-08-24/25)와 위쪽 실시간 카드의 실제 날짜는 서로 다른 값이며 섞이지 않는다.
+    실패 버튼을 누르면 마지막 정상값은 지워지지 않고 "오래됨" 표시가 붙으며, 실패 종류마다 오류 코드가 다르게 뜬다.
+    "다시 시도" 버튼은 <code>T04-RECOVER-D2</code>를 재생해 상태를 fresh로 되돌리고 다음 합성 날짜 기록을 정확히 1건 추가한다.
+  </p>
+</div>
+
+<script>
+(function(){
+  const API_URL = "https://api.open-meteo.com/v1/forecast?latitude=37.5665&longitude=126.9780&current=temperature_2m,relative_humidity_2m,weather_code&timezone=Asia%2FSeoul";
+
+  const el = {
+    dot: document.getElementById('statusDot'),
+    status: document.getElementById('statusText'),
+    value: document.getElementById('valueOut'),
+    unit: document.getElementById('unitOut'),
+    source: document.getElementById('sourceOut'),
+    sourceTime: document.getElementById('sourceTimeOut'),
+    queryTime: document.getElementById('queryTimeOut'),
+    tz: document.getElementById('tzOut'),
+    errorBox: document.getElementById('errorBox'),
+    tip: document.getElementById('tempTipOut'),
+  };
+
+  // 기온 구간별 간단 코멘트(참고용, 체감온도 아님) — 값·단위 등 필수 표시 항목과는 별개
+  const TEMP_TIPS = [
+    { min: 28, text: '반팔·반바지면 충분하고, 낮 시간 자외선 대비가 필요한 기온이에요.' },
+    { min: 23, text: '반팔이나 얇은 셔츠 정도면 되고, 아침저녁엔 가디건 하나 챙기면 좋아요.' },
+    { min: 20, text: '얇은 긴팔이나 가디건이 딱 맞는 기온이에요.' },
+    { min: 17, text: '니트나 자켓이 필요하고, 저녁엔 조금 쌀쌀할 수 있어요.' },
+    { min: 12, text: '자켓·코트가 필요하고, 일교차가 클 수 있으니 겹쳐 입는 게 좋아요.' },
+    { min: 5,  text: '코트에 목도리 정도는 챙기는 게 좋은 기온이에요.' },
+    { min: -Infinity, text: '패딩과 장갑·목도리로 단단히 챙겨야 하는 기온이에요.' },
+  ];
+  function tempTip(celsius){
+    return TEMP_TIPS.find(t => celsius >= t.min).text;
+  }
+
+  function formatOffset(seconds){
+    const sign = seconds >= 0 ? '+' : '-';
+    const abs = Math.abs(seconds);
+    const hh = String(Math.floor(abs/3600)).padStart(2,'0');
+    const mm = String(Math.floor((abs%3600)/60)).padStart(2,'0');
+    return `${sign}${hh}:${mm}`;
+  }
+
+  async function load(){
+    const queryTimeUtc = new Date().toISOString().replace(/\.\d+Z$/, 'Z');
+
+    let res;
+    try{
+      res = await fetch(API_URL, { cache: 'no-store' });
+    }catch(networkErr){
+      showError('조회 실패: 네트워크 요청 자체가 차단되었거나 응답이 오지 않았습니다.', networkErr, queryTimeUtc);
+      return;
+    }
+
+    if(!res.ok){
+      showError(`조회 실패: 서버가 HTTP ${res.status}을 반환했습니다.`, null, queryTimeUtc);
+      return;
+    }
+
+    let raw;
+    try{
+      raw = await res.json();
+    }catch(parseErr){
+      showError('조회 실패: 응답을 JSON으로 해석할 수 없습니다.', parseErr, queryTimeUtc);
+      return;
+    }
+
+    if(!raw || !raw.current || typeof raw.current.temperature_2m !== 'number'){
+      showError('조회 실패: 응답에 기대한 값(current.temperature_2m)이 없습니다.', null, queryTimeUtc);
+      return;
+    }
+
+    const offsetStr = formatOffset(raw.utc_offset_seconds);
+    const sourceTime = `${raw.current.time}:00${offsetStr}`;
+
+    el.dot.className = 'dot ok';
+    el.status.textContent = '실시간 조회 성공';
+    el.value.textContent = raw.current.temperature_2m.toFixed(1);
+    el.unit.textContent = raw.current_units.temperature_2m;
+    el.source.textContent = 'Open-Meteo (api.open-meteo.com)';
+    el.sourceTime.textContent = sourceTime;
+    el.queryTime.textContent = queryTimeUtc + ' (UTC)';
+    el.tz.textContent = raw.timezone + ' (UTC' + offsetStr + ')';
+
+    el.tip.innerHTML = '';
+    el.tip.appendChild(document.createTextNode('참고 코멘트: '));
+    const strong = document.createElement('b');
+    strong.textContent = tempTip(raw.current.temperature_2m);
+    el.tip.appendChild(strong);
+    el.tip.hidden = false;
+  }
+
+  function showError(message, err, queryTimeUtc){
+    el.dot.className = 'dot err';
+    el.status.textContent = '조회 실패';
+    el.value.textContent = '—';
+    el.unit.textContent = '';
+    el.source.textContent = 'Open-Meteo (api.open-meteo.com)';
+    el.sourceTime.textContent = '해당 없음 (응답을 받지 못함)';
+    el.queryTime.textContent = queryTimeUtc + ' (UTC) — 이 시각에 시도함';
+    el.tz.textContent = 'Asia/Seoul (기준 시간대 고정값)';
+    el.errorBox.textContent = message + (err ? ' [' + String(err.message || err) + ']' : '');
+    el.errorBox.classList.add('show');
+    el.tip.hidden = true;
+  }
+
+  load();
+})();
+</script>
+
+<script>
+// ============================================================================
+// 보강 기능: 최근 기온 추이 (line chart, 단일 계열 sequential 색상)
+// Open-Meteo의 past_days 파라미터로 최근 6일 + 오늘의 일별 평균 기온을 실시간 조회한다.
+// ============================================================================
+(function(){
+  const TREND_URL = "https://api.open-meteo.com/v1/forecast?latitude=37.5665&longitude=126.9780&daily=temperature_2m_mean,temperature_2m_max,temperature_2m_min&timezone=Asia%2FSeoul&past_days=6&forecast_days=1";
+  const SVG_NS = 'http://www.w3.org/2000/svg';
+  const W = 320, H = 130, PAD_L = 28, PAD_R = 36, PAD_T = 12, PAD_B = 20;
+
+  const wrap = document.getElementById('trendChartWrap');
+  const tableToggle = document.getElementById('trendTableToggle');
+  const tableWrap = document.getElementById('trendTableWrap');
+
+  function niceStep(range){
+    if (range <= 4) return 1;
+    if (range <= 10) return 2;
+    return 5;
+  }
+
+  async function load(){
+    let res, json;
+    try{
+      res = await fetch(TREND_URL, { cache: 'no-store' });
+      if(!res.ok) throw new Error('HTTP ' + res.status);
+      json = await res.json();
+      if(!json.daily || !Array.isArray(json.daily.time)) throw new Error('unexpected shape');
+    }catch(err){
+      wrap.innerHTML = '';
+      const p = document.createElement('p');
+      p.className = 'note';
+      p.textContent = '추이를 불러오지 못했습니다: ' + (err.message || err);
+      wrap.appendChild(p);
+      return;
+    }
+
+    const dates = json.daily.time;
+    const means = json.daily.temperature_2m_mean;
+    const mins = json.daily.temperature_2m_min;
+    const maxs = json.daily.temperature_2m_max;
+    const unit = json.daily_units.temperature_2m_mean;
+
+    const dataMin = Math.min(...mins);
+    const dataMax = Math.max(...maxs);
+    const step = niceStep(dataMax - dataMin);
+    const yMin = Math.floor(dataMin / step) * step;
+    const yMax = Math.ceil(dataMax / step) * step;
+
+    const xFor = i => PAD_L + (i / (dates.length - 1)) * (W - PAD_L - PAD_R);
+    const yFor = v => H - PAD_B - ((v - yMin) / (yMax - yMin)) * (H - PAD_T - PAD_B);
+
+    const svg = document.createElementNS(SVG_NS, 'svg');
+    svg.setAttribute('viewBox', `0 0 ${W} ${H}`);
+    svg.setAttribute('role', 'img');
+    svg.setAttribute('aria-label', '최근 7일 일별 평균 기온 추이');
+
+    // 가로 기준선 2개 (최소/최대 근처 nice value)
+    for (let v = yMin; v <= yMax; v += step) {
+      const y = yFor(v);
+      const line = document.createElementNS(SVG_NS, 'line');
+      line.setAttribute('class', 'chart-grid');
+      line.setAttribute('x1', PAD_L); line.setAttribute('x2', W - PAD_R);
+      line.setAttribute('y1', y); line.setAttribute('y2', y);
+      svg.appendChild(line);
+      const tick = document.createElementNS(SVG_NS, 'text');
+      tick.setAttribute('class', 'chart-tick');
+      tick.setAttribute('x', PAD_L - 6); tick.setAttribute('y', y + 3);
+      tick.setAttribute('text-anchor', 'end');
+      tick.textContent = v;
+      svg.appendChild(tick);
+    }
+
+    // x축 날짜 라벨 (월/일)
+    dates.forEach((d, i) => {
+      const label = document.createElementNS(SVG_NS, 'text');
+      label.setAttribute('class', 'chart-tick');
+      label.setAttribute('x', xFor(i));
+      label.setAttribute('y', H - 4);
+      label.setAttribute('text-anchor', 'middle');
+      label.textContent = d.slice(5).replace('-', '/');
+      svg.appendChild(label);
+    });
+
+    // area + line
+    const points = means.map((v, i) => [xFor(i), yFor(v)]);
+    const areaPath = `M${points[0][0]},${yFor(yMin)} ` + points.map(p => `L${p[0]},${p[1]}`).join(' ') + ` L${points[points.length-1][0]},${yFor(yMin)} Z`;
+    const area = document.createElementNS(SVG_NS, 'path');
+    area.setAttribute('class', 'chart-area');
+    area.setAttribute('d', areaPath);
+    svg.appendChild(area);
+
+    const linePath = 'M' + points.map(p => p.join(',')).join(' L');
+    const line = document.createElementNS(SVG_NS, 'path');
+    line.setAttribute('class', 'chart-line');
+    line.setAttribute('d', linePath);
+    svg.appendChild(line);
+
+    // crosshair (숨김 상태로 시작)
+    const crosshair = document.createElementNS(SVG_NS, 'line');
+    crosshair.setAttribute('class', 'chart-crosshair');
+    crosshair.setAttribute('y1', PAD_T); crosshair.setAttribute('y2', H - PAD_B);
+    svg.appendChild(crosshair);
+
+    // 오늘(마지막 점) 강조 + 직접 라벨
+    const lastIdx = points.length - 1;
+    const dot = document.createElementNS(SVG_NS, 'circle');
+    dot.setAttribute('class', 'chart-dot');
+    dot.setAttribute('cx', points[lastIdx][0]); dot.setAttribute('cy', points[lastIdx][1]); dot.setAttribute('r', 4);
+    svg.appendChild(dot);
+    const endLabel = document.createElementNS(SVG_NS, 'text');
+    endLabel.setAttribute('class', 'chart-endlabel');
+    endLabel.setAttribute('x', points[lastIdx][0]);
+    endLabel.setAttribute('y', points[lastIdx][1] - 10);
+    endLabel.setAttribute('text-anchor', 'end');
+    endLabel.textContent = means[lastIdx].toFixed(1) + unit;
+    svg.appendChild(endLabel);
+
+    wrap.innerHTML = '';
+    wrap.appendChild(svg);
+
+    const tooltip = document.createElement('div');
+    tooltip.className = 'chart-tooltip';
+    wrap.appendChild(tooltip);
+
+    function showTooltip(i){
+      const [px, py] = points[i];
+      crosshair.setAttribute('x1', px); crosshair.setAttribute('x2', px);
+      crosshair.style.opacity = 1;
+      tooltip.style.opacity = 1;
+      tooltip.style.left = (px / W * 100) + '%';
+      tooltip.style.top = (py / H * 100) + '%';
+      tooltip.innerHTML = '';
+      const dateLine = document.createElement('div');
+      dateLine.textContent = dates[i];
+      const valueLine = document.createElement('div');
+      const b = document.createElement('b');
+      b.textContent = means[i].toFixed(1) + unit + ' (평균)';
+      valueLine.appendChild(b);
+      const rangeLine = document.createElement('div');
+      rangeLine.style.color = 'var(--ink-dim)';
+      rangeLine.textContent = '최저 ' + mins[i].toFixed(1) + unit + ' · 최고 ' + maxs[i].toFixed(1) + unit;
+      tooltip.append(dateLine, valueLine, rangeLine);
+    }
+    function hideTooltip(){
+      crosshair.style.opacity = 0;
+      tooltip.style.opacity = 0;
+    }
+
+    // 히트 영역 (포인터 + 키보드 포커스)
+    points.forEach((p, i) => {
+      const hit = document.createElementNS(SVG_NS, 'rect');
+      const bandW = (W - PAD_L - PAD_R) / dates.length;
+      hit.setAttribute('class', 'chart-hit');
+      hit.setAttribute('x', p[0] - bandW / 2);
+      hit.setAttribute('y', PAD_T);
+      hit.setAttribute('width', bandW);
+      hit.setAttribute('height', H - PAD_T - PAD_B);
+      hit.setAttribute('tabindex', '0');
+      hit.setAttribute('role', 'button');
+      hit.setAttribute('aria-label', dates[i] + ' 평균 ' + means[i].toFixed(1) + unit);
+      hit.addEventListener('pointerenter', () => showTooltip(i));
+      hit.addEventListener('pointermove', () => showTooltip(i));
+      hit.addEventListener('pointerleave', hideTooltip);
+      hit.addEventListener('focus', () => showTooltip(i));
+      hit.addEventListener('blur', hideTooltip);
+      svg.appendChild(hit);
+    });
+
+    // 표로 보기 (접근성: 차트 없이도 같은 값을 볼 수 있어야 함)
+    const table = document.createElement('table');
+    table.className = 'data-table chart-table';
+    const thead = document.createElement('thead');
+    thead.innerHTML = '<tr><th>날짜</th><th>평균</th><th>최저</th><th>최고</th></tr>';
+    const tbody = document.createElement('tbody');
+    dates.forEach((d, i) => {
+      const tr = document.createElement('tr');
+      tr.innerHTML = `<td>${d}</td><td>${means[i].toFixed(1)}${unit}</td><td>${mins[i].toFixed(1)}${unit}</td><td>${maxs[i].toFixed(1)}${unit}</td>`;
+      tbody.appendChild(tr);
+    });
+    table.append(thead, tbody);
+    tableWrap.innerHTML = '';
+    tableWrap.appendChild(table);
+
+    tableToggle.hidden = false;
+    tableToggle.textContent = '표로 보기';
+    tableWrap.hidden = true;
+    tableToggle.onclick = () => {
+      tableWrap.hidden = !tableWrap.hidden;
+      tableToggle.textContent = tableWrap.hidden ? '표로 보기' : '표 접기';
+    };
+  }
+
+  load();
+})();
+</script>
+
+<script>
+// ============================================================================
+// T04-C22~C24: 서로 다른 실제 날짜 기록 2건 + 전일 대비 재계산
+// 아래 두 레코드는 data/weather/2026-09-22.json, data/weather/2026-09-23.json의
+// stored 블록을 그대로 옮긴 것이다 (scripts/verify_daily_records_sync.mjs로 원본과 대조).
+// ============================================================================
+(function(){
+  // --- DAILY-RECORDS-SYNC-START ---
+  var DAILY_RECORDS = [
+    {
+      date: '2026-09-22',
+      value: 21.2,
+      unit: '°C',
+      source: 'Open-Meteo (api.open-meteo.com)',
+      source_url: 'https://api.open-meteo.com/v1/forecast?latitude=37.5665&longitude=126.9780&current=temperature_2m,relative_humidity_2m,weather_code&timezone=Asia%2FSeoul',
+      source_time: '2026-09-22T23:15:00+09:00'
+    },
+    {
+      date: '2026-09-23',
+      value: 20.3,
+      unit: '°C',
+      source: 'Open-Meteo (api.open-meteo.com)',
+      source_url: 'https://api.open-meteo.com/v1/forecast?latitude=37.5665&longitude=126.9780&current=temperature_2m,relative_humidity_2m,weather_code&timezone=Asia%2FSeoul',
+      source_time: '2026-09-23T00:45:00+09:00'
+    }
+  ];
+  // --- DAILY-RECORDS-SYNC-END ---
+
+  var tbody = document.getElementById('dayTableBody');
+  var sorted = DAILY_RECORDS.slice().sort(function(a, b){ return a.date.localeCompare(b.date); });
+
+  sorted.forEach(function(rec){
+    var tr = document.createElement('tr');
+    tr.innerHTML =
+      '<td>' + rec.date + '</td>' +
+      '<td>' + rec.value.toFixed(1) + ' ' + rec.unit + '</td>' +
+      '<td>' + rec.source_time + '</td>' +
+      '<td><a href="' + rec.source_url + '" target="_blank" rel="noopener">' + rec.source + '</a></td>';
+    tbody.appendChild(tr);
+  });
+
+  if (sorted.length >= 2) {
+    var earlier = sorted[0], later = sorted[sorted.length - 1];
+    var delta = later.value - earlier.value; // 계산 규칙: 늦은 날짜 값 - 이른 날짜 값
+    var sign = delta > 0 ? '+' : (delta < 0 ? '' : '±');
+    var direction = delta > 0 ? '상승' : (delta < 0 ? '하락' : '변화 없음');
+    document.getElementById('deltaValueOut').textContent = sign + delta.toFixed(1) + ' ' + later.unit + ' (' + direction + ')';
+    document.getElementById('deltaLabelOut').textContent =
+      earlier.date + '(' + earlier.value.toFixed(1) + earlier.unit + ') → ' + later.date + '(' + later.value.toFixed(1) + later.unit + ') 재계산';
+  }
+})();
+</script>
+
+<script>
+// ============================================================================
+// T04-C12~C21, C26 합성 실패 재생 콘솔
+// 아래 코드는 사용자가 전달한 실제 패키지의
+// assets/studio-task-assets/t04-real-information-board/adapter-reset.example.js 와
+// fixtures/*.json 을 브라우저용으로 그대로 옮긴 것이다.
+// (scripts/verify_fixture_sync.mjs로 원본과 대조한다.)
+// ============================================================================
+(function(){
+  // --- SYNC-EXTRACT-START ---
+  var NORMALIZED_KEYS = ['signal_id','normalized_value','unit','source_name','source_url','source_time','fetched_at','record_timezone','record_date'];
+  var ERROR_CODES = ['timeout','auth','rate_limit','offline','schema_error'];
+
+  function clone(value){ return JSON.parse(JSON.stringify(value)); }
+
+  function kstDate(isoString){
+    var date = new Date(isoString);
+    var parts = new Intl.DateTimeFormat('en', { timeZone:'Asia/Seoul', year:'numeric', month:'2-digit', day:'2-digit' }).formatToParts(date);
+    var byType = {};
+    parts.forEach(function(p){ byType[p.type] = p.value; });
+    return byType.year+'-'+byType.month+'-'+byType.day;
+  }
+
+  function validateNormalizedReading(reading){
+    var actualKeys = Object.keys(reading).sort();
+    var expectedKeys = NORMALIZED_KEYS.slice().sort();
+    if (actualKeys.length !== expectedKeys.length || actualKeys.some(function(k,i){ return k !== expectedKeys[i]; })) {
+      throw new TypeError('normalized reading keys mismatch');
+    }
+    if (typeof reading.normalized_value !== 'number' || !Number.isFinite(reading.normalized_value)) {
+      throw new TypeError('normalized_value must be a finite number');
+    }
+    if (reading.record_timezone !== 'Asia/Seoul') throw new TypeError('record_timezone must be Asia/Seoul');
+    if (reading.record_date !== kstDate(reading.fetched_at)) throw new TypeError('record_date mismatch');
+    return true;
+  }
+
+  function resetEvaluationState(){
+    return { daily_readings:[], current_reading:null, status:null, last_delta:null,
+      last_comparison:{ state:'insufficient', direction:null, magnitude:null, unit:null }, sequence:0 };
+  }
+
+  function recordIdFor(reading){ return 'demo-'+reading.signal_id+'-'+reading.record_date; }
+
+  function comparisonFor(rows, current){
+    var previous = rows.filter(function(r){ return r.signal_id===current.signal_id && r.record_date < current.record_date; })
+      .sort(function(a,b){ return b.record_date.localeCompare(a.record_date); })[0];
+    if(!previous) return { state:'insufficient', direction:null, magnitude:null, unit:null };
+    var signed = current.normalized_value - previous.normalized_value;
+    return { state:'comparable', direction: signed>0?'increase':signed<0?'decrease':'unchanged', magnitude: Math.abs(signed), unit: current.unit };
+  }
+
+  function applySuccessfulReading(inputState, reading){
+    validateNormalizedReading(reading);
+    var state = clone(inputState);
+    var existingIndex = state.daily_readings.findIndex(function(r){ return r.signal_id===reading.signal_id && r.record_date===reading.record_date; });
+    var existing = existingIndex>=0 ? state.daily_readings[existingIndex] : null;
+    var row = { record_id: existing?existing.record_id:recordIdFor(reading), signal_id:reading.signal_id, record_date:reading.record_date,
+      normalized_value:reading.normalized_value, unit:reading.unit };
+    if(existingIndex>=0) state.daily_readings[existingIndex]=row; else state.daily_readings.push(row);
+    state.daily_readings.sort(function(a,b){ return a.record_date.localeCompare(b.record_date); });
+    state.current_reading = clone(reading);
+    state.status = { freshness:'fresh', error_code:'none' };
+    state.last_comparison = comparisonFor(state.daily_readings, row);
+    state.last_delta = state.last_comparison.magnitude;
+    state.sequence += 1;
+    return state;
+  }
+
+  function applyError(inputState, errorCode){
+    var state = clone(inputState);
+    state.status = { freshness:'stale', error_code: errorCode };
+    state.sequence += 1;
+    return state;
+  }
+
+  function runFixture(inputState, fixture){
+    if (fixture.transport.mode === 'timeout') return applyError(inputState, 'timeout');
+    if (fixture.transport.mode === 'offline') return applyError(inputState, 'offline');
+    if (fixture.transport.status === 401 || fixture.transport.status === 403) return applyError(inputState, 'auth');
+    if (fixture.transport.status === 429) return applyError(inputState, 'rate_limit');
+    if (fixture.transport.status >= 200 && fixture.transport.status < 300) {
+      try { return applySuccessfulReading(inputState, fixture.payload); }
+      catch(e){ return applyError(inputState, 'schema_error'); }
+    }
+    return applyError(inputState, 'schema_error');
+  }
+
+  // fixtures/*.json 사본 (실제 패키지 파일과 동일 — subset 대조는 verify_fixture_sync.mjs)
+  var FIXTURES = {
+    D1A: { fixture_id:'T04-NORMAL-D1-A', transport:{ mode:'http', status:200 },
+      payload:{ signal_id:'aleph-demo-index', normalized_value:100, unit:'pt', source_name:'ALEPH 결정론 replay',
+        source_url:'https://fixtures.aleph.invalid/t04/demo-index', source_time:'2026-08-23T23:59:00.000Z',
+        fetched_at:'2026-08-24T00:00:00.000Z', record_timezone:'Asia/Seoul', record_date:'2026-08-24' } },
+    D1B: { fixture_id:'T04-NORMAL-D1-B', transport:{ mode:'http', status:200 },
+      payload:{ signal_id:'aleph-demo-index', normalized_value:105, unit:'pt', source_name:'ALEPH 결정론 replay',
+        source_url:'https://fixtures.aleph.invalid/t04/demo-index', source_time:null,
+        fetched_at:'2026-08-24T09:00:00.000Z', record_timezone:'Asia/Seoul', record_date:'2026-08-24' } },
+    D2: { fixture_id:'T04-NORMAL-D2', transport:{ mode:'http', status:200 },
+      payload:{ signal_id:'aleph-demo-index', normalized_value:120, unit:'pt', source_name:'ALEPH 결정론 replay',
+        source_url:'https://fixtures.aleph.invalid/t04/demo-index', source_time:'2026-08-24T23:59:00.000Z',
+        fetched_at:'2026-08-25T00:00:00.000Z', record_timezone:'Asia/Seoul', record_date:'2026-08-25' } },
+    TIMEOUT: { fixture_id:'T04-TIMEOUT', transport:{ mode:'timeout', status:null, delay_ms:5000, deadline_ms:1500 }, payload:null },
+    AUTH: { fixture_id:'T04-AUTH-401', transport:{ mode:'http', status:401 }, payload:{ message:'unauthorized synthetic fixture' } },
+    RATE: { fixture_id:'T04-RATE-429', transport:{ mode:'http', status:429, headers:{'retry-after':'60'} }, payload:{ message:'rate limited synthetic fixture' } },
+    OFFLINE: { fixture_id:'T04-OFFLINE', transport:{ mode:'offline', status:null }, payload:null },
+    SCHEMA: { fixture_id:'T04-SCHEMA-BREAK', transport:{ mode:'http', status:200 },
+      payload:{ signal_id:'aleph-demo-index', normalized_value:'105', unit:'pt', source_name:'ALEPH 결정론 replay',
+        source_url:'https://fixtures.aleph.invalid/t04/demo-index', source_time:null,
+        fetched_at:'2026-08-24T10:04:00.000Z', record_timezone:'Asia/Seoul', record_date:'2026-08-24' } },
+    RECOVER_D2: { fixture_id:'T04-RECOVER-D2', transport:{ mode:'http', status:200 },
+      payload:{ signal_id:'aleph-demo-index', normalized_value:120, unit:'pt', source_name:'ALEPH 결정론 replay',
+        source_url:'https://fixtures.aleph.invalid/t04/demo-index', source_time:'2026-08-24T23:59:00.000Z',
+        fetched_at:'2026-08-25T00:00:00.000Z', record_timezone:'Asia/Seoul', record_date:'2026-08-25' } }
+  };
+
+  var FAILURE_MESSAGES = {
+    timeout: { explain:'출처 응답이 제한 시간(1.5초)보다 늦게 왔습니다 (timeout).', next_action:'지금 다시 시도해 보세요.' },
+    auth: { explain:'외부 데이터 원천이 인증을 거절했습니다 (401/403).', next_action:'접근 조건이 바뀌었는지 확인이 필요합니다.' },
+    rate_limit: { explain:'외부 원천이 호출을 제한했습니다 (429).', next_action:'잠시(약 60초) 뒤 다시 시도하세요.' },
+    offline: { explain:'네트워크 연결이 끊겼습니다 (offline).', next_action:'네트워크 연결을 확인한 뒤 다시 시도하세요.' },
+    schema_error: { explain:'응답 형식이 바뀌어 값을 해석할 수 없습니다 (schema_error).', next_action:'형식 변경에 맞춰 코드를 고쳐야 할 수 있습니다.' }
+  };
+  // --- SYNC-EXTRACT-END ---
+
+  var state = resetEvaluationState();
+
+  var s = {
+    dot: document.getElementById('simDot'),
+    status: document.getElementById('simStatusText'),
+    value: document.getElementById('simValueOut'),
+    unit: document.getElementById('simUnitOut'),
+    staleBadge: document.getElementById('simStaleBadge'),
+    errorCode: document.getElementById('simErrorCodeOut'),
+    delta: document.getElementById('simDeltaOut'),
+    date: document.getElementById('simDateOut'),
+    msgBox: document.getElementById('simMsgBox'),
+    msgExplain: document.getElementById('simMsgExplain'),
+    msgNextAction: document.getElementById('simMsgNextAction'),
+    btnRetry: document.getElementById('btnRetry'),
+    recordCount: document.getElementById('simRecordCount'),
+    recordList: document.getElementById('simRecordList'),
+  };
+
+  function render(){
+    s.value.textContent = state.current_reading ? state.current_reading.normalized_value : '—';
+    s.unit.textContent = state.current_reading ? state.current_reading.unit : '';
+    s.errorCode.textContent = state.status ? state.status.error_code : 'none';
+    s.delta.textContent = state.last_delta === null || state.last_delta === undefined ? '해당 없음 (비교 대상 없음)' : ('+' + state.last_delta + ' ' + (state.current_reading ? state.current_reading.unit : ''));
+    s.date.textContent = state.current_reading ? state.current_reading.record_date : '—';
+    s.staleBadge.hidden = !state.status || state.status.freshness !== 'stale';
+
+    if(!state.status){ s.dot.className='dot'; s.status.textContent='초기화 안 됨'; }
+    else if(state.status.freshness==='fresh'){ s.dot.className='dot ok'; s.status.textContent='fresh / none'; }
+    else { s.dot.className='dot warn'; s.status.textContent='stale / ' + state.status.error_code; }
+
+    if(state.status && state.status.freshness==='stale'){
+      var m = FAILURE_MESSAGES[state.status.error_code];
+      s.msgBox.hidden=false; s.msgExplain.textContent=m.explain; s.msgNextAction.textContent=m.next_action;
+      s.btnRetry.hidden=false;
+    } else {
+      s.msgBox.hidden=true; s.btnRetry.hidden=true;
+    }
+
+    s.recordCount.textContent = state.daily_readings.length;
+    s.recordList.innerHTML='';
+    state.daily_readings.forEach(function(r){
+      var li=document.createElement('li');
+      li.textContent = r.record_date + ' → ' + r.normalized_value + ' ' + r.unit;
+      s.recordList.appendChild(li);
+    });
+  }
+
+  function replay(key){ state = runFixture(state, FIXTURES[key]); render(); }
+
+  document.getElementById('btnDA').addEventListener('click', function(){ replay('D1A'); });
+  document.getElementById('btnDB').addEventListener('click', function(){ replay('D1B'); });
+  document.getElementById('btnD2').addEventListener('click', function(){ replay('D2'); });
+  document.getElementById('btnTimeout').addEventListener('click', function(){ replay('TIMEOUT'); });
+  document.getElementById('btnAuth').addEventListener('click', function(){ replay('AUTH'); });
+  document.getElementById('btnRate').addEventListener('click', function(){ replay('RATE'); });
+  document.getElementById('btnOffline').addEventListener('click', function(){ replay('OFFLINE'); });
+  document.getElementById('btnSchema').addEventListener('click', function(){ replay('SCHEMA'); });
+  document.getElementById('btnReset').addEventListener('click', function(){ state = resetEvaluationState(); render(); });
+  s.btnRetry.addEventListener('click', function(){ replay('RECOVER_D2'); });
+
+  render();
+})();
+</script>
