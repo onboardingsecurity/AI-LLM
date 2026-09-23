@@ -31,6 +31,7 @@
     --ok:#2f6b4f;
     --warn:#9a6b1f;
     --warn-soft:#f2e6cf;
+    --cursor:url('../assets/common/mouse-cursor.png') 0 0, auto;
   }
   @media (prefers-color-scheme: dark){
     :root:not([data-theme="light"]){
@@ -70,6 +71,7 @@
     display:flex;
     justify-content:center;
     overflow-x:hidden;
+    cursor:var(--cursor);
   }
   .page{ width:100%; max-width:560px; display:flex; flex-direction:column; gap:20px; }
   #landingView:not([hidden]), #boardView:not([hidden]){ display:flex; flex-direction:column; gap:20px; }
@@ -220,7 +222,7 @@
     color:var(--ink);
     padding:8px 12px;
     border-radius:8px;
-    cursor:pointer;
+    cursor:var(--cursor);
   }
   .btn:hover{ border-color:var(--accent); }
   .btn:focus-visible{ outline:2px solid var(--accent); outline-offset:2px; }
@@ -267,7 +269,7 @@
   .chart-area{ fill:var(--accent); opacity:.1; }
   .chart-line{ fill:none; stroke:var(--accent); stroke-width:2; stroke-linecap:round; stroke-linejoin:round; }
   .chart-dot{ fill:var(--accent); stroke:var(--surface); stroke-width:2; }
-  .chart-hit{ fill:transparent; cursor:pointer; }
+  .chart-hit{ fill:transparent; cursor:var(--cursor); }
   .chart-hit:focus-visible{ outline:2px solid var(--accent); outline-offset:2px; }
   .chart-crosshair{ stroke:var(--ink-dim); stroke-width:1; opacity:0; pointer-events:none; }
   .chart-endlabel{ font-family:'IBM Plex Mono', ui-monospace, monospace; font-size:11px; font-weight:600; fill:var(--ink); }
@@ -294,7 +296,7 @@
     color:var(--accent);
     font-family:'IBM Plex Mono', ui-monospace, monospace;
     font-size:11px;
-    cursor:pointer;
+    cursor:var(--cursor);
     padding:0;
     margin-top:12px;
   }
@@ -317,14 +319,14 @@
     padding:0;
     border:none;
     background:none;
-    cursor:pointer;
+    cursor:var(--cursor);
     line-height:0;
     transform:rotate(var(--rot,0deg));
     filter:drop-shadow(0 8px 18px rgba(0,0,0,.4));
     transition:transform .22s ease, filter .22s ease;
   }
   .region-tile img{ display:block; width:100%; height:auto; }
-  .region-tile:hover, .region-tile:focus-visible{
+  .region-tile:hover, .region-tile.is-hover, .region-tile:focus-visible{
     transform:rotate(var(--rot,0deg)) scale(1.08) translateY(-6px);
     filter:drop-shadow(0 14px 26px rgba(0,0,0,.5));
     z-index:5;
@@ -539,6 +541,8 @@
     img.alt = region.name;
     btn.appendChild(img);
     btn.addEventListener('click', () => select(i));
+    btn.addEventListener('mouseenter', () => btn.classList.add('is-hover'));
+    btn.addEventListener('mouseleave', () => btn.classList.remove('is-hover'));
     grid.appendChild(btn);
   });
 
