@@ -52,7 +52,7 @@ with tempfile.TemporaryDirectory(prefix="t04-c20-c21-") as tmp_dir:
     last_merged = None
     for i, (time_str, temp, query_time) in enumerate(same_day_calls, start=1):
         raw = make_raw(time_str, temp)
-        record = build_record(raw, query_time)
+        record = build_record(raw, query_time, "https://fixtures.invalid/synthetic")
         out_path, action, merged = save_record(tmp_dir, record)
         expected_action = "created" if i == 1 else "updated"
         check(f"{i}번째 호출: action={expected_action}", action == expected_action, f"실제: {action}")
@@ -70,7 +70,7 @@ with tempfile.TemporaryDirectory(prefix="t04-c20-c21-") as tmp_dir:
 
     print("\n=== 다음 날짜 한 번 (C21) ===")
     raw_next = make_raw("2099-02-02T09:00", 12.0)
-    record_next = build_record(raw_next, "2099-02-02T00:00:00Z")
+    record_next = build_record(raw_next, "2099-02-02T00:00:00Z", "https://fixtures.invalid/synthetic")
     out_path2, action2, merged2 = save_record(tmp_dir, record_next)
     check("다음 날짜 호출: action=created (새 파일)", action2 == "created", f"실제: {action2}")
 

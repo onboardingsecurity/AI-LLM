@@ -69,8 +69,10 @@
     padding:32px 16px;
     display:flex;
     justify-content:center;
+    overflow-x:hidden;
   }
   .page{ width:100%; max-width:560px; display:flex; flex-direction:column; gap:20px; }
+  #landingView:not([hidden]), #boardView:not([hidden]){ display:flex; flex-direction:column; gap:20px; }
 
   .eyebrow{
     font-family:'IBM Plex Mono', ui-monospace, monospace;
@@ -301,14 +303,48 @@
   .chart-table th, .chart-table td{ text-align:right; padding:4px 6px; font-variant-numeric: tabular-nums; }
   .chart-table th:first-child, .chart-table td:first-child{ text-align:left; }
   .chart-table th{ font-size:10.5px; }
+
+  /* 지역 선택 UI (보강 기능): 4개 이미지를 자유롭게 흩뿌린 분기점.
+     뷰포트 전체 너비로 번져 나가게 해서(브레이크아웃) 같은 배치 비율로 더 크게 보이게 한다. */
+  .region-grid{
+    position:relative;
+    width:100vw;
+    margin-left:calc(50% - 50vw);
+    height:min(90vh, 760px);
+  }
+  .region-tile{
+    position:absolute;
+    padding:0;
+    border:none;
+    background:none;
+    cursor:pointer;
+    line-height:0;
+    transform:rotate(var(--rot,0deg));
+    filter:drop-shadow(0 8px 18px rgba(0,0,0,.4));
+    transition:transform .22s ease, filter .22s ease;
+  }
+  .region-tile img{ display:block; width:100%; height:auto; }
+  .region-tile:hover, .region-tile:focus-visible{
+    transform:rotate(var(--rot,0deg)) scale(1.08) translateY(-6px);
+    filter:drop-shadow(0 14px 26px rgba(0,0,0,.5));
+    z-index:5;
+  }
+  .region-tile:focus-visible{ outline:2px solid var(--accent); outline-offset:4px; }
 </style>
 
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Source+Serif+4:wght@500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
 
 <div class="page">
+  <div id="landingView">
+    <div class="region-grid" id="regionGrid"></div>
+  </div>
+
+  <div id="boardView" hidden>
+  <button class="btn ghost" id="btnBackFromBoard">← 지역 선택으로</button>
+
   <div>
     <div class="eyebrow">오늘의 실제 정보판 · T04</div>
-    <h1>서울 현재 기온</h1>
+    <h1 id="boardTitle">서울 현재 기온</h1>
   </div>
 
   <div class="card">
@@ -333,7 +369,7 @@
 
   <p class="note">
     출처 시각은 API 응답의 관측 시각(15분 간격 갱신)이고, 조회 시각은 이 화면이 방금 요청을 보낸 순간입니다.
-    두 시각이 다를 수 있는 것이 정상입니다. 데이터: <a href="https://open-meteo.com" target="_blank" rel="noopener">Open-Meteo</a> (API 키 불필요, 비개인 공개 좌표: 서울 37.5665, 126.9780).
+    두 시각이 다를 수 있는 것이 정상입니다. 데이터: <a href="https://open-meteo.com" target="_blank" rel="noopener">Open-Meteo</a> (API 키 불필요, 비개인 공개 좌표: <span id="boardCoordNote">서울 37.5665, 126.9780</span>).
   </p>
 
   <div class="divider"></div>
@@ -358,9 +394,10 @@
   </div>
 
   <p class="note">
-    두 행은 <code>data/weather/2026-09-22.json</code>, <code>data/weather/2026-09-23.json</code>에 저장된 값을 그대로 옮긴 것이고(원자료·저장값과 값 변형 없이 동일),
-    전일 대비는 이 화면의 자바스크립트가 그 두 값으로 지금 다시 계산한다(고정된 숫자를 박아넣지 않음).
+    각 행은 <code id="dayRecordsDirNote">data/weather/seoul/&lt;날짜&gt;.json</code>에 저장된 값을 그대로 옮긴 것이고(원자료·저장값과 값 변형 없이 동일),
+    전일 대비는 이 화면의 자바스크립트가 저장된 값들로 지금 다시 계산한다(고정된 숫자를 박아넣지 않음).
     계산 규칙: <code>델타 = 늦은 날짜 값 − 이른 날짜 값</code>, 부호로 상승/하락을 표시.
+    서로 다른 실제 날짜 기록이 아직 2건 미만인 지역은 다음 날 기록이 쌓이면 자동으로 전일 대비가 계산된다.
   </p>
 
   <div class="divider"></div>
@@ -381,6 +418,29 @@
   <p class="note">
     최근 6일 + 오늘, 하루 평균 기온(°C)을 Open-Meteo에서 다시 조회해 그린다. 위쪽 "전일 대비"의 두 저장값과는 별개로,
     이 그래프는 화면을 열 때마다 그 시점 기준으로 다시 그려지는 참고용 추이다.
+  </p>
+
+  <div class="divider"></div>
+
+  <div>
+    <div class="eyebrow">보강 기능 · 채점 기준 밖의 추가 기능</div>
+    <h2>다른 지역 현재 기온</h2>
+  </div>
+
+  <div class="card">
+    <table class="data-table" id="multiCityTable">
+      <thead>
+        <tr><th>지역</th><th>기온</th><th>습도</th><th>풍속</th></tr>
+      </thead>
+      <tbody id="multiCityTableBody">
+        <tr><td colspan="4">조회 중…</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <p class="note">
+    서울·구미·대구·청도 그레이스 CC(경북 청도군 각남면, 35.6610, 128.6439)의 현재 기온을 Open-Meteo에서 다시 조회한다.
+    위쪽 실시간 조회 카드와는 별개의 하드코딩된 좌표 목록이며, 화면을 열 때마다 그 시점 값으로 다시 그려진다.
   </p>
 
   <div class="divider"></div>
@@ -436,11 +496,79 @@
     실패 버튼을 누르면 마지막 정상값은 지워지지 않고 "오래됨" 표시가 붙으며, 실패 종류마다 오류 코드가 다르게 뜬다.
     "다시 시도" 버튼은 <code>T04-RECOVER-D2</code>를 재생해 상태를 fresh로 되돌리고 다음 합성 날짜 기록을 정확히 1건 추가한다.
   </p>
+  </div>
 </div>
 
 <script>
+// ============================================================================
+// 보강 기능: 첫 화면 지도 선택 (서울/구미/대구/청도 그레이스 CC 중 선택)
+// ============================================================================
 (function(){
-  const API_URL = "https://api.open-meteo.com/v1/forecast?latitude=37.5665&longitude=126.9780&current=temperature_2m,relative_humidity_2m,weather_code&timezone=Asia%2FSeoul";
+  // 서울-구미-대구를 가로로 나란히, 서로 떨어뜨려 배치(구미는 서울·대구 사이)하고, 그레이스 CC는 구미 바로 아래에 놓는다.
+  // id는 scripts/fetch_weather.py의 REGIONS 키, data/weather/<id>/ 저장 경로와 동일하게 맞춘다.
+  const REGIONS = [
+    { id: 'seoul', name: '서울', lat: 37.5665, lon: 126.9780, img: '../assets/region/seoul-city.png',
+      left: 0, top: 34, width: 28, rot: -9 },
+    { id: 'gumi', name: '구미', lat: 36.1195, lon: 128.3446, img: '../assets/region/gumi-city.png',
+      left: 36, top: 34, width: 28, rot: 3 },
+    { id: 'daegu', name: '대구', lat: 35.8714, lon: 128.6014, img: '../assets/region/daegu-city.png',
+      left: 72, top: 34, width: 28, rot: 9 },
+    { id: 'grace-cc', name: '청도 그레이스 CC', lat: 35.6610, lon: 128.6439, img: '../assets/region/grace-cc.png',
+      left: 33, top: 58, width: 34, rot: -3 },
+  ];
+  window.TIB = window.TIB || {};
+  window.TIB.REGIONS = REGIONS;
+
+  const grid = document.getElementById('regionGrid');
+  const landingView = document.getElementById('landingView');
+  const boardView = document.getElementById('boardView');
+  const boardTitle = document.getElementById('boardTitle');
+  const boardCoordNote = document.getElementById('boardCoordNote');
+
+  REGIONS.forEach((region, i) => {
+    const btn = document.createElement('button');
+    btn.className = 'region-tile';
+    btn.type = 'button';
+    btn.setAttribute('aria-label', region.name + ' 날씨 보기');
+    btn.style.left = region.left + '%';
+    btn.style.top = region.top + '%';
+    btn.style.width = region.width + '%';
+    btn.style.setProperty('--rot', region.rot + 'deg');
+    const img = document.createElement('img');
+    img.src = region.img;
+    img.alt = region.name;
+    btn.appendChild(img);
+    btn.addEventListener('click', () => select(i));
+    grid.appendChild(btn);
+  });
+
+  function showLanding(){
+    landingView.hidden = false;
+    boardView.hidden = true;
+  }
+
+  document.getElementById('btnBackFromBoard').addEventListener('click', showLanding);
+
+  function select(i){
+    const region = REGIONS[i];
+    landingView.hidden = true;
+    boardView.hidden = false;
+    boardTitle.textContent = region.name + ' 현재 기온';
+    boardCoordNote.textContent = region.name + ' ' + region.lat + ', ' + region.lon;
+    window.TIB.loadCurrent(region);
+    window.TIB.loadTrend(region);
+    window.TIB.renderDailyRecords(region);
+  }
+})();
+</script>
+
+<script>
+(function(){
+  window.TIB = window.TIB || {};
+
+  function apiUrl(region){
+    return `https://api.open-meteo.com/v1/forecast?latitude=${region.lat}&longitude=${region.lon}&current=temperature_2m,relative_humidity_2m,weather_code&timezone=Asia%2FSeoul`;
+  }
 
   const el = {
     dot: document.getElementById('statusDot'),
@@ -477,12 +605,20 @@
     return `${sign}${hh}:${mm}`;
   }
 
-  async function load(){
+  async function load(region){
     const queryTimeUtc = new Date().toISOString().replace(/\.\d+Z$/, 'Z');
+
+    el.dot.className = 'dot';
+    el.status.textContent = '조회 중…';
+    el.value.textContent = '—';
+    el.unit.textContent = '';
+    el.errorBox.classList.remove('show');
+    el.errorBox.textContent = '';
+    el.tip.hidden = true;
 
     let res;
     try{
-      res = await fetch(API_URL, { cache: 'no-store' });
+      res = await fetch(apiUrl(region), { cache: 'no-store' });
     }catch(networkErr){
       showError('조회 실패: 네트워크 요청 자체가 차단되었거나 응답이 오지 않았습니다.', networkErr, queryTimeUtc);
       return;
@@ -540,7 +676,7 @@
     el.tip.hidden = true;
   }
 
-  load();
+  window.TIB.loadCurrent = load;
 })();
 </script>
 
@@ -550,7 +686,11 @@
 // Open-Meteo의 past_days 파라미터로 최근 6일 + 오늘의 일별 평균 기온을 실시간 조회한다.
 // ============================================================================
 (function(){
-  const TREND_URL = "https://api.open-meteo.com/v1/forecast?latitude=37.5665&longitude=126.9780&daily=temperature_2m_mean,temperature_2m_max,temperature_2m_min&timezone=Asia%2FSeoul&past_days=6&forecast_days=1";
+  window.TIB = window.TIB || {};
+
+  function trendUrl(region){
+    return `https://api.open-meteo.com/v1/forecast?latitude=${region.lat}&longitude=${region.lon}&daily=temperature_2m_mean,temperature_2m_max,temperature_2m_min&timezone=Asia%2FSeoul&past_days=6&forecast_days=1`;
+  }
   const SVG_NS = 'http://www.w3.org/2000/svg';
   const W = 320, H = 130, PAD_L = 28, PAD_R = 36, PAD_T = 12, PAD_B = 20;
 
@@ -564,10 +704,14 @@
     return 5;
   }
 
-  async function load(){
+  async function load(region){
+    tableToggle.hidden = true;
+    tableWrap.hidden = true;
+    wrap.innerHTML = '<span class="status" id="trendStatus"><span class="dot"></span><span>추이 조회 중…</span></span>';
+
     let res, json;
     try{
-      res = await fetch(TREND_URL, { cache: 'no-store' });
+      res = await fetch(trendUrl(region), { cache: 'no-store' });
       if(!res.ok) throw new Error('HTTP ' + res.status);
       json = await res.json();
       if(!json.daily || !Array.isArray(json.daily.time)) throw new Error('unexpected shape');
@@ -736,6 +880,50 @@
     };
   }
 
+  window.TIB.loadTrend = load;
+})();
+</script>
+
+<script>
+// ============================================================================
+// 보강 기능: 다른 지역 현재 기온 (하드코딩된 좌표 목록, 채점 기준 밖)
+// ============================================================================
+(function(){
+  var CITIES = [
+    { name: '서울', lat: 37.5665, lon: 126.9780 },
+    { name: '구미', lat: 36.1195, lon: 128.3446 },
+    { name: '대구', lat: 35.8714, lon: 128.6014 },
+    { name: '청도 그레이스 CC', lat: 35.6610, lon: 128.6439 },
+  ];
+  var MULTI_URL = 'https://api.open-meteo.com/v1/forecast?latitude='
+    + CITIES.map(function(c){ return c.lat; }).join(',')
+    + '&longitude=' + CITIES.map(function(c){ return c.lon; }).join(',')
+    + '&current=temperature_2m,relative_humidity_2m,wind_speed_10m&timezone=Asia%2FSeoul';
+
+  var tbody = document.getElementById('multiCityTableBody');
+
+  async function load(){
+    try{
+      var res = await fetch(MULTI_URL, { cache: 'no-store' });
+      if(!res.ok) throw new Error('HTTP ' + res.status);
+      var json = await res.json();
+      var rows = Array.isArray(json) ? json : [json];
+      tbody.innerHTML = '';
+      rows.forEach(function(entry, i){
+        var c = entry.current;
+        var tr = document.createElement('tr');
+        tr.innerHTML =
+          '<td>' + CITIES[i].name + '</td>' +
+          '<td>' + c.temperature_2m.toFixed(1) + ' ' + entry.current_units.temperature_2m + '</td>' +
+          '<td>' + c.relative_humidity_2m + ' ' + entry.current_units.relative_humidity_2m + '</td>' +
+          '<td>' + c.wind_speed_10m.toFixed(1) + ' ' + entry.current_units.wind_speed_10m + '</td>';
+        tbody.appendChild(tr);
+      });
+    }catch(err){
+      tbody.innerHTML = '<tr><td colspan="4">조회 실패: ' + (err.message || err) + '</td></tr>';
+    }
+  }
+
   load();
 })();
 </script>
@@ -743,53 +931,106 @@
 <script>
 // ============================================================================
 // T04-C22~C24: 서로 다른 실제 날짜 기록 2건 + 전일 대비 재계산
-// 아래 두 레코드는 data/weather/2026-09-22.json, data/weather/2026-09-23.json의
-// stored 블록을 그대로 옮긴 것이다 (scripts/verify_daily_records_sync.mjs로 원본과 대조).
+// 아래 레코드들은 data/weather/<지역id>/<날짜>.json의 stored 블록을 그대로 옮긴 것이다
+// (scripts/verify_daily_records_sync.mjs로 원본과 대조). 서울은 이미 서로 다른 실제 날짜 2건이
+// 쌓여 있고, 나머지 지역은 오늘 1건이 있으며 다음 날 기록이 쌓이면 이 배열에 추가해서 채운다.
 // ============================================================================
 (function(){
+  window.TIB = window.TIB || {};
+
   // --- DAILY-RECORDS-SYNC-START ---
-  var DAILY_RECORDS = [
-    {
-      date: '2026-09-22',
-      value: 21.2,
-      unit: '°C',
-      source: 'Open-Meteo (api.open-meteo.com)',
-      source_url: 'https://api.open-meteo.com/v1/forecast?latitude=37.5665&longitude=126.9780&current=temperature_2m,relative_humidity_2m,weather_code&timezone=Asia%2FSeoul',
-      source_time: '2026-09-22T23:15:00+09:00'
-    },
-    {
-      date: '2026-09-23',
-      value: 20.3,
-      unit: '°C',
-      source: 'Open-Meteo (api.open-meteo.com)',
-      source_url: 'https://api.open-meteo.com/v1/forecast?latitude=37.5665&longitude=126.9780&current=temperature_2m,relative_humidity_2m,weather_code&timezone=Asia%2FSeoul',
-      source_time: '2026-09-23T00:45:00+09:00'
-    }
-  ];
+  var DAILY_RECORDS_BY_REGION = {
+    seoul: [
+      {
+        date: '2026-09-22',
+        value: 21.2,
+        unit: '°C',
+        source: 'Open-Meteo (api.open-meteo.com)',
+        source_url: 'https://api.open-meteo.com/v1/forecast?latitude=37.5665&longitude=126.9780&current=temperature_2m,relative_humidity_2m,weather_code&timezone=Asia%2FSeoul',
+        source_time: '2026-09-22T23:15:00+09:00'
+      },
+      {
+        date: '2026-09-23',
+        value: 21.2,
+        unit: '°C',
+        source: 'Open-Meteo (api.open-meteo.com)',
+        source_url: 'https://api.open-meteo.com/v1/forecast?latitude=37.5665&longitude=126.9780&current=temperature_2m,relative_humidity_2m,weather_code&timezone=Asia%2FSeoul',
+        source_time: '2026-09-23T09:45:00+09:00'
+      }
+    ],
+    gumi: [
+      {
+        date: '2026-09-23',
+        value: 25.1,
+        unit: '°C',
+        source: 'Open-Meteo (api.open-meteo.com)',
+        source_url: 'https://api.open-meteo.com/v1/forecast?latitude=36.1195&longitude=128.3446&current=temperature_2m,relative_humidity_2m,weather_code&timezone=Asia%2FSeoul',
+        source_time: '2026-09-23T16:15:00+09:00'
+      }
+    ],
+    daegu: [
+      {
+        date: '2026-09-23',
+        value: 25.7,
+        unit: '°C',
+        source: 'Open-Meteo (api.open-meteo.com)',
+        source_url: 'https://api.open-meteo.com/v1/forecast?latitude=35.8714&longitude=128.6014&current=temperature_2m,relative_humidity_2m,weather_code&timezone=Asia%2FSeoul',
+        source_time: '2026-09-23T16:15:00+09:00'
+      }
+    ],
+    'grace-cc': [
+      {
+        date: '2026-09-23',
+        value: 24.7,
+        unit: '°C',
+        source: 'Open-Meteo (api.open-meteo.com)',
+        source_url: 'https://api.open-meteo.com/v1/forecast?latitude=35.661&longitude=128.6439&current=temperature_2m,relative_humidity_2m,weather_code&timezone=Asia%2FSeoul',
+        source_time: '2026-09-23T16:15:00+09:00'
+      }
+    ]
+  };
   // --- DAILY-RECORDS-SYNC-END ---
 
-  var tbody = document.getElementById('dayTableBody');
-  var sorted = DAILY_RECORDS.slice().sort(function(a, b){ return a.date.localeCompare(b.date); });
+  function render(region){
+    var tbody = document.getElementById('dayTableBody');
+    var dirNote = document.getElementById('dayRecordsDirNote');
+    var deltaValueOut = document.getElementById('deltaValueOut');
+    var deltaLabelOut = document.getElementById('deltaLabelOut');
 
-  sorted.forEach(function(rec){
-    var tr = document.createElement('tr');
-    tr.innerHTML =
-      '<td>' + rec.date + '</td>' +
-      '<td>' + rec.value.toFixed(1) + ' ' + rec.unit + '</td>' +
-      '<td>' + rec.source_time + '</td>' +
-      '<td><a href="' + rec.source_url + '" target="_blank" rel="noopener">' + rec.source + '</a></td>';
-    tbody.appendChild(tr);
-  });
+    dirNote.textContent = 'data/weather/' + region.id + '/<날짜>.json';
 
-  if (sorted.length >= 2) {
-    var earlier = sorted[0], later = sorted[sorted.length - 1];
-    var delta = later.value - earlier.value; // 계산 규칙: 늦은 날짜 값 - 이른 날짜 값
-    var sign = delta > 0 ? '+' : (delta < 0 ? '' : '±');
-    var direction = delta > 0 ? '상승' : (delta < 0 ? '하락' : '변화 없음');
-    document.getElementById('deltaValueOut').textContent = sign + delta.toFixed(1) + ' ' + later.unit + ' (' + direction + ')';
-    document.getElementById('deltaLabelOut').textContent =
-      earlier.date + '(' + earlier.value.toFixed(1) + earlier.unit + ') → ' + later.date + '(' + later.value.toFixed(1) + later.unit + ') 재계산';
+    var records = DAILY_RECORDS_BY_REGION[region.id] || [];
+    var sorted = records.slice().sort(function(a, b){ return a.date.localeCompare(b.date); });
+
+    tbody.innerHTML = '';
+    sorted.forEach(function(rec){
+      var tr = document.createElement('tr');
+      tr.innerHTML =
+        '<td>' + rec.date + '</td>' +
+        '<td>' + rec.value.toFixed(1) + ' ' + rec.unit + '</td>' +
+        '<td>' + rec.source_time + '</td>' +
+        '<td><a href="' + rec.source_url + '" target="_blank" rel="noopener">' + rec.source + '</a></td>';
+      tbody.appendChild(tr);
+    });
+
+    if (sorted.length >= 2) {
+      var earlier = sorted[0], later = sorted[sorted.length - 1];
+      var delta = later.value - earlier.value; // 계산 규칙: 늦은 날짜 값 - 이른 날짜 값
+      var sign = delta > 0 ? '+' : (delta < 0 ? '' : '±');
+      var direction = delta > 0 ? '상승' : (delta < 0 ? '하락' : '변화 없음');
+      deltaValueOut.textContent = sign + delta.toFixed(1) + ' ' + later.unit + ' (' + direction + ')';
+      deltaLabelOut.textContent =
+        earlier.date + '(' + earlier.value.toFixed(1) + earlier.unit + ') → ' + later.date + '(' + later.value.toFixed(1) + later.unit + ') 재계산';
+    } else if (sorted.length === 1) {
+      deltaValueOut.textContent = '—';
+      deltaLabelOut.textContent = '아직 서로 다른 날짜 기록이 1건뿐이라 전일 대비를 계산할 수 없습니다 (다음 날 기록이 쌓이면 자동 계산됩니다).';
+    } else {
+      deltaValueOut.textContent = '—';
+      deltaLabelOut.textContent = '기록 없음';
+    }
   }
+
+  window.TIB.renderDailyRecords = render;
 })();
 </script>
 

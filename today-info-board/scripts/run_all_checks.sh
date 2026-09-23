@@ -4,9 +4,13 @@
 
 set -u
 cd "$(dirname "$0")/.."
+export PYTHONIOENCODING=utf-8
+
+PY=python3
+python3 -c "" >/dev/null 2>&1 || PY=python
 
 CHECKS=(
-  "scripts/test_daily_dedup.py:python3"
+  "scripts/test_daily_dedup.py:$PY"
   "scripts/test_failure_replays.mjs:node"
   "scripts/replay_t04_fixtures.mjs:node"
   "scripts/verify_asset_manifest.mjs:node"

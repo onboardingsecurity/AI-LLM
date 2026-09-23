@@ -1,13 +1,16 @@
 #!/usr/bin/env python3
 """
-오늘의 실제 정보판 - T04: 값 하나 조회/저장
+오늘의 실제 정보판 - T04: 값 하나 조회/저장 (지역별)
 
-Open-Meteo(api.open-meteo.com) 공개 API에서 서울의 현재 기온을 조회한다.
+Open-Meteo(api.open-meteo.com) 공개 API에서 지정한 지역의 현재 기온을 조회한다.
 - API 키 불필요 (비밀키 없는 호출 경로)
-- 개인정보 없음: 위치는 서울(공개 지점 좌표)로 고정, 개인 계정/기기 정보 없음
+- 개인정보 없음: 위치는 아래 REGIONS의 공개 지점 좌표로 고정, 개인 계정/기기 정보 없음
 
 원자료(raw_response)를 그대로 보존하고, 화면 표시에 쓸 값만 뽑아
 stored 블록으로 정규화해서 함께 저장한다. (T04-C10: 원자료·저장값 일치 근거)
+
+사용법: python3 fetch_weather.py [지역ID]
+  지역ID 생략 시 seoul. 지원 지역: seoul, gumi, daegu, grace-cc
 """
 import json
 import os
@@ -15,21 +18,31 @@ import sys
 import urllib.request
 from datetime import datetime, timezone
 
-API_URL = (
-    "https://api.open-meteo.com/v1/forecast"
-    "?latitude=37.5665&longitude=126.9780"
-    "&current=temperature_2m,relative_humidity_2m,weather_code"
-    "&timezone=Asia%2FSeoul"
-)
 SOURCE_NAME = "Open-Meteo (api.open-meteo.com)"
 
+REGIONS = {
+    "seoul": {"name": "서울", "lat": 37.5665, "lon": 126.9780},
+    "gumi": {"name": "구미", "lat": 36.1195, "lon": 128.3446},
+    "daegu": {"name": "대구", "lat": 35.8714, "lon": 128.6014},
+    "grace-cc": {"name": "청도 그레이스 CC", "lat": 35.6610, "lon": 128.6439},
+}
 
-def fetch_raw():
-    with urllib.request.urlopen(API_URL, timeout=10) as resp:
+
+def api_url(lat: float, lon: float) -> str:
+    return (
+        "https://api.open-meteo.com/v1/forecast"
+        f"?latitude={lat}&longitude={lon}"
+        "&current=temperature_2m,relative_humidity_2m,weather_code"
+        "&timezone=Asia%2FSeoul"
+    )
+
+
+def fetch_raw(url: str) -> dict:
+    with urllib.request.urlopen(url, timeout=10) as resp:
         return json.loads(resp.read())
 
 
-def build_record(raw: dict, query_time_utc: str) -> dict:
+def build_record(raw: dict, query_time_utc: str, source_url: str) -> dict:
     current = raw["current"]
     units = raw["current_units"]
     tz_name = raw["timezone"]
@@ -46,7 +59,7 @@ def build_record(raw: dict, query_time_utc: str) -> dict:
         "value": current["temperature_2m"],
         "unit": units["temperature_2m"],
         "source": SOURCE_NAME,
-        "source_url": API_URL,
+        "source_url": source_url,
         "source_time": source_time_local,
         "query_time_utc": query_time_utc,
         "reference_timezone": tz_name,
@@ -101,14 +114,21 @@ def save_record(out_dir: str, record: dict) -> tuple[str, str, dict]:
 
 
 def main():
-    query_time_utc = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
-    raw = fetch_raw()
-    record = build_record(raw, query_time_utc)
+    region_id = sys.argv[1] if len(sys.argv) > 1 else "seoul"
+    if region_id not in REGIONS:
+        print(f"알 수 없는 지역ID: {region_id} (지원: {', '.join(REGIONS)})", file=sys.stderr)
+        sys.exit(1)
+    region = REGIONS[region_id]
 
-    out_dir = os.path.join(os.path.dirname(__file__), "..", "data", "weather")
+    url = api_url(region["lat"], region["lon"])
+    query_time_utc = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+    raw = fetch_raw(url)
+    record = build_record(raw, query_time_utc, url)
+
+    out_dir = os.path.join(os.path.dirname(__file__), "..", "data", "weather", region_id)
     out_path, action, merged = save_record(out_dir, record)
 
-    print(f"[{action}] {out_path} (revision_count={merged['daily_meta']['revision_count']})", file=sys.stderr)
+    print(f"[{action}] {region['name']}({region_id}) {out_path} (revision_count={merged['daily_meta']['revision_count']})", file=sys.stderr)
     print(json.dumps(merged, ensure_ascii=False, indent=2))
 
 
