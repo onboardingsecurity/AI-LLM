@@ -12,7 +12,7 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.join(__dirname, '..');
 
 const html = fs.readFileSync(path.join(ROOT, 'web', 'index.html'), 'utf-8');
-const m = html.match(/\/\/ --- DAILY-RECORDS-SYNC-START ---\n([\s\S]*?)\/\/ --- DAILY-RECORDS-SYNC-END ---/);
+const m = html.match(/\/\/ --- DAILY-RECORDS-SYNC-START ---\r?\n([\s\S]*?)\/\/ --- DAILY-RECORDS-SYNC-END ---/);
 if (!m) {
   console.error('FAIL — index.html에서 DAILY-RECORDS-SYNC 구간을 찾지 못함');
   process.exit(1);

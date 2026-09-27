@@ -17,7 +17,8 @@
 
   전체 검증: scripts/run_all_checks.sh 하나로 위 스크립트 전부 + 테스트 실행.
 -->
-<title>서울 기온 조회</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>하우스 웨더</title>
 <style>
   :root{
     --bg:#f6f4ef;
@@ -306,47 +307,73 @@
   .chart-table th:first-child, .chart-table td:first-child{ text-align:left; }
   .chart-table th{ font-size:10.5px; }
 
-  /* 지역 선택 UI (보강 기능): 4개 이미지를 자유롭게 흩뿌린 분기점.
-     뷰포트 전체 너비로 번져 나가게 해서(브레이크아웃) 같은 배치 비율로 더 크게 보이게 한다. */
-  .region-grid{
-    position:relative;
-    width:100vw;
-    margin-left:calc(50% - 50vw);
-    height:min(90vh, 760px);
+  /* 한 화면 날씨 비교: 4개 지역 카드를 2열 격자로 */
+  .overview{ display:flex; gap:12px; overflow-x:auto; scroll-snap-type:x mandatory; scrollbar-width:none; -webkit-overflow-scrolling:touch; }
+  .overview::-webkit-scrollbar{ display:none; }
+  .ov-card{ flex:0 0 100%; scroll-snap-align:center; padding:28px 24px; }
+  .ov-card .ov-temp{ font-size:64px; }
+  .ov-card .ov-name{ font-size:18px; }
+  .ov-card .ov-cond{ font-size:15px; }
+  .ov-card .ov-meta{ font-size:12px; }
+  .ov-tabs{ display:grid; grid-template-columns:repeat(4, 1fr); gap:8px; }
+  .ov-tab{ padding:clamp(8px, 3vw, 16px); border:3px solid transparent; border-radius:14px; background:var(--surface); overflow:hidden; line-height:0; opacity:.55; cursor:var(--cursor); transition:opacity .2s, border-color .2s, transform .2s; }
+  .ov-tab img{ display:block; width:100%; aspect-ratio:3/2; object-fit:cover; border-radius:8px; }
+  .ov-tab:hover{ opacity:.85; }
+  .ov-tab[aria-selected="true"]{ opacity:1; border-color:var(--accent); transform:translateY(-2px); }
+  .ov-tab:focus-visible{ outline:2px solid var(--accent); outline-offset:2px; }
+  /* 현재 지역 탭 이미지만 살짝 통통 튀며 흔들린다 */
+  @keyframes ov-bounce{
+    0%,100%{ transform:translateY(0) rotate(0deg) scale(1.04); }
+    25%{ transform:translateY(-4px) rotate(-3deg) scale(1.1); }
+    50%{ transform:translateY(0) rotate(0deg) scale(1.04); }
+    75%{ transform:translateY(-4px) rotate(3deg) scale(1.1); }
   }
-  .region-tile{
-    position:absolute;
-    padding:0;
-    border:none;
-    background:none;
-    cursor:var(--cursor);
-    line-height:0;
-    transform:rotate(var(--rot,0deg));
-    filter:drop-shadow(0 8px 18px rgba(0,0,0,.4));
-    transition:transform .22s ease, filter .22s ease;
+  .ov-tab[aria-selected="true"] img{ animation:ov-bounce 1.6s ease-in-out infinite; }
+  @media (prefers-reduced-motion: reduce){
+    .ov-tab[aria-selected="true"] img{ animation:none; }
   }
-  .region-tile img{ display:block; width:100%; height:auto; }
-  .region-tile:hover, .region-tile.is-hover, .region-tile:focus-visible{
-    transform:rotate(var(--rot,0deg)) scale(1.08) translateY(-6px);
-    filter:drop-shadow(0 14px 26px rgba(0,0,0,.5));
-    z-index:5;
-  }
-  .region-tile:focus-visible{ outline:2px solid var(--accent); outline-offset:4px; }
+  .ov-source{ margin-top:4px; row-gap:6px; font-size:12px; }
+  .ov-nav{ display:flex; align-items:center; justify-content:center; gap:14px; }
+  .ov-nav[hidden]{ display:none; }
+  .ov-dots{ display:flex; gap:8px; }
+  .ov-dot{ width:8px; height:8px; padding:0; border-radius:50%; border:none; background:var(--line); cursor:var(--cursor); }
+  .ov-dot.on{ background:var(--accent); }
+  .ov-dot:focus-visible, .ov-arrow:focus-visible{ outline:2px solid var(--accent); outline-offset:2px; }
+  .ov-name{ font-size:15px; font-weight:600; }
+  .ov-temp{ margin-top:10px; font-size:38px; font-weight:600; line-height:1; font-variant-numeric:tabular-nums; }
+  .ov-temp small{ font-size:16px; color:var(--ink-dim); font-weight:500; }
+  .ov-cond{ margin-top:8px; font-size:13px; color:var(--ink-dim); }
+  .ov-meta{ margin-top:10px; font-family:'IBM Plex Mono', ui-monospace, monospace; font-size:11px; color:var(--mono); line-height:1.7; }
+
 </style>
 
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Source+Serif+4:wght@500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
 
 <div class="page">
   <div id="landingView">
-    <div class="region-grid" id="regionGrid"></div>
+    <div>
+      <div class="eyebrow">지역별 현재 날씨</div>
+      <h1>하우스 웨더</h1>
+    </div>
+    <div class="ov-tabs" id="ovTabs" role="tablist" aria-label="지역 탭"></div>
+    <div class="overview" id="overviewGrid" aria-live="polite">
+      <div class="card ov-card"><span class="status"><span class="dot"></span><span>조회 중…</span></span></div>
+    </div>
+    <div class="ov-nav" id="ovNav" hidden>
+      <button class="btn" id="ovPrev" type="button" aria-label="이전 지역">←</button>
+      <div class="ov-dots" id="ovDots"></div>
+      <button class="btn" id="ovNext" type="button" aria-label="다음 지역">→</button>
+    </div>
+    <dl class="fields ov-source" id="ovSource" hidden></dl>
+    <p class="note" id="overviewNote"></p>
   </div>
 
-  <div id="boardView" hidden>
-  <button class="btn ghost" id="btnBackFromBoard">← 지역 선택으로</button>
+  <div class="divider"></div>
 
+  <div id="boardView">
   <div>
-    <div class="eyebrow">오늘의 실제 정보판 · T04</div>
-    <h1 id="boardTitle">서울 현재 기온</h1>
+    <div class="eyebrow">오늘의 실제 정보판 · T04 · 위에서 선택한 지역</div>
+    <h2 id="boardTitle">서울 현재 기온</h2>
   </div>
 
   <div class="card">
@@ -425,29 +452,6 @@
   <div class="divider"></div>
 
   <div>
-    <div class="eyebrow">보강 기능 · 채점 기준 밖의 추가 기능</div>
-    <h2>다른 지역 현재 기온</h2>
-  </div>
-
-  <div class="card">
-    <table class="data-table" id="multiCityTable">
-      <thead>
-        <tr><th>지역</th><th>기온</th><th>습도</th><th>풍속</th></tr>
-      </thead>
-      <tbody id="multiCityTableBody">
-        <tr><td colspan="4">조회 중…</td></tr>
-      </tbody>
-    </table>
-  </div>
-
-  <p class="note">
-    서울·구미·대구·청도 그레이스 CC(경북 청도군 각남면, 35.6610, 128.6439)의 현재 기온을 Open-Meteo에서 다시 조회한다.
-    위쪽 실시간 조회 카드와는 별개의 하드코딩된 좌표 목록이며, 화면을 열 때마다 그 시점 값으로 다시 그려진다.
-  </p>
-
-  <div class="divider"></div>
-
-  <div>
     <div class="eyebrow">합성 실패 재생 콘솔 · T04-C12~C21, C26 (시험용, 실제 데이터 아님)</div>
     <h2>Adapter 계약 리허설</h2>
   </div>
@@ -503,66 +507,18 @@
 
 <script>
 // ============================================================================
-// 보강 기능: 첫 화면 지도 선택 (서울/구미/대구/청도 그레이스 CC 중 선택)
+// 지역 목록 (서울/구미/대구/청도 그레이스 CC)
 // ============================================================================
 (function(){
-  // 서울-구미-대구를 가로로 나란히, 서로 떨어뜨려 배치(구미는 서울·대구 사이)하고, 그레이스 CC는 구미 바로 아래에 놓는다.
   // id는 scripts/fetch_weather.py의 REGIONS 키, data/weather/<id>/ 저장 경로와 동일하게 맞춘다.
   const REGIONS = [
-    { id: 'seoul', name: '서울', lat: 37.5665, lon: 126.9780, img: '../assets/region/seoul-city.png',
-      left: 0, top: 34, width: 28, rot: -9 },
-    { id: 'gumi', name: '구미', lat: 36.1195, lon: 128.3446, img: '../assets/region/gumi-city.png',
-      left: 36, top: 34, width: 28, rot: 3 },
-    { id: 'daegu', name: '대구', lat: 35.8714, lon: 128.6014, img: '../assets/region/daegu-city.png',
-      left: 72, top: 34, width: 28, rot: 9 },
-    { id: 'grace-cc', name: '청도 그레이스 CC', lat: 35.6610, lon: 128.6439, img: '../assets/region/grace-cc.png',
-      left: 33, top: 58, width: 34, rot: -3 },
+    { id: 'seoul', name: '서울', lat: 37.5665, lon: 126.9780 },
+    { id: 'gumi', name: '구미', lat: 36.1195, lon: 128.3446 },
+    { id: 'daegu', name: '대구', lat: 35.8714, lon: 128.6014 },
+    { id: 'grace-cc', name: '청도 그레이스 CC', lat: 35.6610, lon: 128.6439 },
   ];
   window.TIB = window.TIB || {};
   window.TIB.REGIONS = REGIONS;
-
-  const grid = document.getElementById('regionGrid');
-  const landingView = document.getElementById('landingView');
-  const boardView = document.getElementById('boardView');
-  const boardTitle = document.getElementById('boardTitle');
-  const boardCoordNote = document.getElementById('boardCoordNote');
-
-  REGIONS.forEach((region, i) => {
-    const btn = document.createElement('button');
-    btn.className = 'region-tile';
-    btn.type = 'button';
-    btn.setAttribute('aria-label', region.name + ' 날씨 보기');
-    btn.style.left = region.left + '%';
-    btn.style.top = region.top + '%';
-    btn.style.width = region.width + '%';
-    btn.style.setProperty('--rot', region.rot + 'deg');
-    const img = document.createElement('img');
-    img.src = region.img;
-    img.alt = region.name;
-    btn.appendChild(img);
-    btn.addEventListener('click', () => select(i));
-    btn.addEventListener('mouseenter', () => btn.classList.add('is-hover'));
-    btn.addEventListener('mouseleave', () => btn.classList.remove('is-hover'));
-    grid.appendChild(btn);
-  });
-
-  function showLanding(){
-    landingView.hidden = false;
-    boardView.hidden = true;
-  }
-
-  document.getElementById('btnBackFromBoard').addEventListener('click', showLanding);
-
-  function select(i){
-    const region = REGIONS[i];
-    landingView.hidden = true;
-    boardView.hidden = false;
-    boardTitle.textContent = region.name + ' 현재 기온';
-    boardCoordNote.textContent = region.name + ' ' + region.lat + ', ' + region.lon;
-    window.TIB.loadCurrent(region);
-    window.TIB.loadTrend(region);
-    window.TIB.renderDailyRecords(region);
-  }
 })();
 </script>
 
@@ -894,37 +850,190 @@
 // ============================================================================
 (function(){
   var CITIES = [
-    { name: '서울', lat: 37.5665, lon: 126.9780 },
-    { name: '구미', lat: 36.1195, lon: 128.3446 },
-    { name: '대구', lat: 35.8714, lon: 128.6014 },
-    { name: '청도 그레이스 CC', lat: 35.6610, lon: 128.6439 },
+    { id: 'seoul', name: '서울', lat: 37.5665, lon: 126.9780, tabImg: '../assets/tab/seoul-money.png' },
+    { id: 'gumi', name: '구미', lat: 36.1195, lon: 128.3446, tabImg: '../assets/tab/gumi-noodle.png' },
+    { id: 'daegu', name: '대구', lat: 35.8714, lon: 128.6014, tabImg: '../assets/tab/daegu-chicken.png' },
+    { id: 'grace-cc', name: '청도 그레이스 CC', lat: 35.6610, lon: 128.6439, tabImg: '../assets/tab/grace-golf.png' },
   ];
+
+  // 시연용 더미: 2026-09-26 값. 실제 기록이 아니며 data/weather/에는 저장하지 않는다(실제 기록과 섞지 않기 위해).
+  var DUMMY_PREV = {
+    date: '2026-09-26',
+    values: { seoul: 24.6, gumi: 24.9, daegu: 25.2, 'grace-cc': 24.3 }
+  };
+
+  function deltaLine(cityId){
+    var recs = (window.TIB && window.TIB.DAILY_RECORDS_BY_REGION && window.TIB.DAILY_RECORDS_BY_REGION[cityId]) || [];
+    var today = recs.slice().sort(function(a, b){ return a.date.localeCompare(b.date); }).pop();
+    var prev = DUMMY_PREV.values[cityId];
+    if (!today || typeof prev !== 'number') return '전일 대비 계산 불가';
+    var d = today.value - prev;
+    var dir = d > 0 ? '상승' : (d < 0 ? '하락' : '변화 없음');
+    return '전일 대비 ' + (d > 0 ? '+' : '') + d.toFixed(1) + ' ' + today.unit + ' (' + dir + ') · '
+      + DUMMY_PREV.date.slice(5) + ' ' + prev.toFixed(1) + ' → ' + today.date.slice(5) + ' ' + today.value.toFixed(1);
+  }
   var MULTI_URL = 'https://api.open-meteo.com/v1/forecast?latitude='
     + CITIES.map(function(c){ return c.lat; }).join(',')
     + '&longitude=' + CITIES.map(function(c){ return c.lon; }).join(',')
-    + '&current=temperature_2m,relative_humidity_2m,wind_speed_10m&timezone=Asia%2FSeoul';
+    + '&current=temperature_2m,relative_humidity_2m,wind_speed_10m,weather_code&timezone=Asia%2FSeoul';
 
-  var tbody = document.getElementById('multiCityTableBody');
+  var overview = document.getElementById('overviewGrid');
+  var overviewNote = document.getElementById('overviewNote');
+  var ovSource = document.getElementById('ovSource');
+  var ovRows = null, ovQueryTime = '';
+
+  // WMO weather_code → 한글 (Open-Meteo 문서 기준 구간 요약)
+  function conditionText(code){
+    if (code === 0) return '맑음';
+    if (code <= 3) return '구름 조금~흐림';
+    if (code <= 48) return '안개';
+    if (code <= 57) return '이슬비';
+    if (code <= 67) return '비';
+    if (code <= 77) return '눈';
+    if (code <= 82) return '소나기';
+    if (code <= 86) return '눈 소나기';
+    return '뇌우';
+  }
+
+  var ovNav = document.getElementById('ovNav');
+  var ovDots = document.getElementById('ovDots');
+  var ovIndex = 0;
+  var shownRegion = -1;
+  var ovTabs = document.getElementById('ovTabs');
+  CITIES.forEach(function(c, i){
+    var tab = document.createElement('button');
+    tab.type = 'button';
+    tab.className = 'ov-tab';
+    tab.setAttribute('role', 'tab');
+    tab.setAttribute('aria-selected', i === 0 ? 'true' : 'false');
+    tab.setAttribute('aria-label', c.name);
+    tab.title = c.name;
+    var img = document.createElement('img');
+    img.src = c.tabImg;
+    img.alt = c.name;
+    tab.appendChild(img);
+    tab.addEventListener('click', function(){ goTo(i); });
+    ovTabs.appendChild(tab);
+  });
+
+  function goTo(i){
+    var cards = overview.children;
+    if (!cards.length) return;
+    ovIndex = Math.max(0, Math.min(cards.length - 1, i));
+    overview.scrollTo({ left: cards[ovIndex].offsetLeft - overview.offsetLeft, behavior: 'smooth' });
+  }
+  function syncDots(){
+    var cards = overview.children;
+    if (!cards.length) return;
+    var w = cards[0].offsetWidth + 12;
+    ovIndex = Math.max(0, Math.min(cards.length - 1, Math.round(overview.scrollLeft / w)));
+    Array.prototype.forEach.call(ovDots.children, function(d, k){ d.classList.toggle('on', k === ovIndex); });
+    if (ovIndex !== shownRegion) {
+      shownRegion = ovIndex;
+      var region = window.TIB.REGIONS[ovIndex];
+      document.getElementById('boardTitle').textContent = region.name + ' 현재 기온';
+      document.getElementById('boardCoordNote').textContent = region.name + ' ' + region.lat + ', ' + region.lon;
+      window.TIB.loadCurrent(region);
+      window.TIB.loadTrend(region);
+      window.TIB.renderDailyRecords(region);
+    }
+    Array.prototype.forEach.call(ovTabs.children, function(t, k){
+      t.setAttribute('aria-selected', k === ovIndex ? 'true' : 'false');
+      if (k === ovIndex) t.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+    });
+    document.getElementById('ovPrev').disabled = ovIndex === 0;
+    document.getElementById('ovNext').disabled = ovIndex === cards.length - 1;
+    renderSourceInfo(ovIndex);
+  }
+  overview.addEventListener('scroll', syncDots, { passive: true });
+  document.getElementById('ovPrev').addEventListener('click', function(){ goTo(ovIndex - 1); });
+  document.getElementById('ovNext').addEventListener('click', function(){ goTo(ovIndex + 1); });
+  overview.setAttribute('tabindex', '0');
+  overview.addEventListener('keydown', function(e){
+    if (e.key === 'ArrowRight') { goTo(ovIndex + 1); e.preventDefault(); }
+    if (e.key === 'ArrowLeft') { goTo(ovIndex - 1); e.preventDefault(); }
+  });
+
+  function formatOffset(seconds){
+    var sign = seconds >= 0 ? '+' : '-';
+    var abs = Math.abs(seconds);
+    return sign + String(Math.floor(abs / 3600)).padStart(2, '0') + ':' + String(Math.floor((abs % 3600) / 60)).padStart(2, '0');
+  }
+
+  function renderOverview(rows, queryTime){
+    overview.innerHTML = '';
+    ovDots.innerHTML = '';
+    rows.forEach(function(entry, i){
+      var dot = document.createElement('button');
+      dot.type = 'button';
+      dot.className = 'ov-dot';
+      dot.setAttribute('aria-label', CITIES[i].name + ' 보기');
+      dot.addEventListener('click', function(){ goTo(i); });
+      ovDots.appendChild(dot);
+    });
+    ovNav.hidden = false;
+    rows.forEach(function(entry, i){
+      var c = entry.current, u = entry.current_units;
+      var card = document.createElement('div');
+      card.className = 'card ov-card';
+      var name = document.createElement('div');
+      name.className = 'ov-name';
+      name.textContent = CITIES[i].name;
+      var temp = document.createElement('div');
+      temp.className = 'ov-temp';
+      temp.textContent = c.temperature_2m.toFixed(1);
+      var small = document.createElement('small');
+      small.textContent = ' ' + u.temperature_2m;
+      temp.appendChild(small);
+      var cond = document.createElement('div');
+      cond.className = 'ov-cond';
+      cond.textContent = conditionText(c.weather_code);
+      var meta = document.createElement('div');
+      meta.className = 'ov-meta';
+      meta.textContent = '습도 ' + c.relative_humidity_2m + u.relative_humidity_2m + ' · 풍속 ' + c.wind_speed_10m.toFixed(1) + ' ' + u.wind_speed_10m;
+      var delta = document.createElement('div');
+      delta.className = 'ov-meta';
+      delta.textContent = deltaLine(CITIES[i].id) + ' [9/26은 더미]';
+      card.append(name, temp, cond, meta, delta);
+      overview.appendChild(card);
+    });
+    ovRows = rows;
+    ovQueryTime = queryTime;
+    overviewNote.textContent = '관측 시각 ' + rows[0].current.time.replace('T', ' ') + ' (KST) · 데이터: Open-Meteo. 좌우 버튼·스와이프·방향키로 지역을 넘겨 보세요.';
+    syncDots();
+  }
+
+  function renderSourceInfo(i){
+    if (!ovRows || !ovRows[i]) return;
+    var entry = ovRows[i], c = entry.current;
+    var offset = formatOffset(entry.utc_offset_seconds);
+    ovSource.hidden = false;
+    ovSource.innerHTML = '';
+    [
+      ['지역', CITIES[i].name],
+      ['출처', 'Open-Meteo (api.open-meteo.com)'],
+      ['출처 시각', c.time + ':00' + offset],
+      ['조회 시각', ovQueryTime + ' (UTC)'],
+      ['기준 시간대', entry.timezone + ' (UTC' + offset + ')']
+    ].forEach(function(pair){
+      var dt = document.createElement('dt'); dt.textContent = pair[0];
+      var dd = document.createElement('dd'); dd.textContent = pair[1];
+      ovSource.append(dt, dd);
+    });
+  }
 
   async function load(){
+    var queryTime = new Date().toISOString().replace(/\.\d+Z$/, 'Z');
     try{
       var res = await fetch(MULTI_URL, { cache: 'no-store' });
       if(!res.ok) throw new Error('HTTP ' + res.status);
       var json = await res.json();
       var rows = Array.isArray(json) ? json : [json];
-      tbody.innerHTML = '';
-      rows.forEach(function(entry, i){
-        var c = entry.current;
-        var tr = document.createElement('tr');
-        tr.innerHTML =
-          '<td>' + CITIES[i].name + '</td>' +
-          '<td>' + c.temperature_2m.toFixed(1) + ' ' + entry.current_units.temperature_2m + '</td>' +
-          '<td>' + c.relative_humidity_2m + ' ' + entry.current_units.relative_humidity_2m + '</td>' +
-          '<td>' + c.wind_speed_10m.toFixed(1) + ' ' + entry.current_units.wind_speed_10m + '</td>';
-        tbody.appendChild(tr);
-      });
+      renderOverview(rows, queryTime);
     }catch(err){
-      tbody.innerHTML = '<tr><td colspan="4">조회 실패: ' + (err.message || err) + '</td></tr>';
+      overview.innerHTML = '';
+      ovNav.hidden = true;
+      overviewNote.textContent = '날씨를 불러오지 못했습니다: ' + (err.message || err);
     }
   }
 
@@ -936,8 +1045,8 @@
 // ============================================================================
 // T04-C22~C24: 서로 다른 실제 날짜 기록 2건 + 전일 대비 재계산
 // 아래 레코드들은 data/weather/<지역id>/<날짜>.json의 stored 블록을 그대로 옮긴 것이다
-// (scripts/verify_daily_records_sync.mjs로 원본과 대조). 서울은 이미 서로 다른 실제 날짜 2건이
-// 쌓여 있고, 나머지 지역은 오늘 1건이 있으며 다음 날 기록이 쌓이면 이 배열에 추가해서 채운다.
+// (scripts/verify_daily_records_sync.mjs로 원본과 대조). 현재 모든 지역(서울 포함)은 2026-09-27 1건만 있으며,
+// 다른 날짜 기록이 쌓이면 이 배열에 추가해서 채운다 (서울이 2건이 되어야 C22 충족).
 // ============================================================================
 (function(){
   window.TIB = window.TIB || {};
@@ -946,54 +1055,47 @@
   var DAILY_RECORDS_BY_REGION = {
     seoul: [
       {
-        date: '2026-09-22',
-        value: 21.2,
+        date: '2026-09-27',
+        value: 25.8,
         unit: '°C',
         source: 'Open-Meteo (api.open-meteo.com)',
-        source_url: 'https://api.open-meteo.com/v1/forecast?latitude=37.5665&longitude=126.9780&current=temperature_2m,relative_humidity_2m,weather_code&timezone=Asia%2FSeoul',
-        source_time: '2026-09-22T23:15:00+09:00'
-      },
-      {
-        date: '2026-09-23',
-        value: 21.2,
-        unit: '°C',
-        source: 'Open-Meteo (api.open-meteo.com)',
-        source_url: 'https://api.open-meteo.com/v1/forecast?latitude=37.5665&longitude=126.9780&current=temperature_2m,relative_humidity_2m,weather_code&timezone=Asia%2FSeoul',
-        source_time: '2026-09-23T09:45:00+09:00'
+        source_url: 'https://api.open-meteo.com/v1/forecast?latitude=37.5665&longitude=126.978&current=temperature_2m,relative_humidity_2m,weather_code&timezone=Asia%2FSeoul',
+        source_time: '2026-09-27T13:15:00+09:00'
       }
     ],
     gumi: [
       {
-        date: '2026-09-23',
-        value: 25.1,
+        date: '2026-09-27',
+        value: 25.5,
         unit: '°C',
         source: 'Open-Meteo (api.open-meteo.com)',
         source_url: 'https://api.open-meteo.com/v1/forecast?latitude=36.1195&longitude=128.3446&current=temperature_2m,relative_humidity_2m,weather_code&timezone=Asia%2FSeoul',
-        source_time: '2026-09-23T16:15:00+09:00'
+        source_time: '2026-09-27T13:15:00+09:00'
       }
     ],
     daegu: [
       {
-        date: '2026-09-23',
-        value: 25.7,
+        date: '2026-09-27',
+        value: 26.1,
         unit: '°C',
         source: 'Open-Meteo (api.open-meteo.com)',
         source_url: 'https://api.open-meteo.com/v1/forecast?latitude=35.8714&longitude=128.6014&current=temperature_2m,relative_humidity_2m,weather_code&timezone=Asia%2FSeoul',
-        source_time: '2026-09-23T16:15:00+09:00'
+        source_time: '2026-09-27T13:15:00+09:00'
       }
     ],
     'grace-cc': [
       {
-        date: '2026-09-23',
-        value: 24.7,
+        date: '2026-09-27',
+        value: 25.1,
         unit: '°C',
         source: 'Open-Meteo (api.open-meteo.com)',
         source_url: 'https://api.open-meteo.com/v1/forecast?latitude=35.661&longitude=128.6439&current=temperature_2m,relative_humidity_2m,weather_code&timezone=Asia%2FSeoul',
-        source_time: '2026-09-23T16:15:00+09:00'
+        source_time: '2026-09-27T13:15:00+09:00'
       }
     ]
   };
   // --- DAILY-RECORDS-SYNC-END ---
+  window.TIB.DAILY_RECORDS_BY_REGION = DAILY_RECORDS_BY_REGION;
 
   function render(region){
     var tbody = document.getElementById('dayTableBody');
