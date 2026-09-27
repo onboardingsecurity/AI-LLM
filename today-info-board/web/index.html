@@ -2,10 +2,11 @@
   오늘의 실제 정보판 (T04) — 구조 안내
 
   화면 섹션 (위→아래):
-    1. 실시간 조회 카드      — 서울 현재 기온, C03~C10
-    2. 전일 대비 카드        — 서로 다른 실제 날짜 기록 2건 + 재계산, C22~C24
-    3. 최근 기온 추이 (보강) — 채점 기준 밖의 추가 기능
-    4. 합성 실패 재생 콘솔   — C12~C21, C26 (시험용, 실제 데이터 아님)
+    1. 실시간 조회 카드      — 서울 현재 기온, C03~C10 (맨 처음으로 고정)
+    2. 지역별 오버뷰 (보강)  — 지역 탭 + 여러 지역 간단 기온, 채점 기준 밖의 추가 기능
+    3. 전일 대비 카드        — 서로 다른 실제 날짜 기록 2건 + 재계산, C22~C24
+    4. 최근 기온 추이 (보강) — 채점 기준 밖의 추가 기능
+    5. 합성 실패 재생 콘솔   — C12~C21, C26 (시험용, 실제 데이터 아님)
 
   스크립트 블록 4개와 각각의 원본(단일 진실 공급원):
     1. 실시간 조회 로직      — 이 파일이 유일한 원본. 별도 원본 없음.
@@ -75,7 +76,7 @@
     cursor:var(--cursor);
   }
   .page{ width:100%; max-width:560px; display:flex; flex-direction:column; gap:20px; }
-  #landingView:not([hidden]), #boardView:not([hidden]){ display:flex; flex-direction:column; gap:20px; }
+  #landingView:not([hidden]), #boardView:not([hidden]), #boardExtra:not([hidden]){ display:flex; flex-direction:column; gap:20px; }
 
   .eyebrow{
     font-family:'IBM Plex Mono', ui-monospace, monospace;
@@ -350,26 +351,6 @@
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Source+Serif+4:wght@500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
 
 <div class="page">
-  <div id="landingView">
-    <div>
-      <div class="eyebrow">지역별 현재 날씨</div>
-      <h1>하우스 웨더</h1>
-    </div>
-    <div class="ov-tabs" id="ovTabs" role="tablist" aria-label="지역 탭"></div>
-    <div class="overview" id="overviewGrid" aria-live="polite">
-      <div class="card ov-card"><span class="status"><span class="dot"></span><span>조회 중…</span></span></div>
-    </div>
-    <div class="ov-nav" id="ovNav" hidden>
-      <button class="btn" id="ovPrev" type="button" aria-label="이전 지역">←</button>
-      <div class="ov-dots" id="ovDots"></div>
-      <button class="btn" id="ovNext" type="button" aria-label="다음 지역">→</button>
-    </div>
-    <dl class="fields ov-source" id="ovSource" hidden></dl>
-    <p class="note" id="overviewNote"></p>
-  </div>
-
-  <div class="divider"></div>
-
   <div id="boardView">
   <div>
     <div class="eyebrow">오늘의 실제 정보판 · T04 · 위에서 선택한 지역</div>
@@ -400,9 +381,31 @@
     출처 시각은 API 응답의 관측 시각(15분 간격 갱신)이고, 조회 시각은 이 화면이 방금 요청을 보낸 순간입니다.
     두 시각이 다를 수 있는 것이 정상입니다. 데이터: <a href="https://open-meteo.com" target="_blank" rel="noopener">Open-Meteo</a> (API 키 불필요, 비개인 공개 좌표: <span id="boardCoordNote">서울 37.5665, 126.9780</span>).
   </p>
+  </div>
 
   <div class="divider"></div>
 
+  <div id="landingView">
+    <div>
+      <div class="eyebrow">지역별 현재 날씨</div>
+      <h1>하우스 웨더</h1>
+    </div>
+    <div class="ov-tabs" id="ovTabs" role="tablist" aria-label="지역 탭"></div>
+    <div class="overview" id="overviewGrid" aria-live="polite">
+      <div class="card ov-card"><span class="status"><span class="dot"></span><span>조회 중…</span></span></div>
+    </div>
+    <div class="ov-nav" id="ovNav" hidden>
+      <button class="btn" id="ovPrev" type="button" aria-label="이전 지역">←</button>
+      <div class="ov-dots" id="ovDots"></div>
+      <button class="btn" id="ovNext" type="button" aria-label="다음 지역">→</button>
+    </div>
+    <dl class="fields ov-source" id="ovSource" hidden></dl>
+    <p class="note" id="overviewNote"></p>
+  </div>
+
+  <div class="divider"></div>
+
+  <div id="boardExtra">
   <div>
     <div class="eyebrow">서로 다른 실제 날짜 기록 2건 · T04-C22~C24</div>
     <h2>전일 대비</h2>
