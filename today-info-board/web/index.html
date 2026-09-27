@@ -2,15 +2,15 @@
   오늘의 실제 정보판 (T04) — 구조 안내
 
   화면 섹션 (위→아래):
-    1. 실시간 조회 카드      — 서울 현재 기온, C03~C10 (맨 처음으로 고정)
-    2. 지역별 오버뷰 (보강)  — 지역 탭 + 여러 지역 간단 기온, 채점 기준 밖의 추가 기능
-    3. 전일 대비 카드        — 서로 다른 실제 날짜 기록 2건 + 재계산, C22~C24
-    4. 최근 기온 추이 (보강) — 채점 기준 밖의 추가 기능
-    5. 합성 실패 재생 콘솔   — C12~C21, C26 (시험용, 실제 데이터 아님)
+    0. 제목 + 지역 탭        — "하우스 웨더" 타이틀, 탭 클릭 시 아래 지역 관련 카드 전환(채점 기준 밖)
+    1. 실시간 조회 카드      — 서울 현재 기온, C03~C10
+    2. 전일 대비 카드        — 서로 다른 실제 날짜 기록 2건 + 재계산, C22~C24
+    3. 8시간 날씨 예보 (보강) — 채점 기준 밖의 추가 기능
+    4. 합성 실패 재생 콘솔   — C12~C21, C26 (시험용, 실제 데이터 아님)
 
   스크립트 블록 4개와 각각의 원본(단일 진실 공급원):
     1. 실시간 조회 로직      — 이 파일이 유일한 원본. 별도 원본 없음.
-    2. 최근 기온 추이(보강)  — 이 파일이 유일한 원본. Open-Meteo를 그때그때 다시 조회.
+    2. 8시간 날씨 예보(보강)  — 이 파일이 유일한 원본. Open-Meteo를 그때그때 다시 조회.
     3. 전일 대비 데이터      — 원본: data/weather/*.json. 동기화 확인: scripts/verify_daily_records_sync.mjs
     4. 합성 콘솔 adapter/fixture — 원본: assets/studio-task-assets/t04-real-information-board/
                                     동기화 확인: scripts/verify_fixture_sync.mjs
@@ -20,66 +20,87 @@
 -->
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>하우스 웨더</title>
+<link rel="icon" type="image/png" href="../assets/common/favicon.png">
 <style>
   :root{
-    --bg:#f6f4ef;
-    --surface:#ffffff;
-    --ink:#1c1b19;
-    --ink-dim:#5c584f;
-    --line:#e4ded2;
-    --accent:#c0532a;
-    --accent-soft:#f3e2d8;
-    --mono:#7a756a;
-    --ok:#2f6b4f;
-    --warn:#9a6b1f;
-    --warn-soft:#f2e6cf;
+    --bg:#f6efd9;
+    --surface:#fffdf6;
+    --ink:#2c241a;
+    --ink-dim:#8a7d63;
+    --line:#ecdfbd;
+    --accent:#d9713f;
+    --accent-soft:#fbe4d3;
+    --mono:#8a7d63;
+    --ok:#4f9d4a;
+    --warn:#c98a1f;
+    --warn-soft:#fbeecb;
+    --sky:#8ddcfd;
+    --leaf:#8ece7a;
     --cursor:url('../assets/common/mouse-cursor.png') 0 0, auto;
   }
   @media (prefers-color-scheme: dark){
     :root:not([data-theme="light"]){
-      --bg:#171512;
-      --surface:#211e1a;
-      --ink:#f1ede4;
-      --ink-dim:#b3aa9a;
-      --line:#3a352c;
-      --accent:#e07a4a;
-      --accent-soft:#3a271c;
-      --mono:#9a9284;
-      --ok:#6bbd93;
-      --warn:#d9a94a;
-      --warn-soft:#3a2f18;
+      --bg:#1c1810;
+      --surface:#252016;
+      --ink:#f3ecdc;
+      --ink-dim:#b7a98c;
+      --line:#3c3323;
+      --accent:#f0925c;
+      --accent-soft:#3d2a1c;
+      --mono:#b7a98c;
+      --ok:#7fc478;
+      --warn:#e0b04a;
+      --warn-soft:#3a2f14;
+      --sky:#6fb8dd;
+      --leaf:#6fb865;
     }
   }
   :root[data-theme="dark"]{
-    --bg:#171512;
-    --surface:#211e1a;
-    --ink:#f1ede4;
-    --ink-dim:#b3aa9a;
-    --line:#3a352c;
-    --accent:#e07a4a;
-    --accent-soft:#3a271c;
-    --mono:#9a9284;
-    --ok:#6bbd93;
-    --warn:#d9a94a;
-    --warn-soft:#3a2f18;
+    --bg:#1c1810;
+    --surface:#252016;
+    --ink:#f3ecdc;
+    --ink-dim:#b7a98c;
+    --line:#3c3323;
+    --accent:#f0925c;
+    --accent-soft:#3d2a1c;
+    --mono:#b7a98c;
+    --ok:#7fc478;
+    --warn:#e0b04a;
+    --warn-soft:#3a2f14;
+    --sky:#6fb8dd;
+    --leaf:#6fb865;
   }
 
   *{box-sizing:border-box}
   body{
-    background:var(--bg);
+    background:
+      radial-gradient(480px 220px at 50% 0%, color-mix(in srgb, var(--sky) 28%, transparent), transparent 70%),
+      var(--bg);
     color:var(--ink);
-    font-family:'Source Serif 4', Georgia, 'Noto Serif KR', serif;
+    font-family:'Jua', 'Noto Sans KR', sans-serif;
     padding:32px 16px;
     display:flex;
     justify-content:center;
     overflow-x:hidden;
     cursor:var(--cursor);
   }
-  .page{ width:100%; max-width:560px; display:flex; flex-direction:column; gap:20px; }
-  #landingView:not([hidden]), #boardView:not([hidden]), #boardExtra:not([hidden]){ display:flex; flex-direction:column; gap:20px; }
+  .page{ width:100%; max-width:720px; display:flex; flex-direction:column; gap:20px; }
+  .brand{ display:flex; align-items:center; gap:14px; }
+  .brand-logo{
+    width:52px; height:52px; flex:none;
+    border-radius:16px;
+    box-shadow:0 3px 10px rgba(44,36,26,.12);
+  }
+  #landingView:not([hidden]), #boardView:not([hidden]), #boardExtra:not([hidden]), #dayCompareView:not([hidden]){ display:flex; flex-direction:column; gap:20px; }
+  .row-2col{ display:flex; flex-direction:column; gap:20px; }
+  .row-2col > div{ flex:1 1 260px; min-width:0; }
+  .row-2col .card{ flex:1; }
+  @media (min-width:640px){
+    .row-2col{ flex-direction:row; }
+  }
 
   .eyebrow{
-    font-family:'IBM Plex Mono', ui-monospace, monospace;
+    font-family:'Jua', sans-serif;
     font-size:12px;
     letter-spacing:.12em;
     text-transform:uppercase;
@@ -87,8 +108,9 @@
   }
   h1{
     margin:0;
-    font-size:22px;
-    font-weight:600;
+    font-family:'Jua', sans-serif;
+    font-size:26px;
+    font-weight:400;
     letter-spacing:-.01em;
     text-wrap:balance;
   }
@@ -96,15 +118,17 @@
   .card{
     background:var(--surface);
     border:1px solid var(--line);
-    border-radius:14px;
+    border-radius:20px;
     padding:28px 24px;
+    box-shadow:0 3px 14px rgba(44,36,26,.06);
   }
 
   .status{
     display:inline-flex;
     align-items:center;
     gap:6px;
-    font-family:'IBM Plex Mono', ui-monospace, monospace;
+    height:16px;
+    font-family:'Jua', sans-serif;
     font-size:12px;
     color:var(--ink-dim);
   }
@@ -134,7 +158,7 @@
     font-weight:500;
   }
   .stale-badge{
-    font-family:'IBM Plex Mono', ui-monospace, monospace;
+    font-family:'Jua', sans-serif;
     font-size:11px;
     letter-spacing:.04em;
     color:var(--warn);
@@ -154,7 +178,7 @@
   }
   .fields dt{
     color:var(--ink-dim);
-    font-family:'IBM Plex Mono', ui-monospace, monospace;
+    font-family:'Jua', sans-serif;
     font-size:11px;
     letter-spacing:.06em;
     text-transform:uppercase;
@@ -169,25 +193,6 @@
 
   .divider{ height:1px; background:var(--line); margin:22px 0; }
 
-  .note{
-    font-size:13px;
-    color:var(--ink-dim);
-    line-height:1.6;
-  }
-  .note a{ color:var(--accent); }
-
-  .error-box{
-    display:none;
-    margin-top:18px;
-    padding:14px 16px;
-    border-radius:10px;
-    background:var(--accent-soft);
-    color:var(--ink);
-    font-size:13.5px;
-    line-height:1.6;
-  }
-  .error-box.show{ display:block; }
-
   .tip-line{
     margin-top:14px;
     font-size:13.5px;
@@ -196,11 +201,13 @@
     border-top:1px dashed var(--line);
   }
   .tip-line b{ color:var(--ink); font-weight:600; }
+  .bubble-icon{ display:inline-block; transform:scaleX(-1); }
 
   h2{
     margin:0;
-    font-size:17px;
-    font-weight:600;
+    font-family:'Jua', sans-serif;
+    font-size:18px;
+    font-weight:400;
     letter-spacing:-.01em;
     text-wrap:balance;
   }
@@ -208,7 +215,7 @@
   .msg-box{
     margin-top:18px;
     padding:14px 16px;
-    border-radius:10px;
+    border-radius:14px;
     font-size:13.5px;
     line-height:1.6;
   }
@@ -217,13 +224,13 @@
 
   .btn-grid{ display:flex; flex-wrap:wrap; gap:8px; }
   .btn{
-    font-family:'IBM Plex Mono', ui-monospace, monospace;
+    font-family:'Jua', sans-serif;
     font-size:12px;
     border:1px solid var(--line);
     background:var(--bg);
     color:var(--ink);
     padding:8px 12px;
-    border-radius:8px;
+    border-radius:12px;
     cursor:var(--cursor);
   }
   .btn:hover{ border-color:var(--accent); }
@@ -236,77 +243,45 @@
     margin-top:16px;
     padding-top:14px;
     border-top:1px dashed var(--line);
-    font-family:'IBM Plex Mono', ui-monospace, monospace;
+    font-family:'Jua', sans-serif;
     font-size:12px;
     color:var(--ink-dim);
   }
   .records ul{ margin:6px 0 0; padding-left:18px; }
   .records li{ margin-top:2px; }
 
-  /* 표 스타일 공통 베이스. 개별 표는 .data-table에 아래 수정자(day-table/chart-table)를 덧붙여 쓴다. */
-  .data-table{ width:100%; border-collapse:collapse; font-size:13px; }
-  .data-table th, .data-table td{ text-align:left; padding:6px 8px 6px 0; border-bottom:1px solid var(--line); vertical-align:top; }
-  .data-table th{ color:var(--ink-dim); font-family:'IBM Plex Mono', ui-monospace, monospace; font-size:11px; letter-spacing:.05em; text-transform:uppercase; font-weight:500; }
-  .data-table a{ color:var(--accent); word-break:break-all; }
+  .title-row{ display:flex; align-items:baseline; gap:8px; flex-wrap:wrap; }
+  .title-time{ font-size:12px; color:var(--ink-dim); }
 
-  .day-table{ margin-top:16px; }
-
-  .delta-row{
-    margin-top:18px;
-    padding:14px 16px;
-    border-radius:10px;
-    background:var(--accent-soft);
-    display:flex;
-    align-items:baseline;
-    gap:10px;
-    flex-wrap:wrap;
+  .day-compare-main{ text-align:left; }
+  .day-compare-label{
+    font-size:11px;
+    letter-spacing:.06em;
+    text-transform:uppercase;
+    color:var(--ink-dim);
+    margin-bottom:6px;
   }
-  .delta-value{ font-size:28px; font-weight:600; font-variant-numeric: tabular-nums; }
-  .delta-label{ font-size:13px; color:var(--ink-dim); }
+  .day-compare-value{
+    font-weight:600;
+    font-variant-numeric: tabular-nums;
+    line-height:1.1;
+  }
+  .day-compare-value--main{ font-size:64px; line-height:1; margin-top:18px; }
+  .day-compare-value--sub{ font-size:24px; }
+  .day-compare-main .day-compare-label{ display:inline-flex; align-items:center; gap:6px; height:16px; line-height:16px; margin-bottom:0; }
+  .day-compare-hr{ margin:14px 0; border-top:1px dashed var(--line); }
+  .day-compare-pair{ display:flex; gap:24px; }
+  .day-compare-pair .day-compare-item{ flex:1 1 0; text-align:left; }
+  .day-compare-pair .day-compare-item + .day-compare-item{ padding-left:24px; border-left:1px dashed var(--line); }
 
   .chart-wrap{ position:relative; }
   .chart-wrap svg{ display:block; width:100%; height:auto; overflow:visible; }
   .chart-grid{ stroke:var(--line); stroke-width:1; }
-  .chart-tick{ font-family:'IBM Plex Mono', ui-monospace, monospace; font-size:9px; fill:var(--ink-dim); }
+  .chart-tick{ font-family:'Jua', sans-serif; font-size:9px; fill:var(--ink-dim); }
+  .chart-point-label{ font-family:'Jua', sans-serif; font-size:7px; fill:var(--ink-dim); }
   .chart-area{ fill:var(--accent); opacity:.1; }
   .chart-line{ fill:none; stroke:var(--accent); stroke-width:2; stroke-linecap:round; stroke-linejoin:round; }
-  .chart-dot{ fill:var(--accent); stroke:var(--surface); stroke-width:2; }
-  .chart-hit{ fill:transparent; cursor:var(--cursor); }
-  .chart-hit:focus-visible{ outline:2px solid var(--accent); outline-offset:2px; }
-  .chart-crosshair{ stroke:var(--ink-dim); stroke-width:1; opacity:0; pointer-events:none; }
-  .chart-endlabel{ font-family:'IBM Plex Mono', ui-monospace, monospace; font-size:11px; font-weight:600; fill:var(--ink); }
-
-  .chart-tooltip{
-    position:absolute;
-    pointer-events:none;
-    background:var(--surface);
-    border:1px solid var(--line);
-    border-radius:8px;
-    padding:6px 10px;
-    font-size:12px;
-    line-height:1.5;
-    box-shadow:0 4px 12px rgba(0,0,0,.12);
-    opacity:0;
-    transform:translate(-50%,-100%);
-    white-space:nowrap;
-  }
-  .chart-tooltip b{ font-variant-numeric: tabular-nums; }
-
-  .table-toggle{
-    background:none;
-    border:none;
-    color:var(--accent);
-    font-family:'IBM Plex Mono', ui-monospace, monospace;
-    font-size:11px;
-    cursor:var(--cursor);
-    padding:0;
-    margin-top:12px;
-  }
-  /* .data-table 베이스에 숫자 표(오른쪽 정렬·tabular-nums) 수정자를 덧붙인다 */
-  .chart-table{ margin-top:10px; font-size:12px; }
-  .chart-table th, .chart-table td{ text-align:right; padding:4px 6px; font-variant-numeric: tabular-nums; }
-  .chart-table th:first-child, .chart-table td:first-child{ text-align:left; }
-  .chart-table th{ font-size:10.5px; }
+  .chart-dot{ fill:var(--surface); stroke:var(--accent); stroke-width:2; }
 
   /* 한 화면 날씨 비교: 4개 지역 카드를 2열 격자로 */
   .overview{ display:flex; gap:12px; overflow-x:auto; scroll-snap-type:x mandatory; scrollbar-width:none; -webkit-overflow-scrolling:touch; }
@@ -318,7 +293,7 @@
   .ov-card .ov-meta{ font-size:12px; }
   .ov-tabs{ display:grid; grid-template-columns:repeat(4, 1fr); gap:8px; }
   .ov-tab{ padding:clamp(8px, 3vw, 16px); border:3px solid transparent; border-radius:14px; background:var(--surface); overflow:hidden; line-height:0; opacity:.55; cursor:var(--cursor); transition:opacity .2s, border-color .2s, transform .2s; }
-  .ov-tab img{ display:block; width:100%; aspect-ratio:3/2; object-fit:cover; border-radius:8px; }
+  .ov-tab img{ display:block; width:100%; aspect-ratio:3/2; object-fit:cover; border-radius:12px; }
   .ov-tab:hover{ opacity:.85; }
   .ov-tab[aria-selected="true"]{ opacity:1; border-color:var(--accent); transform:translateY(-2px); }
   .ov-tab:focus-visible{ outline:2px solid var(--accent); outline-offset:2px; }
@@ -344,17 +319,27 @@
   .ov-temp{ margin-top:10px; font-size:38px; font-weight:600; line-height:1; font-variant-numeric:tabular-nums; }
   .ov-temp small{ font-size:16px; color:var(--ink-dim); font-weight:500; }
   .ov-cond{ margin-top:8px; font-size:13px; color:var(--ink-dim); }
-  .ov-meta{ margin-top:10px; font-family:'IBM Plex Mono', ui-monospace, monospace; font-size:11px; color:var(--mono); line-height:1.7; }
+  .ov-meta{ margin-top:10px; font-family:'Jua', sans-serif; font-size:11px; color:var(--mono); line-height:1.7; }
 
 </style>
 
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Source+Serif+4:wght@500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Jua&display=swap">
 
 <div class="page">
+  <div class="brand">
+    <img class="brand-logo" src="../assets/common/favicon.png" alt="" aria-hidden="true">
+    <div>
+      <div class="eyebrow">우리 동네 날씨</div>
+      <h1>하우스 웨더</h1>
+    </div>
+  </div>
+  <div class="ov-tabs" id="ovTabs" role="tablist" aria-label="지역 탭"></div>
+
+  <div class="row-2col">
   <div id="boardView">
-  <div>
-    <div class="eyebrow">오늘의 실제 정보판 · T04 · 위에서 선택한 지역</div>
+  <div class="title-row">
     <h2 id="boardTitle">서울 현재 기온</h2>
+    <span class="title-time" id="boardTitleTimeOut"></span>
   </div>
 
   <div class="card">
@@ -365,97 +350,53 @@
       <span class="unit" id="unitOut"></span>
     </div>
 
-    <dl class="fields">
-      <dt>출처</dt><dd id="sourceOut">—</dd>
-      <dt>출처 시각</dt><dd id="sourceTimeOut">—</dd>
-      <dt>조회 시각</dt><dd id="queryTimeOut">—</dd>
-      <dt>기준 시간대</dt><dd id="tzOut">—</dd>
-    </dl>
-
     <p class="tip-line" id="tempTipOut" hidden></p>
-
-    <div class="error-box" id="errorBox"></div>
+  </div>
   </div>
 
-  <p class="note">
-    출처 시각은 API 응답의 관측 시각(15분 간격 갱신)이고, 조회 시각은 이 화면이 방금 요청을 보낸 순간입니다.
-    두 시각이 다를 수 있는 것이 정상입니다. 데이터: <a href="https://open-meteo.com" target="_blank" rel="noopener">Open-Meteo</a> (API 키 불필요, 비개인 공개 좌표: <span id="boardCoordNote">서울 37.5665, 126.9780</span>).
-  </p>
+  <div id="dayCompareView">
+  <div class="title-row">
+    <h2>전일 대비</h2>
+    <span class="title-time" id="dayTitleTimeOut"></span>
   </div>
 
-  <div class="divider"></div>
-
-  <div id="landingView">
-    <div>
-      <div class="eyebrow">지역별 현재 날씨</div>
-      <h1>하우스 웨더</h1>
+  <div class="card">
+    <div class="day-compare-main">
+      <div class="day-compare-label"><span class="dot" id="dayCompareDot"></span> 기온차</div>
+      <div class="day-compare-value day-compare-value--main" id="dayDeltaOut">—</div>
     </div>
-    <div class="ov-tabs" id="ovTabs" role="tablist" aria-label="지역 탭"></div>
-    <div class="overview" id="overviewGrid" aria-live="polite">
-      <div class="card ov-card"><span class="status"><span class="dot"></span><span>조회 중…</span></span></div>
+    <div class="day-compare-hr"></div>
+    <div class="day-compare-pair" id="dayComparePair">
+      <div class="day-compare-item">
+        <div class="day-compare-label">어제 기온</div>
+        <div class="day-compare-value day-compare-value--sub" id="dayYestOut">—</div>
+      </div>
+      <div class="day-compare-item">
+        <div class="day-compare-label">오늘 기온</div>
+        <div class="day-compare-value day-compare-value--sub" id="dayTodayOut">—</div>
+      </div>
     </div>
-    <div class="ov-nav" id="ovNav" hidden>
-      <button class="btn" id="ovPrev" type="button" aria-label="이전 지역">←</button>
-      <div class="ov-dots" id="ovDots"></div>
-      <button class="btn" id="ovNext" type="button" aria-label="다음 지역">→</button>
-    </div>
-    <dl class="fields ov-source" id="ovSource" hidden></dl>
-    <p class="note" id="overviewNote"></p>
+    <p class="tip-line" id="dayCompareMerged" hidden></p>
+  </div>
+  </div>
   </div>
 
   <div class="divider"></div>
 
   <div id="boardExtra">
   <div>
-    <div class="eyebrow">서로 다른 실제 날짜 기록 2건 · T04-C22~C24</div>
-    <h2>전일 대비</h2>
-  </div>
-
-  <div class="card">
-    <table class="data-table day-table">
-      <thead>
-        <tr><th>날짜(KST)</th><th>값</th><th>출처 시각</th><th>출처</th></tr>
-      </thead>
-      <tbody id="dayTableBody"></tbody>
-    </table>
-
-    <div class="delta-row">
-      <span class="delta-value" id="deltaValueOut">—</span>
-      <span class="delta-label" id="deltaLabelOut">두 저장값에서 이 화면이 직접 재계산함</span>
-    </div>
-  </div>
-
-  <p class="note">
-    각 행은 <code id="dayRecordsDirNote">data/weather/seoul/&lt;날짜&gt;.json</code>에 저장된 값을 그대로 옮긴 것이고(원자료·저장값과 값 변형 없이 동일),
-    전일 대비는 이 화면의 자바스크립트가 저장된 값들로 지금 다시 계산한다(고정된 숫자를 박아넣지 않음).
-    계산 규칙: <code>델타 = 늦은 날짜 값 − 이른 날짜 값</code>, 부호로 상승/하락을 표시.
-    서로 다른 실제 날짜 기록이 아직 2건 미만인 지역은 다음 날 기록이 쌓이면 자동으로 전일 대비가 계산된다.
-  </p>
-
-  <div class="divider"></div>
-
-  <div>
-    <div class="eyebrow">보강 기능 · 실시간 조회 활용</div>
-    <h2>최근 기온 추이</h2>
+    <h2>8시간 날씨 예보</h2>
   </div>
 
   <div class="card">
     <div class="chart-wrap" id="trendChartWrap">
       <span class="status" id="trendStatus"><span class="dot"></span><span>추이 조회 중…</span></span>
     </div>
-    <button class="table-toggle" id="trendTableToggle" hidden>표로 보기</button>
-    <div id="trendTableWrap" hidden></div>
   </div>
-
-  <p class="note">
-    최근 6일 + 오늘, 하루 평균 기온(°C)을 Open-Meteo에서 다시 조회해 그린다. 위쪽 "전일 대비"의 두 저장값과는 별개로,
-    이 그래프는 화면을 열 때마다 그 시점 기준으로 다시 그려지는 참고용 추이다.
-  </p>
 
   <div class="divider"></div>
 
   <div>
-    <div class="eyebrow">합성 실패 재생 콘솔 · T04-C12~C21, C26 (시험용, 실제 데이터 아님)</div>
     <h2>Adapter 계약 리허설</h2>
   </div>
 
@@ -498,13 +439,12 @@
     </div>
   </div>
 
-  <p class="note">
-    이 콘솔은 사용자가 전달한 실제 T04 공개 패키지(<code>assets/studio-task-assets/t04-real-information-board/</code>)의
-    <code>adapter-reset.example.js</code>와 9개 fixture를 그대로 옮겨 재생한다(SHA-256 대조로 원본과 바이트 일치 확인함).
-    합성 날짜(2026-08-24/25)와 위쪽 실시간 카드의 실제 날짜는 서로 다른 값이며 섞이지 않는다.
-    실패 버튼을 누르면 마지막 정상값은 지워지지 않고 "오래됨" 표시가 붙으며, 실패 종류마다 오류 코드가 다르게 뜬다.
-    "다시 시도" 버튼은 <code>T04-RECOVER-D2</code>를 재생해 상태를 fresh로 되돌리고 다음 합성 날짜 기록을 정확히 1건 추가한다.
-  </p>
+  <div class="divider"></div>
+
+  <dl class="fields">
+    <dt>출처</dt><dd id="sourceOut">—</dd>
+    <dt>기준 시간대</dt><dd id="tzOut">—</dd>
+  </dl>
   </div>
 </div>
 
@@ -539,12 +479,48 @@
     value: document.getElementById('valueOut'),
     unit: document.getElementById('unitOut'),
     source: document.getElementById('sourceOut'),
-    sourceTime: document.getElementById('sourceTimeOut'),
-    queryTime: document.getElementById('queryTimeOut'),
     tz: document.getElementById('tzOut'),
-    errorBox: document.getElementById('errorBox'),
     tip: document.getElementById('tempTipOut'),
+    titleTime: document.getElementById('boardTitleTimeOut'),
   };
+
+  // Adapter 계약 리허설(합성 콘솔)이 쓰는 것과 같은 문구 패턴(설명 + 다음 행동).
+  // 여기서는 실제 fetch 실패를 이 패턴으로만 표현한다 (합성 데이터를 끌어오는 게 아님).
+  const FAILURE_MESSAGES = {
+    network: { explain: '네트워크 연결이 끊겼거나 요청이 차단되었습니다.', next_action: '네트워크 연결을 확인한 뒤 다시 시도하세요.' },
+    auth: { explain: '외부 데이터 원천이 인증을 거절했습니다 (401/403).', next_action: '접근 조건이 바뀌었는지 확인이 필요합니다.' },
+    rate_limit: { explain: '외부 원천이 호출을 제한했습니다 (429).', next_action: '잠시(약 60초) 뒤 다시 시도하세요.' },
+    http: { explain: '서버가 오류 응답을 반환했습니다.', next_action: '잠시 후 다시 시도해 보세요.' },
+    schema_error: { explain: '응답 형식이 예상과 달라 값을 해석할 수 없습니다.', next_action: '형식이 바뀌었는지 확인이 필요합니다.' },
+  };
+
+  function renderBubble(target, explain, nextAction){
+    target.innerHTML = '';
+    const bubble = document.createElement('span');
+    bubble.className = 'bubble-icon';
+    bubble.textContent = '💬';
+    target.appendChild(bubble);
+    target.appendChild(document.createTextNode(' '));
+    const strong = document.createElement('b');
+    strong.textContent = explain;
+    target.appendChild(strong);
+    if(nextAction){
+      target.appendChild(document.createTextNode(' ' + nextAction));
+    }
+    target.hidden = false;
+  }
+  window.TIB.renderBubble = renderBubble;
+
+  // ISO 문자열을 '9월 27일 15시 29분' 형태로 바꾼다. 제목 옆 작은 시각 표기용.
+  function formatKoreanTime(iso){
+    const m = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})/.exec(iso);
+    if(!m) return iso;
+    const month = parseInt(m[2], 10);
+    const day = parseInt(m[3], 10);
+    const hour = parseInt(m[4], 10);
+    return `${month}월 ${day}일 ${hour}시 ${m[5]}분`;
+  }
+  window.TIB.formatKoreanTime = formatKoreanTime;
 
   // 기온 구간별 간단 코멘트(참고용, 체감온도 아님) — 값·단위 등 필수 표시 항목과는 별개
   const TEMP_TIPS = [
@@ -569,26 +545,24 @@
   }
 
   async function load(region){
-    const queryTimeUtc = new Date().toISOString().replace(/\.\d+Z$/, 'Z');
-
     el.dot.className = 'dot';
     el.status.textContent = '조회 중…';
     el.value.textContent = '—';
     el.unit.textContent = '';
-    el.errorBox.classList.remove('show');
-    el.errorBox.textContent = '';
     el.tip.hidden = true;
 
     let res;
     try{
       res = await fetch(apiUrl(region), { cache: 'no-store' });
     }catch(networkErr){
-      showError('조회 실패: 네트워크 요청 자체가 차단되었거나 응답이 오지 않았습니다.', networkErr, queryTimeUtc);
+      showError('network');
       return;
     }
 
     if(!res.ok){
-      showError(`조회 실패: 서버가 HTTP ${res.status}을 반환했습니다.`, null, queryTimeUtc);
+      if(res.status === 401 || res.status === 403) showError('auth');
+      else if(res.status === 429) showError('rate_limit');
+      else showError('http');
       return;
     }
 
@@ -596,12 +570,12 @@
     try{
       raw = await res.json();
     }catch(parseErr){
-      showError('조회 실패: 응답을 JSON으로 해석할 수 없습니다.', parseErr, queryTimeUtc);
+      showError('schema_error');
       return;
     }
 
     if(!raw || !raw.current || typeof raw.current.temperature_2m !== 'number'){
-      showError('조회 실패: 응답에 기대한 값(current.temperature_2m)이 없습니다.', null, queryTimeUtc);
+      showError('schema_error');
       return;
     }
 
@@ -609,34 +583,26 @@
     const sourceTime = `${raw.current.time}:00${offsetStr}`;
 
     el.dot.className = 'dot ok';
-    el.status.textContent = '실시간 조회 성공';
+    el.status.textContent = '실시간 기온';
     el.value.textContent = raw.current.temperature_2m.toFixed(1);
     el.unit.textContent = raw.current_units.temperature_2m;
-    el.source.textContent = 'Open-Meteo (api.open-meteo.com)';
-    el.sourceTime.textContent = sourceTime;
-    el.queryTime.textContent = queryTimeUtc + ' (UTC)';
+    el.source.innerHTML = '<a href="' + apiUrl(region) + '" target="_blank" rel="noopener">Open-Meteo (api.open-meteo.com)</a>';
     el.tz.textContent = raw.timezone + ' (UTC' + offsetStr + ')';
+    el.titleTime.textContent = '- ' + formatKoreanTime(sourceTime);
 
-    el.tip.innerHTML = '';
-    el.tip.appendChild(document.createTextNode('참고 코멘트: '));
-    const strong = document.createElement('b');
-    strong.textContent = tempTip(raw.current.temperature_2m);
-    el.tip.appendChild(strong);
-    el.tip.hidden = false;
+    renderBubble(el.tip, tempTip(raw.current.temperature_2m), '');
   }
 
-  function showError(message, err, queryTimeUtc){
+  function showError(code){
     el.dot.className = 'dot err';
     el.status.textContent = '조회 실패';
     el.value.textContent = '—';
     el.unit.textContent = '';
     el.source.textContent = 'Open-Meteo (api.open-meteo.com)';
-    el.sourceTime.textContent = '해당 없음 (응답을 받지 못함)';
-    el.queryTime.textContent = queryTimeUtc + ' (UTC) — 이 시각에 시도함';
     el.tz.textContent = 'Asia/Seoul (기준 시간대 고정값)';
-    el.errorBox.textContent = message + (err ? ' [' + String(err.message || err) + ']' : '');
-    el.errorBox.classList.add('show');
-    el.tip.hidden = true;
+    el.titleTime.textContent = '';
+    const msg = FAILURE_MESSAGES[code] || FAILURE_MESSAGES.http;
+    renderBubble(el.tip, msg.explain, msg.next_action);
   }
 
   window.TIB.loadCurrent = load;
@@ -645,21 +611,21 @@
 
 <script>
 // ============================================================================
-// 보강 기능: 최근 기온 추이 (line chart, 단일 계열 sequential 색상)
-// Open-Meteo의 past_days 파라미터로 최근 6일 + 오늘의 일별 평균 기온을 실시간 조회한다.
+// 보강 기능: 8시간 날씨 예보 (line chart, 단일 계열 sequential 색상)
+// Open-Meteo의 hourly 파라미터로 시간별 기온을 실시간 조회해서, 현재 시점부터 8시간 이후까지를 보여준다.
 // ============================================================================
 (function(){
   window.TIB = window.TIB || {};
 
   function trendUrl(region){
-    return `https://api.open-meteo.com/v1/forecast?latitude=${region.lat}&longitude=${region.lon}&daily=temperature_2m_mean,temperature_2m_max,temperature_2m_min&timezone=Asia%2FSeoul&past_days=6&forecast_days=1`;
+    return `https://api.open-meteo.com/v1/forecast?latitude=${region.lat}&longitude=${region.lon}&hourly=temperature_2m&timezone=Asia%2FSeoul&forecast_days=2`;
   }
   const SVG_NS = 'http://www.w3.org/2000/svg';
-  const W = 320, H = 130, PAD_L = 28, PAD_R = 36, PAD_T = 12, PAD_B = 20;
+  const W = 320, H = 130, PAD_L = 28, PAD_R = 36, PAD_T = 22, PAD_B = 20;
+  const PLOT_L = 46; // y축 숫자(PAD_L 기준 고정)는 그대로 두고, 그래프 자체만 오른쪽으로 옮기기 위한 여백
+  const HOURS_AHEAD = 8;
 
   const wrap = document.getElementById('trendChartWrap');
-  const tableToggle = document.getElementById('trendTableToggle');
-  const tableWrap = document.getElementById('trendTableWrap');
 
   function niceStep(range){
     if (range <= 4) return 1;
@@ -667,9 +633,23 @@
     return 5;
   }
 
+  // Open-Meteo가 timezone=Asia/Seoul로 내려주는 hourly.time은 오프셋 없는 'YYYY-MM-DDTHH:00' 문자열이라,
+  // '지금'도 같은 형식(KST 기준)으로 만들어야 문자열 비교로 현재 시각 이후를 정확히 찾을 수 있다.
+  function nowKstHourString(){
+    const kst = new Date(Date.now() + 9 * 3600 * 1000);
+    const y = kst.getUTCFullYear();
+    const mo = String(kst.getUTCMonth() + 1).padStart(2, '0');
+    const d = String(kst.getUTCDate()).padStart(2, '0');
+    const h = String(kst.getUTCHours()).padStart(2, '0');
+    return `${y}-${mo}-${d}T${h}:00`;
+  }
+
+  function hourLabel(iso){
+    const m = /T(\d{2}):/.exec(iso);
+    return m ? `${m[1]}시` : iso;
+  }
+
   async function load(region){
-    tableToggle.hidden = true;
-    tableWrap.hidden = true;
     wrap.innerHTML = '<span class="status" id="trendStatus"><span class="dot"></span><span>추이 조회 중…</span></span>';
 
     let res, json;
@@ -677,42 +657,47 @@
       res = await fetch(trendUrl(region), { cache: 'no-store' });
       if(!res.ok) throw new Error('HTTP ' + res.status);
       json = await res.json();
-      if(!json.daily || !Array.isArray(json.daily.time)) throw new Error('unexpected shape');
+      if(!json.hourly || !Array.isArray(json.hourly.time)) throw new Error('unexpected shape');
     }catch(err){
       wrap.innerHTML = '';
       const p = document.createElement('p');
-      p.className = 'note';
+      p.className = 'tip-line';
       p.textContent = '추이를 불러오지 못했습니다: ' + (err.message || err);
       wrap.appendChild(p);
       return;
     }
 
-    const dates = json.daily.time;
-    const means = json.daily.temperature_2m_mean;
-    const mins = json.daily.temperature_2m_min;
-    const maxs = json.daily.temperature_2m_max;
-    const unit = json.daily_units.temperature_2m_mean;
+    const allTimes = json.hourly.time;
+    const allTemps = json.hourly.temperature_2m;
+    const unit = json.hourly_units.temperature_2m;
 
-    const dataMin = Math.min(...mins);
-    const dataMax = Math.max(...maxs);
+    const nowStr = nowKstHourString();
+    let startIdx = allTimes.findIndex(t => t >= nowStr);
+    if (startIdx < 0) startIdx = 0;
+
+    const times = allTimes.slice(startIdx, startIdx + HOURS_AHEAD + 1);
+    const temps = allTemps.slice(startIdx, startIdx + HOURS_AHEAD + 1);
+
+    const dataMin = Math.min(...temps);
+    const dataMax = Math.max(...temps);
     const step = niceStep(dataMax - dataMin);
     const yMin = Math.floor(dataMin / step) * step;
     const yMax = Math.ceil(dataMax / step) * step;
 
-    const xFor = i => PAD_L + (i / (dates.length - 1)) * (W - PAD_L - PAD_R);
+    const xFor = i => PLOT_L + (i / (times.length - 1)) * (W - PLOT_L - PAD_R);
     const yFor = v => H - PAD_B - ((v - yMin) / (yMax - yMin)) * (H - PAD_T - PAD_B);
 
     const svg = document.createElementNS(SVG_NS, 'svg');
     svg.setAttribute('viewBox', `0 0 ${W} ${H}`);
     svg.setAttribute('role', 'img');
-    svg.setAttribute('aria-label', '최근 7일 일별 평균 기온 추이');
+    svg.setAttribute('aria-label', '현재 시점부터 8시간 이후까지 시간별 기온 추이');
 
     // 가로 기준선 2개 (최소/최대 근처 nice value)
     for (let v = yMin; v <= yMax; v += step) {
       const y = yFor(v);
       const line = document.createElementNS(SVG_NS, 'line');
       line.setAttribute('class', 'chart-grid');
-      line.setAttribute('x1', PAD_L); line.setAttribute('x2', W - PAD_R);
+      line.setAttribute('x1', PLOT_L); line.setAttribute('x2', W - PAD_R);
       line.setAttribute('y1', y); line.setAttribute('y2', y);
       svg.appendChild(line);
       const tick = document.createElementNS(SVG_NS, 'text');
@@ -723,19 +708,19 @@
       svg.appendChild(tick);
     }
 
-    // x축 날짜 라벨 (월/일)
-    dates.forEach((d, i) => {
+    // x축 시각 라벨 (시)
+    times.forEach((t, i) => {
       const label = document.createElementNS(SVG_NS, 'text');
       label.setAttribute('class', 'chart-tick');
       label.setAttribute('x', xFor(i));
       label.setAttribute('y', H - 4);
       label.setAttribute('text-anchor', 'middle');
-      label.textContent = d.slice(5).replace('-', '/');
+      label.textContent = hourLabel(t);
       svg.appendChild(label);
     });
 
     // area + line
-    const points = means.map((v, i) => [xFor(i), yFor(v)]);
+    const points = temps.map((v, i) => [xFor(i), yFor(v)]);
     const areaPath = `M${points[0][0]},${yFor(yMin)} ` + points.map(p => `L${p[0]},${p[1]}`).join(' ') + ` L${points[points.length-1][0]},${yFor(yMin)} Z`;
     const area = document.createElementNS(SVG_NS, 'path');
     area.setAttribute('class', 'chart-area');
@@ -748,299 +733,27 @@
     line.setAttribute('d', linePath);
     svg.appendChild(line);
 
-    // crosshair (숨김 상태로 시작)
-    const crosshair = document.createElementNS(SVG_NS, 'line');
-    crosshair.setAttribute('class', 'chart-crosshair');
-    crosshair.setAttribute('y1', PAD_T); crosshair.setAttribute('y2', H - PAD_B);
-    svg.appendChild(crosshair);
+    // 시간대별 점(선 위에 오도록 선 다음에 그린다) + 위에 작은 기온 라벨
+    points.forEach((p, i) => {
+      const dot = document.createElementNS(SVG_NS, 'circle');
+      dot.setAttribute('class', 'chart-dot');
+      dot.setAttribute('cx', p[0]); dot.setAttribute('cy', p[1]); dot.setAttribute('r', 3.5);
+      svg.appendChild(dot);
 
-    // 오늘(마지막 점) 강조 + 직접 라벨
-    const lastIdx = points.length - 1;
-    const dot = document.createElementNS(SVG_NS, 'circle');
-    dot.setAttribute('class', 'chart-dot');
-    dot.setAttribute('cx', points[lastIdx][0]); dot.setAttribute('cy', points[lastIdx][1]); dot.setAttribute('r', 4);
-    svg.appendChild(dot);
-    const endLabel = document.createElementNS(SVG_NS, 'text');
-    endLabel.setAttribute('class', 'chart-endlabel');
-    endLabel.setAttribute('x', points[lastIdx][0]);
-    endLabel.setAttribute('y', points[lastIdx][1] - 10);
-    endLabel.setAttribute('text-anchor', 'end');
-    endLabel.textContent = means[lastIdx].toFixed(1) + unit;
-    svg.appendChild(endLabel);
+      const label = document.createElementNS(SVG_NS, 'text');
+      label.setAttribute('class', 'chart-point-label');
+      label.setAttribute('x', p[0]);
+      label.setAttribute('y', p[1] - 9);
+      label.setAttribute('text-anchor', 'middle');
+      label.textContent = temps[i].toFixed(1);
+      svg.appendChild(label);
+    });
 
     wrap.innerHTML = '';
     wrap.appendChild(svg);
-
-    const tooltip = document.createElement('div');
-    tooltip.className = 'chart-tooltip';
-    wrap.appendChild(tooltip);
-
-    function showTooltip(i){
-      const [px, py] = points[i];
-      crosshair.setAttribute('x1', px); crosshair.setAttribute('x2', px);
-      crosshair.style.opacity = 1;
-      tooltip.style.opacity = 1;
-      tooltip.style.left = (px / W * 100) + '%';
-      tooltip.style.top = (py / H * 100) + '%';
-      tooltip.innerHTML = '';
-      const dateLine = document.createElement('div');
-      dateLine.textContent = dates[i];
-      const valueLine = document.createElement('div');
-      const b = document.createElement('b');
-      b.textContent = means[i].toFixed(1) + unit + ' (평균)';
-      valueLine.appendChild(b);
-      const rangeLine = document.createElement('div');
-      rangeLine.style.color = 'var(--ink-dim)';
-      rangeLine.textContent = '최저 ' + mins[i].toFixed(1) + unit + ' · 최고 ' + maxs[i].toFixed(1) + unit;
-      tooltip.append(dateLine, valueLine, rangeLine);
-    }
-    function hideTooltip(){
-      crosshair.style.opacity = 0;
-      tooltip.style.opacity = 0;
-    }
-
-    // 히트 영역 (포인터 + 키보드 포커스)
-    points.forEach((p, i) => {
-      const hit = document.createElementNS(SVG_NS, 'rect');
-      const bandW = (W - PAD_L - PAD_R) / dates.length;
-      hit.setAttribute('class', 'chart-hit');
-      hit.setAttribute('x', p[0] - bandW / 2);
-      hit.setAttribute('y', PAD_T);
-      hit.setAttribute('width', bandW);
-      hit.setAttribute('height', H - PAD_T - PAD_B);
-      hit.setAttribute('tabindex', '0');
-      hit.setAttribute('role', 'button');
-      hit.setAttribute('aria-label', dates[i] + ' 평균 ' + means[i].toFixed(1) + unit);
-      hit.addEventListener('pointerenter', () => showTooltip(i));
-      hit.addEventListener('pointermove', () => showTooltip(i));
-      hit.addEventListener('pointerleave', hideTooltip);
-      hit.addEventListener('focus', () => showTooltip(i));
-      hit.addEventListener('blur', hideTooltip);
-      svg.appendChild(hit);
-    });
-
-    // 표로 보기 (접근성: 차트 없이도 같은 값을 볼 수 있어야 함)
-    const table = document.createElement('table');
-    table.className = 'data-table chart-table';
-    const thead = document.createElement('thead');
-    thead.innerHTML = '<tr><th>날짜</th><th>평균</th><th>최저</th><th>최고</th></tr>';
-    const tbody = document.createElement('tbody');
-    dates.forEach((d, i) => {
-      const tr = document.createElement('tr');
-      tr.innerHTML = `<td>${d}</td><td>${means[i].toFixed(1)}${unit}</td><td>${mins[i].toFixed(1)}${unit}</td><td>${maxs[i].toFixed(1)}${unit}</td>`;
-      tbody.appendChild(tr);
-    });
-    table.append(thead, tbody);
-    tableWrap.innerHTML = '';
-    tableWrap.appendChild(table);
-
-    tableToggle.hidden = false;
-    tableToggle.textContent = '표로 보기';
-    tableWrap.hidden = true;
-    tableToggle.onclick = () => {
-      tableWrap.hidden = !tableWrap.hidden;
-      tableToggle.textContent = tableWrap.hidden ? '표로 보기' : '표 접기';
-    };
   }
 
   window.TIB.loadTrend = load;
-})();
-</script>
-
-<script>
-// ============================================================================
-// 보강 기능: 다른 지역 현재 기온 (하드코딩된 좌표 목록, 채점 기준 밖)
-// ============================================================================
-(function(){
-  var CITIES = [
-    { id: 'seoul', name: '서울', lat: 37.5665, lon: 126.9780, tabImg: '../assets/tab/seoul-money.png' },
-    { id: 'gumi', name: '구미', lat: 36.1195, lon: 128.3446, tabImg: '../assets/tab/gumi-noodle.png' },
-    { id: 'daegu', name: '대구', lat: 35.8714, lon: 128.6014, tabImg: '../assets/tab/daegu-chicken.png' },
-    { id: 'grace-cc', name: '청도 그레이스 CC', lat: 35.6610, lon: 128.6439, tabImg: '../assets/tab/grace-golf.png' },
-  ];
-
-  // 시연용 더미: 2026-09-26 값. 실제 기록이 아니며 data/weather/에는 저장하지 않는다(실제 기록과 섞지 않기 위해).
-  var DUMMY_PREV = {
-    date: '2026-09-26',
-    values: { seoul: 24.6, gumi: 24.9, daegu: 25.2, 'grace-cc': 24.3 }
-  };
-
-  function deltaLine(cityId){
-    var recs = (window.TIB && window.TIB.DAILY_RECORDS_BY_REGION && window.TIB.DAILY_RECORDS_BY_REGION[cityId]) || [];
-    var today = recs.slice().sort(function(a, b){ return a.date.localeCompare(b.date); }).pop();
-    var prev = DUMMY_PREV.values[cityId];
-    if (!today || typeof prev !== 'number') return '전일 대비 계산 불가';
-    var d = today.value - prev;
-    var dir = d > 0 ? '상승' : (d < 0 ? '하락' : '변화 없음');
-    return '전일 대비 ' + (d > 0 ? '+' : '') + d.toFixed(1) + ' ' + today.unit + ' (' + dir + ') · '
-      + DUMMY_PREV.date.slice(5) + ' ' + prev.toFixed(1) + ' → ' + today.date.slice(5) + ' ' + today.value.toFixed(1);
-  }
-  var MULTI_URL = 'https://api.open-meteo.com/v1/forecast?latitude='
-    + CITIES.map(function(c){ return c.lat; }).join(',')
-    + '&longitude=' + CITIES.map(function(c){ return c.lon; }).join(',')
-    + '&current=temperature_2m,relative_humidity_2m,wind_speed_10m,weather_code&timezone=Asia%2FSeoul';
-
-  var overview = document.getElementById('overviewGrid');
-  var overviewNote = document.getElementById('overviewNote');
-  var ovSource = document.getElementById('ovSource');
-  var ovRows = null, ovQueryTime = '';
-
-  // WMO weather_code → 한글 (Open-Meteo 문서 기준 구간 요약)
-  function conditionText(code){
-    if (code === 0) return '맑음';
-    if (code <= 3) return '구름 조금~흐림';
-    if (code <= 48) return '안개';
-    if (code <= 57) return '이슬비';
-    if (code <= 67) return '비';
-    if (code <= 77) return '눈';
-    if (code <= 82) return '소나기';
-    if (code <= 86) return '눈 소나기';
-    return '뇌우';
-  }
-
-  var ovNav = document.getElementById('ovNav');
-  var ovDots = document.getElementById('ovDots');
-  var ovIndex = 0;
-  var shownRegion = -1;
-  var ovTabs = document.getElementById('ovTabs');
-  CITIES.forEach(function(c, i){
-    var tab = document.createElement('button');
-    tab.type = 'button';
-    tab.className = 'ov-tab';
-    tab.setAttribute('role', 'tab');
-    tab.setAttribute('aria-selected', i === 0 ? 'true' : 'false');
-    tab.setAttribute('aria-label', c.name);
-    tab.title = c.name;
-    var img = document.createElement('img');
-    img.src = c.tabImg;
-    img.alt = c.name;
-    tab.appendChild(img);
-    tab.addEventListener('click', function(){ goTo(i); });
-    ovTabs.appendChild(tab);
-  });
-
-  function goTo(i){
-    var cards = overview.children;
-    if (!cards.length) return;
-    ovIndex = Math.max(0, Math.min(cards.length - 1, i));
-    overview.scrollTo({ left: cards[ovIndex].offsetLeft - overview.offsetLeft, behavior: 'smooth' });
-  }
-  function syncDots(){
-    var cards = overview.children;
-    if (!cards.length) return;
-    var w = cards[0].offsetWidth + 12;
-    ovIndex = Math.max(0, Math.min(cards.length - 1, Math.round(overview.scrollLeft / w)));
-    Array.prototype.forEach.call(ovDots.children, function(d, k){ d.classList.toggle('on', k === ovIndex); });
-    if (ovIndex !== shownRegion) {
-      shownRegion = ovIndex;
-      var region = window.TIB.REGIONS[ovIndex];
-      document.getElementById('boardTitle').textContent = region.name + ' 현재 기온';
-      document.getElementById('boardCoordNote').textContent = region.name + ' ' + region.lat + ', ' + region.lon;
-      window.TIB.loadCurrent(region);
-      window.TIB.loadTrend(region);
-      window.TIB.renderDailyRecords(region);
-    }
-    Array.prototype.forEach.call(ovTabs.children, function(t, k){
-      t.setAttribute('aria-selected', k === ovIndex ? 'true' : 'false');
-      if (k === ovIndex) t.scrollIntoView({ block: 'nearest', inline: 'nearest' });
-    });
-    document.getElementById('ovPrev').disabled = ovIndex === 0;
-    document.getElementById('ovNext').disabled = ovIndex === cards.length - 1;
-    renderSourceInfo(ovIndex);
-  }
-  overview.addEventListener('scroll', syncDots, { passive: true });
-  document.getElementById('ovPrev').addEventListener('click', function(){ goTo(ovIndex - 1); });
-  document.getElementById('ovNext').addEventListener('click', function(){ goTo(ovIndex + 1); });
-  overview.setAttribute('tabindex', '0');
-  overview.addEventListener('keydown', function(e){
-    if (e.key === 'ArrowRight') { goTo(ovIndex + 1); e.preventDefault(); }
-    if (e.key === 'ArrowLeft') { goTo(ovIndex - 1); e.preventDefault(); }
-  });
-
-  function formatOffset(seconds){
-    var sign = seconds >= 0 ? '+' : '-';
-    var abs = Math.abs(seconds);
-    return sign + String(Math.floor(abs / 3600)).padStart(2, '0') + ':' + String(Math.floor((abs % 3600) / 60)).padStart(2, '0');
-  }
-
-  function renderOverview(rows, queryTime){
-    overview.innerHTML = '';
-    ovDots.innerHTML = '';
-    rows.forEach(function(entry, i){
-      var dot = document.createElement('button');
-      dot.type = 'button';
-      dot.className = 'ov-dot';
-      dot.setAttribute('aria-label', CITIES[i].name + ' 보기');
-      dot.addEventListener('click', function(){ goTo(i); });
-      ovDots.appendChild(dot);
-    });
-    ovNav.hidden = false;
-    rows.forEach(function(entry, i){
-      var c = entry.current, u = entry.current_units;
-      var card = document.createElement('div');
-      card.className = 'card ov-card';
-      var name = document.createElement('div');
-      name.className = 'ov-name';
-      name.textContent = CITIES[i].name;
-      var temp = document.createElement('div');
-      temp.className = 'ov-temp';
-      temp.textContent = c.temperature_2m.toFixed(1);
-      var small = document.createElement('small');
-      small.textContent = ' ' + u.temperature_2m;
-      temp.appendChild(small);
-      var cond = document.createElement('div');
-      cond.className = 'ov-cond';
-      cond.textContent = conditionText(c.weather_code);
-      var meta = document.createElement('div');
-      meta.className = 'ov-meta';
-      meta.textContent = '습도 ' + c.relative_humidity_2m + u.relative_humidity_2m + ' · 풍속 ' + c.wind_speed_10m.toFixed(1) + ' ' + u.wind_speed_10m;
-      var delta = document.createElement('div');
-      delta.className = 'ov-meta';
-      delta.textContent = deltaLine(CITIES[i].id) + ' [9/26은 더미]';
-      card.append(name, temp, cond, meta, delta);
-      overview.appendChild(card);
-    });
-    ovRows = rows;
-    ovQueryTime = queryTime;
-    overviewNote.textContent = '관측 시각 ' + rows[0].current.time.replace('T', ' ') + ' (KST) · 데이터: Open-Meteo. 좌우 버튼·스와이프·방향키로 지역을 넘겨 보세요.';
-    syncDots();
-  }
-
-  function renderSourceInfo(i){
-    if (!ovRows || !ovRows[i]) return;
-    var entry = ovRows[i], c = entry.current;
-    var offset = formatOffset(entry.utc_offset_seconds);
-    ovSource.hidden = false;
-    ovSource.innerHTML = '';
-    [
-      ['지역', CITIES[i].name],
-      ['출처', 'Open-Meteo (api.open-meteo.com)'],
-      ['출처 시각', c.time + ':00' + offset],
-      ['조회 시각', ovQueryTime + ' (UTC)'],
-      ['기준 시간대', entry.timezone + ' (UTC' + offset + ')']
-    ].forEach(function(pair){
-      var dt = document.createElement('dt'); dt.textContent = pair[0];
-      var dd = document.createElement('dd'); dd.textContent = pair[1];
-      ovSource.append(dt, dd);
-    });
-  }
-
-  async function load(){
-    var queryTime = new Date().toISOString().replace(/\.\d+Z$/, 'Z');
-    try{
-      var res = await fetch(MULTI_URL, { cache: 'no-store' });
-      if(!res.ok) throw new Error('HTTP ' + res.status);
-      var json = await res.json();
-      var rows = Array.isArray(json) ? json : [json];
-      renderOverview(rows, queryTime);
-    }catch(err){
-      overview.innerHTML = '';
-      ovNav.hidden = true;
-      overviewNote.textContent = '날씨를 불러오지 못했습니다: ' + (err.message || err);
-    }
-  }
-
-  load();
 })();
 </script>
 
@@ -1064,6 +777,14 @@
         source: 'Open-Meteo (api.open-meteo.com)',
         source_url: 'https://api.open-meteo.com/v1/forecast?latitude=37.5665&longitude=126.978&current=temperature_2m,relative_humidity_2m,weather_code&timezone=Asia%2FSeoul',
         source_time: '2026-09-27T13:15:00+09:00'
+      },
+      {
+        date: '2026-09-28',
+        value: 19.8,
+        unit: '°C',
+        source: 'Open-Meteo (api.open-meteo.com)',
+        source_url: 'https://api.open-meteo.com/v1/forecast?latitude=37.5665&longitude=126.978&current=temperature_2m,relative_humidity_2m,weather_code&timezone=Asia%2FSeoul',
+        source_time: '2026-09-28T00:30:00+09:00'
       }
     ],
     gumi: [
@@ -1074,6 +795,14 @@
         source: 'Open-Meteo (api.open-meteo.com)',
         source_url: 'https://api.open-meteo.com/v1/forecast?latitude=36.1195&longitude=128.3446&current=temperature_2m,relative_humidity_2m,weather_code&timezone=Asia%2FSeoul',
         source_time: '2026-09-27T13:15:00+09:00'
+      },
+      {
+        date: '2026-09-28',
+        value: 19.7,
+        unit: '°C',
+        source: 'Open-Meteo (api.open-meteo.com)',
+        source_url: 'https://api.open-meteo.com/v1/forecast?latitude=36.1195&longitude=128.3446&current=temperature_2m,relative_humidity_2m,weather_code&timezone=Asia%2FSeoul',
+        source_time: '2026-09-28T00:30:00+09:00'
       }
     ],
     daegu: [
@@ -1084,6 +813,14 @@
         source: 'Open-Meteo (api.open-meteo.com)',
         source_url: 'https://api.open-meteo.com/v1/forecast?latitude=35.8714&longitude=128.6014&current=temperature_2m,relative_humidity_2m,weather_code&timezone=Asia%2FSeoul',
         source_time: '2026-09-27T13:15:00+09:00'
+      },
+      {
+        date: '2026-09-28',
+        value: 20.7,
+        unit: '°C',
+        source: 'Open-Meteo (api.open-meteo.com)',
+        source_url: 'https://api.open-meteo.com/v1/forecast?latitude=35.8714&longitude=128.6014&current=temperature_2m,relative_humidity_2m,weather_code&timezone=Asia%2FSeoul',
+        source_time: '2026-09-28T00:30:00+09:00'
       }
     ],
     'grace-cc': [
@@ -1094,6 +831,14 @@
         source: 'Open-Meteo (api.open-meteo.com)',
         source_url: 'https://api.open-meteo.com/v1/forecast?latitude=35.661&longitude=128.6439&current=temperature_2m,relative_humidity_2m,weather_code&timezone=Asia%2FSeoul',
         source_time: '2026-09-27T13:15:00+09:00'
+      },
+      {
+        date: '2026-09-28',
+        value: 19.8,
+        unit: '°C',
+        source: 'Open-Meteo (api.open-meteo.com)',
+        source_url: 'https://api.open-meteo.com/v1/forecast?latitude=35.661&longitude=128.6439&current=temperature_2m,relative_humidity_2m,weather_code&timezone=Asia%2FSeoul',
+        source_time: '2026-09-28T00:30:00+09:00'
       }
     ]
   };
@@ -1101,45 +846,92 @@
   window.TIB.DAILY_RECORDS_BY_REGION = DAILY_RECORDS_BY_REGION;
 
   function render(region){
-    var tbody = document.getElementById('dayTableBody');
-    var dirNote = document.getElementById('dayRecordsDirNote');
-    var deltaValueOut = document.getElementById('deltaValueOut');
-    var deltaLabelOut = document.getElementById('deltaLabelOut');
-
-    dirNote.textContent = 'data/weather/' + region.id + '/<날짜>.json';
+    var dot = document.getElementById('dayCompareDot');
+    var deltaOut = document.getElementById('dayDeltaOut');
+    var yestOut = document.getElementById('dayYestOut');
+    var todayOut = document.getElementById('dayTodayOut');
+    var pairEl = document.getElementById('dayComparePair');
+    var mergedEl = document.getElementById('dayCompareMerged');
+    var titleTimeOut = document.getElementById('dayTitleTimeOut');
+    var formatKoreanTime = window.TIB.formatKoreanTime;
+    var renderBubble = window.TIB.renderBubble;
 
     var records = DAILY_RECORDS_BY_REGION[region.id] || [];
     var sorted = records.slice().sort(function(a, b){ return a.date.localeCompare(b.date); });
-
-    tbody.innerHTML = '';
-    sorted.forEach(function(rec){
-      var tr = document.createElement('tr');
-      tr.innerHTML =
-        '<td>' + rec.date + '</td>' +
-        '<td>' + rec.value.toFixed(1) + ' ' + rec.unit + '</td>' +
-        '<td>' + rec.source_time + '</td>' +
-        '<td><a href="' + rec.source_url + '" target="_blank" rel="noopener">' + rec.source + '</a></td>';
-      tbody.appendChild(tr);
-    });
 
     if (sorted.length >= 2) {
       var earlier = sorted[0], later = sorted[sorted.length - 1];
       var delta = later.value - earlier.value; // 계산 규칙: 늦은 날짜 값 - 이른 날짜 값
       var sign = delta > 0 ? '+' : (delta < 0 ? '' : '±');
-      var direction = delta > 0 ? '상승' : (delta < 0 ? '하락' : '변화 없음');
-      deltaValueOut.textContent = sign + delta.toFixed(1) + ' ' + later.unit + ' (' + direction + ')';
-      deltaLabelOut.textContent =
-        earlier.date + '(' + earlier.value.toFixed(1) + earlier.unit + ') → ' + later.date + '(' + later.value.toFixed(1) + later.unit + ') 재계산';
-    } else if (sorted.length === 1) {
-      deltaValueOut.textContent = '—';
-      deltaLabelOut.textContent = '아직 서로 다른 날짜 기록이 1건뿐이라 전일 대비를 계산할 수 없습니다 (다음 날 기록이 쌓이면 자동 계산됩니다).';
+      dot.className = 'dot ok';
+      deltaOut.innerHTML = sign + delta.toFixed(1) + ' <span class="unit">' + later.unit + '</span>';
+      yestOut.innerHTML = earlier.value.toFixed(1) + ' <span class="unit">' + earlier.unit + '</span>';
+      todayOut.innerHTML = later.value.toFixed(1) + ' <span class="unit">' + later.unit + '</span>';
+      pairEl.hidden = false;
+      mergedEl.hidden = true;
+      titleTimeOut.textContent = '- 어제 ' + formatKoreanTime(earlier.source_time) + ' · 오늘 ' + formatKoreanTime(later.source_time);
     } else {
-      deltaValueOut.textContent = '—';
-      deltaLabelOut.textContent = '기록 없음';
+      dot.className = 'dot err';
+      deltaOut.textContent = '—';
+      pairEl.hidden = true;
+      var have = sorted.length === 1 ? '1건' : '0건';
+      renderBubble(mergedEl,
+        '어제·오늘 기온이 모두 있어야 전일 대비를 구할 수 있는데, 지금은 서로 다른 날짜 기록이 ' + have + '뿐입니다.',
+        '다음 날 기록이 쌓이면 자동으로 채워집니다.');
+      titleTimeOut.textContent = sorted.length === 1 ? '- ' + formatKoreanTime(sorted[0].source_time) : '';
     }
   }
 
   window.TIB.renderDailyRecords = render;
+})();
+</script>
+
+<script>
+// ============================================================================
+// 지역 탭: 탭 클릭 시 실시간 조회 카드 · 전일 대비 · 8시간 날씨 예보를 해당 지역으로 전환한다.
+// ============================================================================
+(function(){
+  var TAB_IMG = {
+    seoul: '../assets/tab/seoul-money.png',
+    gumi: '../assets/tab/gumi-noodle.png',
+    daegu: '../assets/tab/daegu-chicken.png',
+    'grace-cc': '../assets/tab/grace-golf.png',
+  };
+  var REGIONS = window.TIB.REGIONS;
+  var ovTabs = document.getElementById('ovTabs');
+  var boardTitle = document.getElementById('boardTitle');
+  var shownIndex = -1;
+
+  function selectRegion(i){
+    if (i === shownIndex) return;
+    shownIndex = i;
+    var region = REGIONS[i];
+    boardTitle.textContent = region.name + ' 현재 기온';
+    window.TIB.loadCurrent(region);
+    window.TIB.loadTrend(region);
+    window.TIB.renderDailyRecords(region);
+    Array.prototype.forEach.call(ovTabs.children, function(t, k){
+      t.setAttribute('aria-selected', k === i ? 'true' : 'false');
+    });
+  }
+
+  REGIONS.forEach(function(region, i){
+    var tab = document.createElement('button');
+    tab.type = 'button';
+    tab.className = 'ov-tab';
+    tab.setAttribute('role', 'tab');
+    tab.setAttribute('aria-selected', i === 0 ? 'true' : 'false');
+    tab.setAttribute('aria-label', region.name);
+    tab.title = region.name;
+    var img = document.createElement('img');
+    img.src = TAB_IMG[region.id];
+    img.alt = region.name;
+    tab.appendChild(img);
+    tab.addEventListener('click', function(){ selectRegion(i); });
+    ovTabs.appendChild(tab);
+  });
+
+  selectRegion(0);
 })();
 </script>
 
