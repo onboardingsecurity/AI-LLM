@@ -38,6 +38,12 @@
     --sky:#8ddcfd;
     --leaf:#8ece7a;
     --cursor:url('../assets/common/mouse-cursor.png') 0 0, auto;
+    --halo:0 0 3px rgba(255,255,255,.95), 0 0 7px rgba(255,255,255,.7); /* 밝은 배경 그림 위 카드 밖 글씨용 흰 테두리 빛 */
+    --glass:rgba(255,255,255,.66);       /* 실제 정보 카드(현재 기온·전일 대비·예보)의 반투명 흰 바탕 */
+    --glass-edge:rgba(255,255,255,.8);
+    --glass-divider:rgba(70,80,95,.25);
+    --glass-btn:rgba(255,255,255,.7);
+    --glass-dim:#5d6068;                 /* 반투명 카드 안 보조 글씨(갈색 회색 대신 중립 회색, 어두운 배경 위에서도 읽히게 조금 진하게) */
   }
   @media (prefers-color-scheme: dark){
     :root:not([data-theme="light"]){
@@ -54,6 +60,7 @@
       --warn-soft:#3a2f14;
       --sky:#6fb8dd;
       --leaf:#6fb865;
+      --halo:0 1px 3px rgba(10,25,50,.75);
     }
   }
   :root[data-theme="dark"]{
@@ -70,6 +77,7 @@
     --warn-soft:#3a2f14;
     --sky:#6fb8dd;
     --leaf:#6fb865;
+    --halo:0 1px 3px rgba(10,25,50,.75);
   }
 
   *{box-sizing:border-box}
@@ -84,13 +92,35 @@
     overflow-x:hidden;
     cursor:var(--cursor);
   }
-  .page{ width:100%; max-width:720px; display:flex; flex-direction:column; gap:20px; }
-  .brand{ display:flex; align-items:center; gap:14px; }
-  .brand-logo{
-    width:52px; height:52px; flex:none;
-    border-radius:16px;
-    box-shadow:0 3px 10px rgba(44,36,26,.12);
+  /* 날씨 배경: #skyBg = 날씨별 배경 그림(맑음일 때), #fxBg = 그 위의 움직이는 효과(비·맑음). 둘 다 화면에 고정, 내용 뒤, 클릭은 통과.
+     현재 날씨가 해당될 때만 서서히 나타난다(아래 스크립트가 .on을 붙였다 뗀다). */
+  #skyBg{ position:fixed; inset:0; z-index:-2; pointer-events:none; opacity:0; transition:opacity .8s;
+    background-position:center; background-size:cover; background-repeat:no-repeat; }
+  #skyBg.on{ opacity:1; }
+  @media (prefers-color-scheme: dark){
+    :root:not([data-theme="light"]) #skyBg{ filter:brightness(.55); }
   }
+  :root[data-theme="dark"] #skyBg{ filter:brightness(.55); }
+  /* 밝은 배경 그림(맑음·안개·눈·바람)일 때: 카드 밖 글씨를 진하게 하고 흰 테두리 빛을 둘러 파란 하늘·눈·물결 위에서도 읽히게 한다. 스크립트가 body에 sky-light를 붙였다 뗀다. */
+  body.sky-light .head-row .tip-line, body.sky-light .page h2, body.sky-light .title-time,
+  body.sky-light .source-fields, body.sky-light .source-fields dt{ text-shadow:var(--halo); }
+  body.sky-light .title-time, body.sky-light .head-row .tip-line{ color:var(--ink); }
+  /* 어두운 배경 그림(비)일 때: 카드 밖에 놓인 글씨(제목·시각·출처)를 밝은 색으로 바꿔 읽히게 한다. 스크립트가 body에 sky-dark를 붙였다 뗀다. */
+  .head-row .tip-line, .head-row .tip-line b, .page h2, .title-time, .source-fields, .source-fields dt{ transition:color .6s, text-shadow .6s; }
+  body.sky-dark .head-row .tip-line, body.sky-dark .head-row .tip-line b, body.sky-dark .page h2, body.sky-dark .title-time,
+  body.sky-dark .source-fields, body.sky-dark .source-fields dt{
+    color:#f2f7ff; text-shadow:0 1px 3px rgba(10,25,50,.75);
+  }
+  #fxBg{ position:fixed; inset:0; width:100%; height:100%; z-index:-1; pointer-events:none; opacity:0; transition:opacity .6s; }
+  #fxBg.on{ opacity:1; }
+  /* 날씨 배경이 바뀔 때 게임 화면 전환처럼 검은 네모 블록이 덮었다 걷히는 층 (내용 뒤, 배경·효과 위) */
+  #wipeBg{ position:fixed; inset:0; width:100%; height:100%; z-index:-1; pointer-events:none; image-rendering:pixelated;
+    background:#000; /* 새로 고침 직후에는 검은 화면으로 시작해서 기본 크림색이 보이지 않게 하고, 첫 날씨 결과가 오면 블록으로 걷는다 */
+    animation:boot-release .01s 12s forwards; } /* 혹시 스크립트가 못 돌아도 12초 뒤에는 검은 덮개가 풀리는 안전장치 */
+  @keyframes boot-release{ to{ background:transparent; } }
+  .page{ width:100%; max-width:720px; display:flex; flex-direction:column; gap:20px; }
+  .main-col, .adapter-panel, .head-row{ display:flex; flex-direction:column; gap:20px; }
+  .adapter-panel{ order:2; } /* 좁은 화면에서는 실제 정보(main-col)를 먼저 보여주고 리허설은 그 아래로 */
   #landingView:not([hidden]), #boardView:not([hidden]), #boardExtra:not([hidden]), #dayCompareView:not([hidden]){ display:flex; flex-direction:column; gap:20px; }
   .row-2col{ display:flex; flex-direction:column; gap:20px; }
   .row-2col > div{ flex:1 1 260px; min-width:0; }
@@ -99,29 +129,32 @@
     .row-2col{ flex-direction:row; }
   }
 
-  .eyebrow{
-    font-family:'Jua', sans-serif;
-    font-size:12px;
-    letter-spacing:.12em;
-    text-transform:uppercase;
-    color:var(--mono);
-  }
-  h1{
-    margin:0;
-    font-family:'Jua', sans-serif;
-    font-size:26px;
-    font-weight:400;
-    letter-spacing:-.01em;
-    text-wrap:balance;
-  }
 
   .card{
+    --pad-y:28px; --pad-x:24px;
     background:var(--surface);
     border:1px solid var(--line);
     border-radius:20px;
-    padding:28px 24px;
+    padding:var(--pad-y) var(--pad-x);
     box-shadow:0 3px 14px rgba(44,36,26,.06);
   }
+
+  /* 카드 4개(서울 현재 기온·전일 대비·8시간 날씨 예보·Adapter 계약 리허설): 갈색 대신 반투명 흰색 유리 느낌으로, 뒤의 날씨 배경이 비쳐 보이게 한다.
+     안쪽 점선·눈금선(--line)도 갈색 대신 중립 회색으로. 살짝 흐림(blur)을 줘서 배경이 복잡해도 글씨가 읽히게 한다. */
+  #boardView .card, #dayCompareView .card, #boardExtra > .card, .adapter-panel .card{
+    background:var(--glass);
+    border-color:var(--glass-edge);
+    /* 다크 모드여도 창 바탕은 흰색 반투명이므로, 창 안쪽 색은 항상 라이트 팔레트로 고정한다(흰 바탕 위 진한 글씨) */
+    --ink:#2c241a; --surface:#fffdf6; --mono:#8a7d63; --accent:#d9713f; --accent-soft:#fbe4d3;
+    color:var(--ink); /* 글자색은 body에서 상속되므로 창 안에서 다시 지정해야 다크 모드에서도 진한 글씨가 된다 */
+    --ok:#4f9d4a; --warn:#c98a1f; --warn-soft:#fbeecb;
+    --line:var(--glass-divider);
+    --ink-dim:var(--glass-dim);
+    -webkit-backdrop-filter:blur(3px);
+    backdrop-filter:blur(3px);
+  }
+  /* 리허설 카드 안 버튼(reset·정상 외 버튼)도 갈색 바탕 대신 반투명 흰색으로. 주황 강조 버튼(primary·retry)은 그대로 */
+  .adapter-panel .btn:not(.primary):not(.retry){ background:var(--glass-btn); }
 
   .status{
     display:inline-flex;
@@ -203,9 +236,6 @@
     word-break:break-word;
   }
 
-  .divider{ height:1px; background:var(--line); margin:22px 0; }
-  /* 현재 기온·전일 대비 카드 바로 아래 구분선은 숨겨서, 8시간 예보 제목의 위 간격을 "서울 현재 기온" 제목(탭 아래)과 같게 맞춘다 */
-  .row-2col + .divider{ display:none; }
 
   .tip-line{
     margin-top:14px;
@@ -215,18 +245,35 @@
     border-top:1px dashed var(--line);
   }
   .tip-line b{ color:var(--ink); font-weight:600; }
-  /* 서울 현재 기온 카드: 점선 아래부터 카드 하단 끝까지의 영역 세로 중앙에 코멘트를 둔다 */
+  /* 상단 코멘트 줄(예전 슬로건 자리): 말풍선 + 코멘트. 말풍선은 서울 현재 기온 제목과 같은 x에서 시작하고,
+     코멘트는 말풍선 바로 오른쪽부터 전일 대비 제목 옆 시각이 끝나는 곳까지(끝 위치는 스크립트가 맞춘다). */
   #boardView .card{ display:flex; flex-direction:column; }
-  #tempTipOut:not([hidden]){
-    font-size:17.5px; /* 기본 13.5px에서 두 단계(+2px씩) 키움. 말풍선 이모지도 글자 크기를 따라 같이 커짐 */
-    word-break:normal; /* 한글은 단어가 아니라 글자 단위로 줄바꿈 */
-    flex:1;
-    display:flex;
-    align-items:center;
-    gap:6px;
-    padding:0;
-    margin-bottom:-28px; /* 카드 아래 안쪽 여백만큼 영역을 카드 끝까지 늘림 */
-  }
+  .head-row .tip-line{ margin:0; padding:0; border:0; display:flex; align-items:center; gap:8px; font-size:25.5px; line-height:1.4; }
+  .head-row .tip-line[hidden]{ display:none; }
+  .head-row .tip-line b{ color:inherit; font-weight:600; }
+  .bubble-text{ min-width:0; }
+  /* 코멘트가 타자 치듯 한 글자씩 나온다: 글자 자리는 처음부터 잡아 두고(visibility) 차례로 보이게 해서 줄바꿈·높이가 흔들리지 않는다 */
+  .type-ch{ visibility:hidden; }
+  .type-ch.on{ visibility:visible; }
+  .type-caret{ display:inline-block; width:0; height:1em; position:relative; vertical-align:-.15em; }
+  .type-caret::after{ content:""; position:absolute; left:1px; top:0; width:2px; height:100%; background:currentColor; animation:caret-blink .8s steps(1) infinite; }
+  @keyframes caret-blink{ 50%{ opacity:0; } }
+  /* 서울 현재 기온 카드 아래쪽(예전 코멘트 자리)의 상식 문제 */
+  .quiz{ flex:1; margin-top:12px; padding-top:8px; border-top:1px dashed var(--line); display:flex; flex-direction:column; justify-content:center; min-width:0; }
+  /* 한 줄 안에서 [문제 영역 | 나머지 = 보기 영역]. 보기는 그 나머지 영역 안에서 가로로 나열되어 가운데 정렬된다.
+     답을 고르면 보기가 사라지고 같은 영역 가운데에 정답/오답 결과가 나온다(누르면 다음 문제, 가만히 두면 잠시 뒤 자동으로 다음 문제). */
+  .quiz-row{ display:flex; flex-wrap:nowrap; align-items:center; gap:10px; }
+  .quiz-q{ flex:0 1 auto; min-width:0; margin:0; font-size:13.5px; line-height:1.35; color:var(--ink); word-break:keep-all; }
+  .quiz-tag{ color:var(--accent); font-weight:600; }
+  .quiz-area{ flex:1 0 auto; display:flex; justify-content:center; align-items:center; min-height:26px; }
+  .quiz-a{ display:flex; flex-wrap:nowrap; justify-content:center; align-items:center; gap:6px; }
+  .quiz-a[hidden], .quiz-result[hidden]{ display:none; }
+  .quiz-choice, .quiz-result{ font-family:inherit; font-size:13.5px; line-height:1.2; color:var(--ink); background:var(--glass-btn); border:1px solid rgba(90,95,105,.35);
+    padding:2px 9px; border-radius:999px; cursor:var(--cursor); white-space:nowrap; }
+  .quiz-choice:hover, .quiz-result:hover{ border-color:var(--accent); }
+  .quiz-choice:focus-visible, .quiz-result:focus-visible{ outline:2px solid var(--accent); outline-offset:2px; }
+  .quiz-result.ok{ color:var(--ok); border-color:var(--ok); font-weight:600; }
+  .quiz-result.no{ color:var(--warn); border-color:var(--warn); font-weight:600; }
   .bubble-icon{ display:inline-block; flex:none; width:1.35em; height:1.35em; vertical-align:-.3em; }
   .bubble-icon svg{ display:block; width:100%; height:100%; }
   .bubble-body{ fill:#ddd2f8; stroke:#b7a5e6; stroke-width:1.2; stroke-linejoin:round; }
@@ -321,7 +368,7 @@
   .ov-card .ov-cond{ font-size:15px; }
   .ov-card .ov-meta{ font-size:12px; }
   .ov-tabs{ display:grid; grid-template-columns:repeat(4, 1fr); gap:8px; }
-  .ov-tab{ padding:clamp(8px, 3vw, 16px); border:3px solid transparent; border-radius:14px; background:var(--surface); overflow:hidden; line-height:0; opacity:.55; cursor:var(--cursor); transition:opacity .2s, border-color .2s, transform .2s; }
+  .ov-tab{ padding:clamp(8px, 3vw, 16px); border:3px solid transparent; border-radius:14px; background:#fff; overflow:hidden; line-height:0; opacity:.55; cursor:var(--cursor); transition:opacity .2s, border-color .2s, transform .2s; }
   .ov-tab img{ display:block; width:100%; aspect-ratio:3/2; object-fit:cover; border-radius:12px; }
   .ov-tab:hover{ opacity:.85; }
   .ov-tab[aria-selected="true"]{ opacity:1; border-color:var(--accent); transform:translateY(-2px); }
@@ -337,6 +384,29 @@
   @media (prefers-reduced-motion: reduce){
     .ov-tab[aria-selected="true"] img{ animation:none; }
   }
+  .sim-status{ margin-top:16px; }
+  /* 날씨 연결 안내 메시지(= 합성 실패 재생 콘솔, Adapter 계약 리허설) 표현 */
+  /* 시험 버튼 색: 정상 받기 = 은은한 초록, 문제 상황 = 은은한 주황, 처음으로(reset) = 은은한 회색. 글씨는 원래 글자색 그대로 */
+  .adapter-panel .btn.primary{ background:rgba(88,178,82,.3); border-color:rgba(79,157,74,.55); color:var(--ink); }
+  .adapter-panel .btn:not(.primary):not(.ghost):not(.retry){ background:rgba(240,150,80,.3); border-color:rgba(224,138,74,.55); color:var(--ink); }
+  .adapter-panel .btn.ghost:not(.primary):not(.retry){ background:rgba(125,130,140,.24); border-color:rgba(125,130,140,.45); color:var(--ink); opacity:1; }
+  /* 제목을 누르면 아래 내용이 펼쳐지고 접힌다 */
+  .panel-toggle{ display:inline-flex; align-items:baseline; gap:8px; padding:0; margin:0; border:0; background:none;
+    font:inherit; color:inherit; text-shadow:inherit; text-align:left; cursor:var(--cursor); }
+  .panel-toggle:focus-visible{ outline:2px solid var(--accent); outline-offset:3px; border-radius:6px; }
+  .toggle-hint{ font-size:12px; opacity:.7; }
+  .panel-toggle .chev{ font-size:13px; opacity:.75; transition:transform .2s; }
+  .panel-toggle[aria-expanded="true"] .chev{ transform:rotate(180deg); }
+  .panel-sub{ margin:0 0 12px; font-size:12px; line-height:1.5; color:var(--ink-dim); }
+  .adapter-panel .btn-grid{ display:grid; grid-template-columns:1fr 1fr; gap:6px; }
+  .adapter-panel .btn{ display:flex; flex-direction:column; align-items:center; justify-content:center; gap:1px; text-align:center; line-height:1.25; }
+  .adapter-panel .btn small, .code-note{ font-size:9.5px; letter-spacing:.03em; opacity:.6; }
+  .adapter-panel .btn.retry{ width:100%; }
+  .adapter-panel .btn[hidden]{ display:none; } /* display:flex가 hidden 속성을 이기지 않게 */
+  .code-note{ margin-left:4px; }
+  /* 하단 출처·기준 시간대: 8시간 날씨 예보 카드 너비 기준 가운데 정렬, 30% 투명(불투명도 70%) */
+  .source-fields{ margin:0; align-self:center; width:max-content; max-width:none; opacity:.7; } /* max-content: 카드보다 넓어져도 줄바꿈 없이 가운데 유지 */
+  .source-fields dt{ color:var(--ink); } /* 라벨(출처·기준 시간대)도 값과 같은 색 */
   .ov-source{ margin-top:4px; row-gap:6px; font-size:12px; }
   .ov-nav{ display:flex; align-items:center; justify-content:center; gap:14px; }
   .ov-nav[hidden]{ display:none; }
@@ -350,17 +420,156 @@
   .ov-cond{ margin-top:8px; font-size:13px; color:var(--ink-dim); }
   .ov-meta{ margin-top:10px; font-family:'Jua', sans-serif; font-size:11px; color:var(--mono); line-height:1.7; }
 
+  /* 넓고 충분히 높은 화면: 한 화면에 전부 들어오는 대시보드 (페이지 스크롤 없음).
+     왼쪽 = Adapter 계약 리허설, 오른쪽 = 실제 정보. 화면이 이보다 작으면 위의 세로 배치로 돌아가 스크롤된다. */
+  @media (min-width:1240px) and (min-height:620px){
+    html, body{ height:100%; }
+    body{ height:100dvh; margin:0; overflow:hidden; padding:16px 20px; } /* 기본 body 여백 8px를 빼야 100dvh를 넘지 않는다 */
+    .page{
+      max-width:none; height:100%; /* 화면 전체를 쓰므로 리허설 패널이 실제로 왼쪽 위 모서리에 붙는다 */
+      display:grid; grid-template-columns:300px minmax(0, 1fr); grid-template-rows:minmax(0, 1fr);
+      gap:20px;
+      /* 오른쪽에 리허설 패널(300px)+간격(20px)만큼(320px) 빈 여백을 둔다. 본문이 좁아지지 않게 1240px부터 서서히 늘어난다.
+         1620px 이상에서는 아래 블록이 좌우를 같은 크기로 맞춘다 */
+      padding-right:clamp(0px, calc(100vw - 1240px), 320px);
+    }
+    .card{ --pad-y:16px; --pad-x:20px; }
+
+    .adapter-panel{ order:0; gap:8px; min-height:0; width:300px; }
+    .adapter-panel .card{ flex:1; min-height:0; overflow-y:auto; }
+    .adapter-panel .btn-grid{ gap:6px; }
+    .adapter-panel .btn{ padding:6px 10px; }
+    .sim-status{ margin-top:12px; }
+    .value-row.sim{ margin-top:8px; }
+    .value-row.sim .value{ font-size:36px; }
+    .adapter-panel .fields{ margin-top:10px; row-gap:4px; }
+    .adapter-panel .msg-box{ margin-top:10px; padding:10px 12px; }
+    .adapter-panel .btn.retry{ margin-top:10px; }
+    .adapter-panel .records{ margin-top:10px; padding-top:8px; }
+
+    /* 본문 격자: [지역 탭 | 서울 현재 기온 | 전일 대비] / 8시간 날씨 예보. 카드·예보 영역은 780px 폭이고, 왼쪽에 지역 탭 세로줄(--tabw)이 붙는다.
+       지역 탭은 서울 현재 기온 카드의 윗선에서 시작해 8시간 날씨 예보 카드의 아랫선에서 끝나고, 그 사이를 4등분한다. */
+    .main-col{
+      --tabw:112px;
+      min-height:0; width:min(100%, calc(780px + 16px + var(--tabw))); justify-self:center;
+      display:grid; grid-template-columns:var(--tabw) minmax(0, 1fr) minmax(0, 1fr); /* 서울 현재 기온과 전일 대비는 같은 너비 */
+      grid-template-rows:auto auto auto auto auto auto;
+      column-gap:16px; row-gap:8px;
+      align-content:center; /* 본문 덩어리를 화면 세로 가운데에 둬서 맨 위(코멘트 위)와 맨 아래(출처 아래) 공백이 같게 한다. 줄 사이를 벌리지는 않는다 */
+    }
+    .head-row{ grid-column:2 / 4; grid-row:1; min-height:36px; justify-content:flex-start; margin-bottom:32px; } /* 코멘트 글자 윗선이 곧 본문 덩어리의 윗선. 코멘트~제목 간격은 8+32=40px */ /* 서울 현재 기온 카드 왼쪽 끝(x)에서 시작 */
+    .ov-tabs{ grid-column:1; grid-row:3 / 6; grid-template-columns:1fr; grid-template-rows:repeat(4, minmax(0, 1fr)); gap:10px; min-height:0; }
+    .ov-tab{ position:relative; min-height:0; padding:0; border-width:2px; border-radius:14px; }
+    .ov-tab img{ position:absolute; inset:8px; width:calc(100% - 16px); height:calc(100% - 16px); aspect-ratio:auto; object-fit:contain; border-radius:8px; } /* 칸 크기에 맞춰 그림이 잘리지 않게 */
+
+    /* 감싸는 상자들은 격자 배치에만 끼어들도록 풀고, 제목·카드를 각 칸에 직접 놓는다 */
+    .row-2col, #boardView:not([hidden]), #dayCompareView:not([hidden]), #boardExtra:not([hidden]){ display:contents; }
+    #boardView > .title-row{ grid-column:2; grid-row:2; }
+    #boardView > .card{ grid-column:2; grid-row:3; }
+    #dayCompareView > .title-row{ grid-column:3; grid-row:2; }
+    #dayCompareView > .card{ grid-column:3; grid-row:3; }
+    #boardExtra > div:first-child{ grid-column:2 / 4; grid-row:4; margin-top:32px; } /* 서울 현재 기온·전일 대비 카드 ~ 8시간 날씨 예보 제목 간격도 8+32=40px */
+    #boardExtra > .card{ grid-column:2 / 4; grid-row:5; }
+    #boardExtra > .source-fields{ grid-column:2 / 4; grid-row:6; }
+    .title-row{ flex-wrap:nowrap; } /* 두 카드의 윗선이 어긋나지 않게 제목 줄은 항상 한 줄 */
+    .title-row h2{ white-space:nowrap; }
+    .wx-row{ margin-top:10px; }
+    .wx-main .value, .day-compare-value--main{ font-size:44px; }
+    .wx-icon{ width:96px; height:64px; }
+    .wx-cell{ min-height:64px; }
+    .day-compare-hr{ margin:10px 0; }
+
+    /* 예보 카드 높이는 남는 높이를 다 채우지 않고 화면 높이의 약 34%(최대 318px)만 쓴다. 낮은 화면(약 730px 미만)에서는 위·아래 공백이 너무 좁아지지 않게 더 줄어든다(최소 170px).
+       너비는 위의 서울 현재 기온 + 전일 대비 두 카드를 합친 너비(= 본문 전체 폭)와 같다. */
+    #boardExtra:not([hidden]){
+      --fh:clamp(170px, min(34vh, calc(100vh - 437px)), 318px);
+      flex:none;
+    }
+    #boardExtra > .card{ flex:none; height:var(--fh); display:flex; flex-direction:column; }
+    .chart-wrap{ flex:1; min-height:0; }
+    .chart-wrap svg{ position:absolute; inset:0; height:100%; }
+
+    .source-fields{
+      grid-template-columns:auto auto auto auto; justify-content:start; column-gap:12px;
+    }
+    .source-fields dt:nth-of-type(2){ margin-left:16px; }
+    #boardExtra > .source-fields{ justify-self:center; }
+
+  }
+
+  /* 좌우 대칭: 왼쪽 공간(리허설 패널 300px 포함)과 오른쪽 빈 공간을 같은 크기(--side)로 맞춰 본문을 화면 가운데에 둔다.
+     본문 폭이 800px 아래로 줄지 않도록 --side는 (화면폭-840px)/2까지만 커지고, 최대 640px. */
+  @media (min-width:1620px) and (min-height:620px){
+    .page{
+      --side:clamp(320px, calc((100vw - 960px) / 2), 640px);
+      grid-template-columns:calc(var(--side) - 20px) minmax(0, 1fr);
+      padding-right:var(--side);
+    }
+  }
+
 </style>
 
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Jua&display=swap">
 
+<div id="skyBg" aria-hidden="true"></div>
+<canvas id="fxBg" aria-hidden="true"></canvas>
+<canvas id="wipeBg" aria-hidden="true"></canvas>
+
 <div class="page">
-  <div class="brand">
-    <img class="brand-logo" src="../assets/common/favicon.png" alt="" aria-hidden="true">
-    <div>
-      <div class="eyebrow">우리 동네 날씨</div>
-      <h1>하우스 웨더</h1>
+  <aside class="adapter-panel">
+    <h2>
+      <button type="button" class="panel-toggle" id="adapterToggle" aria-expanded="false" aria-controls="adapterCard">
+        <span>날씨 연결 안내 메시지</span>
+        <span class="toggle-hint" id="adapterHint">눌러서 자세히 보기</span>
+        <span class="chev" aria-hidden="true">▾</span>
+      </button>
+    </h2>
+
+    <div class="card" id="adapterCard" hidden>
+      <p class="panel-sub">연결이 끊기거나 오류가 나도 화면이 어떻게 버티는지, 버튼을 눌러 미리 확인해 봐요. (시험용 가짜 데이터라 실제 날씨와는 무관해요)</p>
+
+      <div class="btn-grid">
+        <button class="btn primary" id="btnDA" title="D1-A 정상">첫째 날 받기<small>D1-A 정상</small></button>
+        <button class="btn primary" id="btnDB" title="D1-B 정상">첫째 날 재시도<small>D1-B 정상</small></button>
+        <button class="btn primary" id="btnD2" title="D2 정상">다음 날 받기<small>D2 정상</small></button>
+        <button class="btn" id="btnTimeout" title="TIMEOUT">응답이 늦어요<small>TIMEOUT</small></button>
+        <button class="btn" id="btnAuth" title="AUTH-401">접근이 거절됐어요<small>AUTH-401</small></button>
+        <button class="btn" id="btnRate" title="RATE-429">요청이 많아요<small>RATE-429</small></button>
+        <button class="btn" id="btnOffline" title="OFFLINE">인터넷이 끊겼어요<small>OFFLINE</small></button>
+        <button class="btn" id="btnSchema" title="SCHEMA-BREAK">형식이 달라졌어요<small>SCHEMA-BREAK</small></button>
+        <button class="btn ghost" id="btnReset" title="reset">처음으로<small>reset</small></button>
+      </div>
+
+      <span class="status sim-status"><span id="simDot" class="dot"></span><span id="simStatusText">아직 시작 전이에요</span></span>
+
+      <div class="value-row sim">
+        <span class="value" id="simValueOut">—</span>
+        <span class="unit" id="simUnitOut"></span>
+        <span class="stale-badge" id="simStaleBadge" hidden>지난 정보(stale)</span>
+      </div>
+
+      <dl class="fields">
+        <dt>오류 종류</dt><dd id="simErrorCodeOut">—</dd>
+        <dt>전날과 차이</dt><dd id="simDeltaOut">—</dd>
+        <dt>시험 날짜</dt><dd id="simDateOut">—</dd>
+      </dl>
+
+      <div class="msg-box tone-warn" id="simMsgBox" hidden>
+        <span id="simMsgExplain"></span>
+        <span class="next-action" id="simMsgNextAction"></span>
+      </div>
+      <button class="btn retry" id="btnRetry" hidden>다시 받아오기<small>RECOVER-D2 재생</small></button>
+
+      <div class="records">
+        시험용 기록(실제 날씨 기록과 무관): <span id="simRecordCount">0</span>건
+        <ul id="simRecordList"></ul>
+      </div>
     </div>
+  </aside>
+
+  <div class="main-col">
+  <div class="head-row">
+    <p class="tip-line" id="tempTipOut" hidden></p>
   </div>
   <div class="ov-tabs" id="ovTabs" role="tablist" aria-label="지역 탭"></div>
 
@@ -382,7 +591,15 @@
       <div class="wx-cell"><img class="wx-icon" id="curWxIcon" hidden alt=""></div>
     </div>
 
-    <p class="tip-line" id="tempTipOut" hidden></p>
+    <div class="quiz" id="quizBox" aria-label="상식 문제">
+      <div class="quiz-row">
+        <p class="quiz-q"><span class="quiz-tag">Q.</span> <span id="quizText"></span></p>
+        <div class="quiz-area">
+          <div class="quiz-a" id="quizChoices"></div>
+          <button type="button" class="quiz-result" id="quizResult" aria-live="polite" title="누르면 다음 문제" hidden></button>
+        </div>
+      </div>
+    </div>
   </div>
   </div>
 
@@ -418,8 +635,6 @@
   </div>
   </div>
 
-  <div class="divider"></div>
-
   <div id="boardExtra">
   <div>
     <h2>8시간 날씨 예보</h2>
@@ -431,57 +646,11 @@
     </div>
   </div>
 
-  <div class="divider"></div>
-
-  <div>
-    <h2>Adapter 계약 리허설</h2>
-  </div>
-
-  <div class="card">
-    <div class="btn-grid">
-      <button class="btn primary" id="btnDA">D1-A 정상</button>
-      <button class="btn primary" id="btnDB">D1-B 정상</button>
-      <button class="btn primary" id="btnD2">D2 정상</button>
-      <button class="btn" id="btnTimeout">TIMEOUT</button>
-      <button class="btn" id="btnAuth">AUTH-401</button>
-      <button class="btn" id="btnRate">RATE-429</button>
-      <button class="btn" id="btnOffline">OFFLINE</button>
-      <button class="btn" id="btnSchema">SCHEMA-BREAK</button>
-      <button class="btn ghost" id="btnReset">reset</button>
-    </div>
-
-    <span class="status" style="margin-top:16px;"><span id="simDot" class="dot"></span><span id="simStatusText">초기화 안 됨</span></span>
-
-    <div class="value-row sim">
-      <span class="value" id="simValueOut">—</span>
-      <span class="unit" id="simUnitOut"></span>
-      <span class="stale-badge" id="simStaleBadge" hidden>오래됨(stale)</span>
-    </div>
-
-    <dl class="fields">
-      <dt>오류 코드</dt><dd id="simErrorCodeOut">—</dd>
-      <dt>전일 대비</dt><dd id="simDeltaOut">—</dd>
-      <dt>합성 날짜</dt><dd id="simDateOut">—</dd>
-    </dl>
-
-    <div class="msg-box tone-warn" id="simMsgBox" hidden>
-      <span id="simMsgExplain"></span>
-      <span class="next-action" id="simMsgNextAction"></span>
-    </div>
-    <button class="btn retry" id="btnRetry" hidden>다시 시도 (RECOVER-D2 재생)</button>
-
-    <div class="records">
-      합성 일별 기록(adapter 내부 상태, 실제 기록과 무관): <span id="simRecordCount">0</span>건
-      <ul id="simRecordList"></ul>
-    </div>
-  </div>
-
-  <div class="divider"></div>
-
-  <dl class="fields">
+  <dl class="fields source-fields">
     <dt>출처</dt><dd id="sourceOut">—</dd>
     <dt>기준 시간대</dt><dd id="tzOut">—</dd>
   </dl>
+  </div>
   </div>
 </div>
 
@@ -507,7 +676,7 @@
   window.TIB = window.TIB || {};
 
   function apiUrl(region){
-    return `https://api.open-meteo.com/v1/forecast?latitude=${region.lat}&longitude=${region.lon}&current=temperature_2m,relative_humidity_2m,weather_code,wind_speed_10m&timezone=Asia%2FSeoul`;
+    return `https://api.open-meteo.com/v1/forecast?latitude=${region.lat}&longitude=${region.lon}&current=temperature_2m,relative_humidity_2m,weather_code,wind_speed_10m,is_day&timezone=Asia%2FSeoul`;
   }
 
   // WMO 날씨 코드(+풍속) → 아이콘. assets/weather/small/은 원본(assets/weather/*.png, 1536x1024)을 300x200으로 줄인 사본.
@@ -527,6 +696,12 @@
   function setIcon(imgEl, icon){
     if (!icon) { imgEl.hidden = true; imgEl.removeAttribute('src'); imgEl.alt = ''; return; }
     imgEl.src = icon.src; imgEl.alt = icon.label; imgEl.title = icon.label; imgEl.hidden = false;
+  }
+
+  // 현재 날씨 종류(아이콘 라벨: 맑음·구름·안개·눈·비·바람, 없으면 null)를 배경 효과 등에 알린다.
+  // isDay: Open-Meteo current.is_day (1=낮, 0=해 진 뒤). 모르면 undefined.
+  function announceWeather(label, isDay){
+    document.dispatchEvent(new CustomEvent('tib:weather', { detail: { label: label, isDay: isDay } }));
   }
 
   const el = {
@@ -552,7 +727,9 @@
     schema_error: { explain: '응답 형식이 예상과 달라 값을 해석할 수 없습니다.', next_action: '형식이 바뀌었는지 확인이 필요합니다.' },
   };
 
-  function renderBubble(target, explain, nextAction){
+  // opts.typing이 true면 코멘트를 타자 치듯 한 글자씩 보여준다(움직임 줄이기 설정이면 바로 전체를 보여준다).
+  function renderBubble(target, explain, nextAction, opts){
+    clearInterval(target._typeTimer);
     target.innerHTML = '';
     const bubble = document.createElement('span');
     bubble.className = 'bubble-icon';
@@ -560,14 +737,54 @@
     bubble.setAttribute('aria-hidden', 'true');
     bubble.innerHTML = '<svg viewBox="0 0 24 24" focusable="false"><path class="bubble-body" d="M7 2.5h10a5 5 0 0 1 5 5v5a5 5 0 0 1-5 5h-1.5v4.5l-4.5-4.5H7a5 5 0 0 1-5-5v-5a5 5 0 0 1 5-5z"/><circle class="bubble-dot" cx="8" cy="10" r="1.6"/><circle class="bubble-dot" cx="12" cy="10" r="1.6"/><circle class="bubble-dot" cx="16" cy="10" r="1.6"/></svg>';
     target.appendChild(bubble);
-    target.appendChild(document.createTextNode(' '));
-    const strong = document.createElement('b');
-    strong.textContent = explain;
-    target.appendChild(strong);
-    if(nextAction){
-      target.appendChild(document.createTextNode(' ' + nextAction));
+    const typing = !!(opts && opts.typing) && !(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+    const chars = [];
+    function addText(parent, text){
+      if(!typing){ parent.appendChild(document.createTextNode(text)); return; }
+      for(const ch of text){
+        const sp = document.createElement('span');
+        sp.className = 'type-ch';
+        sp.textContent = ch;
+        parent.appendChild(sp);
+        chars.push(sp);
+      }
     }
-    target.hidden = false;
+    const textWrap = document.createElement('span'); // 설명+다음 행동을 한 덩어리로 묶어 말풍선 오른쪽에서 함께 줄바꿈되게
+    textWrap.className = 'bubble-text';
+    const strong = document.createElement('b');
+    addText(strong, explain);
+    textWrap.appendChild(strong);
+    if(nextAction){
+      const rest = document.createElement('span');
+      addText(rest, ' ' + nextAction);
+      textWrap.appendChild(rest);
+    }
+    target.appendChild(textWrap);
+    target.setAttribute('aria-label', explain + (nextAction ? ' ' + nextAction : ''));
+    const myId = target._rid = (target._rid || 0) + 1;   // 더 새로운 렌더가 생기면 아직 시작 안 한 이전 것은 취소한다
+
+    if(typing && chars.length){
+      target.hidden = true;                               // 배경이 다 뜰 때까지 말풍선·코멘트는 숨겨 두었다가 그때부터 쓰기 시작한다
+      const begin = function(){
+        if(target._rid !== myId) return;
+        target.hidden = false;
+        const caret = document.createElement('span');
+        caret.className = 'type-caret';
+        caret.setAttribute('aria-hidden', 'true');
+        chars[0].before(caret);
+        let i = 0;
+        target._typeTimer = setInterval(function(){
+          if(i >= chars.length){ clearInterval(target._typeTimer); caret.remove(); return; }
+          chars[i].classList.add('on');
+          i++;
+          if(i < chars.length) chars[i].before(caret);
+        }, 45);
+      };
+      // 한 박자 미룬다: 같은 순간에 날씨 알림(배경 전환 시작)이 나가므로, 그 뒤에 '전환이 끝났는지'를 물어야 한다
+      Promise.resolve().then(function(){ return window.TIB.bgReady ? window.TIB.bgReady() : null; }).then(begin);
+    } else {
+      target.hidden = false;
+    }
   }
   window.TIB.renderBubble = renderBubble;
 
@@ -610,6 +827,7 @@
     el.value.textContent = '—';
     el.unit.textContent = '';
     el.tip.hidden = true;
+    el.tip._rid = (el.tip._rid || 0) + 1; clearInterval(el.tip._typeTimer);   // 이전 지역 코멘트의 예약·타자 중단
     setIcon(el.curIcon, null);
     setIcon(el.dayIcon, null);
 
@@ -648,17 +866,20 @@
     el.status.textContent = '실시간 기온';
     el.value.textContent = raw.current.temperature_2m.toFixed(1);
     el.unit.textContent = raw.current_units.temperature_2m;
-    el.source.innerHTML = '<a href="' + apiUrl(region) + '" target="_blank" rel="noopener">Open-Meteo (api.open-meteo.com)</a>';
+    el.source.textContent = 'Open-Meteo (api.open-meteo.com)';
     el.tz.textContent = raw.timezone + ' (UTC' + offsetStr + ')';
     el.titleTime.textContent = '- ' + formatKoreanTime(sourceTime);
 
-    renderBubble(el.tip, tempTip(raw.current.temperature_2m), '');
+    renderBubble(el.tip, tempTip(raw.current.temperature_2m), '', { typing: true });
 
     // 날씨 코드가 없거나 숫자가 아니면 아이콘만 생략(기온 표시는 그대로)
     if (typeof raw.current.weather_code === 'number') {
       const icon = weatherIcon(raw.current.weather_code, raw.current.wind_speed_10m);
       setIcon(el.curIcon, icon);
       setIcon(el.dayIcon, icon); // 전일 대비 카드의 '오늘'도 같은 현재 날씨
+      announceWeather(icon.label, raw.current.is_day);
+    } else {
+      announceWeather(null, raw.current.is_day); // 날씨 종류를 모르면 이전 지역의 배경 효과를 남기지 않는다
     }
   }
 
@@ -672,8 +893,9 @@
     el.titleTime.textContent = '';
     setIcon(el.curIcon, null);
     setIcon(el.dayIcon, null);
+    announceWeather(null);
     const msg = FAILURE_MESSAGES[code] || FAILURE_MESSAGES.http;
-    renderBubble(el.tip, msg.explain, msg.next_action);
+    renderBubble(el.tip, msg.explain, msg.next_action, { typing: true });
   }
 
   window.TIB.loadCurrent = load;
@@ -1198,17 +1420,30 @@
     recordList: document.getElementById('simRecordList'),
   };
 
+  // 화면용 쉬운 말 (원래 코드는 괄호나 작은 글씨로 함께 보여준다)
+  var ERROR_LABELS = { none: '없음', timeout: '응답 지연', auth: '접근 거절', rate_limit: '호출 제한', offline: '연결 끊김', schema_error: '형식 변경' };
+  function setStatus(main, code){
+    s.status.textContent = main;
+    if(code){
+      var note = document.createElement('span');
+      note.className = 'code-note';
+      note.textContent = code;
+      s.status.appendChild(note);
+    }
+  }
+
   function render(){
     s.value.textContent = state.current_reading ? state.current_reading.normalized_value : '—';
     s.unit.textContent = state.current_reading ? state.current_reading.unit : '';
-    s.errorCode.textContent = state.status ? state.status.error_code : 'none';
-    s.delta.textContent = state.last_delta === null || state.last_delta === undefined ? '해당 없음 (비교 대상 없음)' : ('+' + state.last_delta + ' ' + (state.current_reading ? state.current_reading.unit : ''));
+    var code = state.status ? state.status.error_code : 'none';
+    s.errorCode.textContent = (ERROR_LABELS[code] || code) + ' (' + code + ')';
+    s.delta.textContent = state.last_delta === null || state.last_delta === undefined ? '비교할 전날 기록이 아직 없어요' : ('+' + state.last_delta + ' ' + (state.current_reading ? state.current_reading.unit : ''));
     s.date.textContent = state.current_reading ? state.current_reading.record_date : '—';
     s.staleBadge.hidden = !state.status || state.status.freshness !== 'stale';
 
-    if(!state.status){ s.dot.className='dot'; s.status.textContent='초기화 안 됨'; }
-    else if(state.status.freshness==='fresh'){ s.dot.className='dot ok'; s.status.textContent='fresh / none'; }
-    else { s.dot.className='dot warn'; s.status.textContent='stale / ' + state.status.error_code; }
+    if(!state.status){ s.dot.className='dot'; setStatus('아직 시작 전이에요'); }
+    else if(state.status.freshness==='fresh'){ s.dot.className='dot ok'; setStatus('최신 정보예요', 'fresh / none'); }
+    else { s.dot.className='dot warn'; setStatus('지난 정보예요', 'stale / ' + state.status.error_code); }
 
     if(state.status && state.status.freshness==='stale'){
       var m = FAILURE_MESSAGES[state.status.error_code];
@@ -1240,6 +1475,689 @@
   document.getElementById('btnReset').addEventListener('click', function(){ state = resetEvaluationState(); render(); });
   s.btnRetry.addEventListener('click', function(){ replay('RECOVER_D2'); });
 
+  // 제목을 누르면 자세한 내용(버튼·상태·기록)이 펼쳐지고 접힌다. 처음에는 접혀 있다.
+  var toggle = document.getElementById('adapterToggle');
+  var card = document.getElementById('adapterCard');
+  var hint = document.getElementById('adapterHint');
+  toggle.addEventListener('click', function(){
+    var open = card.hidden;               // 지금 접혀 있으면 펼친다
+    card.hidden = !open;
+    toggle.setAttribute('aria-expanded', open ? 'true' : 'false');
+    hint.textContent = open ? '접기' : '눌러서 자세히 보기';
+  });
+
   render();
+})();
+</script>
+
+<script>
+// ============================================================================
+// 날씨 배경 효과 (장식용, 데이터와 무관): 실시간 조회 스크립트가 알려주는 현재 날씨(tib:weather)에 따라
+//   '비'   → 비 오는 배경 그림(assets/weather/background/rain.png) + 픽셀 느낌의 빗줄기가 계속 내린다.
+//   '맑음'(낮) → 맑은 하늘 배경 그림(assets/weather/background/sun.png) + 햇살이 숨 쉬듯 번지고, 나뭇잎이 흩날리고, 반짝임이 깜박인다.
+//   '안개' → 안개 낀 배경 그림(assets/weather/background/fog.png) + 옅은 안개 띠가 천천히 흘러간다.
+//   '눈'   → 눈 오는 배경 그림(assets/weather/background/snow.png) + 눈송이가 살랑이며 내린다.
+//   '바람' → 바람 부는 배경 그림(assets/weather/background/wind.png) + 바람줄기가 스치고 나뭇잎·꽃잎이 날려 간다.
+//   '구름' → 구름 낀 배경 그림(assets/weather/background/cloud.png) + 회백색 구름 덩어리가 천천히 흘러간다.
+//   그 외 날씨 중 해가 진 뒤(is_day=0) → 밤하늘 배경 그림(assets/weather/background/night.png) + 별 깜박임·별똥별·달빛·반딧불이.
+// 나머지 날씨이거나 조회에 실패하면 효과 없이 기본 배경. 움직임 줄이기 설정이면 한 장면만 그린다(배경 그림은 그대로).
+// ============================================================================
+(function(){
+  var canvas = document.getElementById('fxBg');
+  var sky = document.getElementById('skyBg');
+  if (!canvas || !canvas.getContext) return;
+  var ctx = canvas.getContext('2d');
+  var reduceMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  var SKY_IMG = { sun: '../assets/weather/background/sun.png', rain: '../assets/weather/background/rain.png', fog: '../assets/weather/background/fog.png', night: '../assets/weather/background/night.png',
+    snow: '../assets/weather/background/snow.png', wind: '../assets/weather/background/wind.png',
+    cloud: '../assets/weather/background/cloud.png' };
+  var SUN_IMG_W = 1672, SUN_IMG_H = 941, SUN_IMG_X = 460, SUN_IMG_Y = 145; // sun.png 안에서 해의 위치(픽셀)
+  var NIGHT_IMG_W = 1671, NIGHT_IMG_H = 941, NIGHT_MOON_X = 510, NIGHT_MOON_Y = 187; // night.png 안에서 달의 위치(픽셀)
+  var dpr = 1, w = 0, h = 0, t = 0;
+
+  // 배경 그림을 cover로 깔았을 때 그림 안 좌표(ix, iy)가 놓이는 화면 좌표와 배율
+  function cover(imgW, imgH, ix, iy){
+    var sc = Math.max(w / imgW, h / imgH);
+    var offX = (w - imgW * sc) / 2, offY = (h - imgH * sc) / 2;
+    return { sc: sc, offX: offX, offY: offY, x: offX + ix * sc, y: offY + iy * sc };
+  }
+
+  // ---- 비 ----
+  var rain = {
+    drops: [],
+    make: function(spread){
+      var size = Math.random();               // 0=멀리(작고 느리고 옅음) ~ 1=가까이(크고 빠르고 진함)
+      return { x: Math.floor(Math.random() * w), y: spread ? Math.random() * h : -20,
+        len: 8 + size * 14, speed: 260 + size * 420, alpha: 0.18 + size * 0.32, width: size > 0.7 ? 3 : 2 };
+    },
+    init: function(){
+      var n = Math.max(40, Math.round(w * h / 5500));
+      this.drops = [];
+      for (var i = 0; i < n; i++) this.drops.push(this.make(true));
+    },
+    update: function(dt){
+      for (var i = 0; i < this.drops.length; i++) {
+        var d = this.drops[i];
+        d.y += d.speed * dt;
+        if (d.y > h) this.drops[i] = this.make(false);
+      }
+    },
+    draw: function(){
+      ctx.fillStyle = '#d6e9ff'; // 어두운 비 오는 배경 위에서 잘 보이는 옅은 하늘색
+      for (var i = 0; i < this.drops.length; i++) {
+        var d = this.drops[i];
+        ctx.globalAlpha = d.alpha;
+        ctx.fillRect(d.x, Math.round(d.y), d.width, d.len);
+      }
+      ctx.globalAlpha = 1;
+    }
+  };
+
+  // ---- 맑음 ----
+  var sun = {
+    leaves: [], sparks: [],
+    init: function(){
+      var nl = Math.min(22, Math.max(8, Math.round(w / 110)));
+      var ns = Math.max(14, Math.round(w * h / 45000));
+      this.leaves = []; this.sparks = [];
+      for (var i = 0; i < nl; i++) this.leaves.push({
+        x: Math.random() * w, y: Math.random() * h, vx: 18 + Math.random() * 30, vy: 14 + Math.random() * 26,
+        rot: Math.random() * 6.28, vr: (Math.random() - 0.5) * 1.6, s: 5 + Math.random() * 6, ph: Math.random() * 6.28 });
+      for (var j = 0; j < ns; j++) this.sparks.push({
+        x: Math.random() * w, y: Math.random() * h, ph: Math.random() * 6.28, sp: 1.2 + Math.random() * 2, r: Math.random() < 0.3 ? 2 : 1 });
+    },
+    update: function(dt){
+      for (var i = 0; i < this.leaves.length; i++) {
+        var l = this.leaves[i];
+        l.x += (l.vx + Math.sin(t + l.ph) * 15) * dt;
+        l.y += l.vy * dt;
+        l.rot += l.vr * dt;
+        if (l.x > w + 20) { l.x = -20; l.y = Math.random() * h; }
+        if (l.y > h + 20) { l.y = -20; l.x = Math.random() * w; }
+      }
+    },
+    draw: function(){
+      // 해 주변 빛무리: sun.png를 cover로 깔았을 때 해가 놓이는 화면 좌표에 맞춘다
+      var sc = Math.max(w / SUN_IMG_W, h / SUN_IMG_H);
+      var sx = (w - SUN_IMG_W * sc) / 2 + SUN_IMG_X * sc;
+      var sy = (h - SUN_IMG_H * sc) / 2 + SUN_IMG_Y * sc;
+      var r = (130 + 18 * Math.sin(t * 1.3)) * sc;
+      var g = ctx.createRadialGradient(sx, sy, 0, sx, sy, r);
+      g.addColorStop(0, 'rgba(255,250,205,0.6)');
+      g.addColorStop(1, 'rgba(255,250,205,0)');
+      ctx.fillStyle = g;
+      ctx.fillRect(sx - r, sy - r, r * 2, r * 2);
+      // 반짝임(픽셀 십자 모양)
+      ctx.fillStyle = '#fffbe0';
+      for (var j = 0; j < this.sparks.length; j++) {
+        var p = this.sparks[j];
+        var a = Math.pow((Math.sin(t * p.sp + p.ph) + 1) / 2, 3);
+        if (a < 0.05) continue;
+        ctx.globalAlpha = a;
+        var x = Math.round(p.x), y = Math.round(p.y), k = p.r;
+        ctx.fillRect(x - k, y - k, k * 2 + 1, k * 2 + 1);
+        ctx.fillRect(x - k * 3, y, k * 6 + 1, 1);
+        ctx.fillRect(x, y - k * 3, 1, k * 6 + 1);
+      }
+      ctx.globalAlpha = 1;
+      // 흩날리는 나뭇잎
+      for (var i = 0; i < this.leaves.length; i++) {
+        var l = this.leaves[i];
+        ctx.save();
+        ctx.translate(l.x, l.y);
+        ctx.rotate(l.rot);
+        ctx.fillStyle = '#63c247';
+        ctx.beginPath(); ctx.ellipse(0, 0, l.s, l.s * 0.5, 0, 0, 6.28); ctx.fill();
+        ctx.fillStyle = '#3f9a32';
+        ctx.fillRect(-l.s, -0.5, l.s * 2, 1);
+        ctx.restore();
+      }
+    }
+  };
+
+  // ---- 안개 ----
+  // 옅은 안개 덩어리(가로로 길쭉한 타원형 그라데이션)들이 서로 다른 높이·속도로 천천히 흘러가고, 숨 쉬듯 진해졌다 옅어진다.
+  var fog = {
+    banks: [],
+    make: function(spread){
+      var rx = w * (0.25 + Math.random() * 0.3);
+      var dir = Math.random() < 0.65 ? 1 : -1;      // 대부분 오른쪽으로, 일부는 반대로 흘러 겹쳐 보이게
+      return {
+        x: spread ? Math.random() * w : (dir > 0 ? -rx : w + rx),
+        y: h * (0.2 + Math.random() * 0.65),
+        rx: rx, ry: h * (0.07 + Math.random() * 0.1),
+        vx: dir * (8 + Math.random() * 20),
+        alpha: 0.22 + Math.random() * 0.2,
+        ph: Math.random() * 6.28
+      };
+    },
+    init: function(){
+      var n = Math.min(14, Math.max(7, Math.round(w / 170)));
+      this.banks = [];
+      for (var i = 0; i < n; i++) this.banks.push(this.make(true));
+    },
+    update: function(dt){
+      for (var i = 0; i < this.banks.length; i++) {
+        var b = this.banks[i];
+        b.x += b.vx * dt;
+        if ((b.vx > 0 && b.x - b.rx > w) || (b.vx < 0 && b.x + b.rx < 0)) this.banks[i] = this.make(false);
+      }
+    },
+    draw: function(){
+      for (var i = 0; i < this.banks.length; i++) {
+        var b = this.banks[i];
+        var a = b.alpha * (0.8 + 0.2 * Math.sin(t * 0.4 + b.ph));
+        ctx.save();
+        ctx.translate(b.x, b.y);
+        ctx.scale(1, b.ry / b.rx);                   // 원형 그라데이션을 납작하게 눌러 안개 띠 모양으로
+        var g = ctx.createRadialGradient(0, 0, 0, 0, 0, b.rx);
+        g.addColorStop(0, 'rgba(240,245,251,' + a + ')');
+        g.addColorStop(1, 'rgba(240,245,251,0)');
+        ctx.fillStyle = g;
+        ctx.fillRect(-b.rx, -b.rx, b.rx * 2, b.rx * 2);
+        ctx.restore();
+      }
+    }
+  };
+
+  // ---- 구름 ----
+  // 픽셀아트 느낌의 회백색 구름 덩어리가 하늘 위쪽에서 서로 다른 크기·속도로 천천히 흘러간다(멀리 있는 것은 작고 느리게).
+  var cloud = {
+    sprites: [], banks: [],
+    makeSprite: function(){
+      var cw = 44, ch = 18;
+      var c = document.createElement('canvas'); c.width = cw; c.height = ch;
+      var g = c.getContext('2d');
+      g.fillStyle = '#eef2f7';
+      g.fillRect(4, 11, cw - 8, 4);                                    // 납작한 구름 밑면
+      var n = 5 + Math.floor(Math.random() * 3);
+      for (var i = 0; i < n; i++) {                                    // 위로 솟은 몽글몽글한 덩어리
+        var r = 4 + Math.random() * 4.5;
+        var x = 8 + (cw - 16) * (i / (n - 1)) + (Math.random() - 0.5) * 4;
+        g.beginPath(); g.arc(x, 12 - r * 0.55, r, 0, 6.28); g.fill();
+      }
+      g.globalCompositeOperation = 'source-atop';
+      g.fillStyle = 'rgba(140,155,178,0.65)';                          // 아랫부분 그늘
+      g.fillRect(0, 11, cw, ch - 11);
+      return c;
+    },
+    make: function(spread, sprite){
+      var sc = 5 + Math.random() * 6;
+      var wpx = 44 * sc;
+      return { sprite: sprite || this.sprites[Math.floor(Math.random() * this.sprites.length)], sc: sc,
+        x: spread ? Math.random() * (w + wpx) - wpx : -wpx, y: h * (0.02 + Math.random() * 0.48),
+        v: 5 + sc * 1.8 + Math.random() * 6, alpha: 0.32 + Math.random() * 0.25 };
+    },
+    init: function(){
+      this.sprites = [];
+      for (var i = 0; i < 4; i++) this.sprites.push(this.makeSprite());
+      var n = Math.min(9, Math.max(5, Math.round(w / 220)));
+      this.banks = [];
+      for (var j = 0; j < n; j++) this.banks.push(this.make(true));
+    },
+    update: function(dt){
+      for (var i = 0; i < this.banks.length; i++) {
+        var b = this.banks[i];
+        b.x += b.v * dt;
+        if (b.x > w) this.banks[i] = this.make(false);
+      }
+    },
+    draw: function(){
+      ctx.imageSmoothingEnabled = false;                               // 확대해도 픽셀이 뭉개지지 않게
+      for (var i = 0; i < this.banks.length; i++) {
+        var b = this.banks[i];
+        ctx.globalAlpha = b.alpha;
+        ctx.drawImage(b.sprite, Math.round(b.x), Math.round(b.y), 44 * b.sc, 18 * b.sc);
+      }
+      ctx.globalAlpha = 1;
+    }
+  };
+
+  // ---- 눈 ----
+  // 눈송이가 좌우로 살랑이며 천천히 내린다. 가까운 것은 크고 빠르고 또렷하고, 먼 것은 작고 느리고 옅다.
+  var snow = {
+    flakes: [],
+    make: function(spread){
+      var size = Math.random();
+      return { x: Math.random() * w, y: spread ? Math.random() * h : -10, s: size > 0.85 ? 5 : (size > 0.5 ? 3 : 2),
+        vy: 25 + size * 65, sway: 10 + Math.random() * 22, ph: Math.random() * 6.28, sp: 0.5 + Math.random() * 1.2,
+        alpha: 0.55 + size * 0.4 };
+    },
+    init: function(){
+      var n = Math.max(50, Math.round(w * h / 7500));
+      this.flakes = [];
+      for (var i = 0; i < n; i++) this.flakes.push(this.make(true));
+    },
+    update: function(dt){
+      for (var i = 0; i < this.flakes.length; i++) {
+        var f = this.flakes[i];
+        f.y += f.vy * dt;
+        f.x += Math.cos(t * f.sp + f.ph) * f.sway * dt;
+        if (f.y > h + 10) this.flakes[i] = this.make(false);
+      }
+    },
+    draw: function(){
+      for (var i = 0; i < this.flakes.length; i++) {
+        var f = this.flakes[i];
+        var x = Math.round(f.x + Math.sin(t * f.sp + f.ph) * f.sway * 0.3), y = Math.round(f.y);
+        ctx.globalAlpha = f.alpha * 0.35; ctx.fillStyle = '#7fa6e0';           // 흰 구름 위에서도 보이게 옅은 파란 테두리
+        ctx.fillRect(x - 1, y - 1, f.s + 2, f.s + 2);
+        ctx.globalAlpha = f.alpha; ctx.fillStyle = '#ffffff';
+        ctx.fillRect(x, y, f.s, f.s);
+        if (f.s >= 5) { ctx.fillRect(x - 2, y + 2, 9, 1); ctx.fillRect(x + 2, y - 2, 1, 9); } // 큰 눈송이는 십자 결정 모양
+      }
+      ctx.globalAlpha = 1;
+    }
+  };
+
+  // ---- 바람 ----
+  // 하얀 바람줄기가 물결치며 빠르게 스쳐 지나가고, 나뭇잎과 꽃잎이 세차게 날려 간다.
+  var wind = {
+    gusts: [], bits: [],
+    makeGust: function(spread){
+      return { x: spread ? Math.random() * w : -40, y: Math.random() * h * 0.92, len: 90 + Math.random() * 150,
+        v: 520 + Math.random() * 420, amp: 4 + Math.random() * 9, ph: Math.random() * 6.28, a: 0.25 + Math.random() * 0.35 };
+    },
+    makeBit: function(spread){
+      var petal = Math.random() < 0.3;
+      return { x: spread ? Math.random() * w : -20, y: Math.random() * h, vx: 230 + Math.random() * 230, vy: (Math.random() - 0.5) * 50,
+        rot: Math.random() * 6.28, vr: 2 + Math.random() * 4, s: petal ? 3 + Math.random() * 3 : 5 + Math.random() * 6,
+        ph: Math.random() * 6.28, petal: petal };
+    },
+    init: function(){
+      var ng = Math.min(16, Math.max(7, Math.round(w / 100))), nb = Math.min(26, Math.max(10, Math.round(w / 65)));
+      this.gusts = []; this.bits = [];
+      for (var i = 0; i < ng; i++) this.gusts.push(this.makeGust(true));
+      for (var j = 0; j < nb; j++) this.bits.push(this.makeBit(true));
+    },
+    update: function(dt){
+      for (var i = 0; i < this.gusts.length; i++) {
+        var g = this.gusts[i];
+        g.x += g.v * dt;
+        if (g.x - g.len > w) this.gusts[i] = this.makeGust(false);
+      }
+      for (var j = 0; j < this.bits.length; j++) {
+        var b = this.bits[j];
+        b.x += b.vx * dt;
+        b.y += (b.vy + Math.sin(t * 3 + b.ph) * 40) * dt;
+        b.rot += b.vr * dt;
+        if (b.x > w + 20 || b.y < -20 || b.y > h + 20) this.bits[j] = this.makeBit(false);
+      }
+    },
+    draw: function(){
+      ctx.lineWidth = 2; ctx.lineCap = 'round';
+      for (var i = 0; i < this.gusts.length; i++) {
+        var g = this.gusts[i];
+        var lg = ctx.createLinearGradient(g.x - g.len, 0, g.x, 0);
+        lg.addColorStop(0, 'rgba(255,255,255,0)');
+        lg.addColorStop(1, 'rgba(255,255,255,' + g.a + ')');
+        ctx.strokeStyle = lg;
+        ctx.beginPath();
+        ctx.moveTo(g.x - g.len, g.y);
+        ctx.quadraticCurveTo(g.x - g.len / 2, g.y + g.amp * Math.sin(t * 2 + g.ph), g.x, g.y);
+        ctx.stroke();
+      }
+      for (var j = 0; j < this.bits.length; j++) {
+        var b = this.bits[j];
+        ctx.save();
+        ctx.translate(b.x, b.y); ctx.rotate(b.rot);
+        ctx.fillStyle = b.petal ? '#ffffff' : '#63c247';
+        ctx.beginPath(); ctx.ellipse(0, 0, b.s, b.s * 0.5, 0, 0, 6.28); ctx.fill();
+        if (!b.petal) { ctx.fillStyle = '#3f9a32'; ctx.fillRect(-b.s, -0.5, b.s * 2, 1); }
+        ctx.restore();
+      }
+    }
+  };
+
+  // ---- 밤 ----
+  // 별이 깜박이고, 가끔 별똥별이 지나가고, 달빛이 은은하게 숨 쉬고, 아래쪽 수풀 위로 반딧불이가 떠다닌다. 위치는 night.png 안의 하늘·수풀 영역에 맞춘다.
+  var night = {
+    stars: [], flies: [], shoot: null, nextShoot: 3,
+    init: function(){
+      var c = cover(NIGHT_IMG_W, NIGHT_IMG_H, 0, 0);
+      var xMin = Math.max(0, c.offX), xMax = Math.min(w, c.offX + NIGHT_IMG_W * c.sc);
+      var skyTop = Math.max(0, c.offY), skyBot = Math.min(h, c.offY + 500 * c.sc);            // 그림 안 하늘 영역
+      var grTop = Math.min(h, c.offY + 590 * c.sc), grBot = Math.min(h, c.offY + 900 * c.sc); // 호수·수풀 영역
+      this.sky = { xMin: xMin, xMax: xMax, top: skyTop, bot: skyBot };
+      this.stars = []; this.flies = [];
+      var ns = Math.max(24, Math.round((xMax - xMin) * (skyBot - skyTop) / 9000));
+      for (var i = 0; i < ns; i++) this.stars.push({
+        x: xMin + Math.random() * (xMax - xMin), y: skyTop + Math.random() * (skyBot - skyTop),
+        ph: Math.random() * 6.28, sp: 0.8 + Math.random() * 2.2, big: Math.random() < 0.18 });
+      var nf = Math.min(24, Math.max(8, Math.round(w / 90)));
+      this.ground = { xMin: xMin, xMax: xMax, top: grTop, bot: grBot };
+      for (var j = 0; j < nf; j++) this.flies.push({
+        x: xMin + Math.random() * (xMax - xMin), y: grTop + Math.random() * Math.max(1, grBot - grTop),
+        vx: (Math.random() - 0.5) * 14, vy: (Math.random() - 0.5) * 8, ph: Math.random() * 6.28 });
+      this.shoot = null; this.nextShoot = t + 1.5 + Math.random() * 3;
+    },
+    update: function(dt){
+      var g = this.ground;
+      for (var i = 0; i < this.flies.length; i++) {
+        var f = this.flies[i];
+        f.x += (f.vx + Math.sin(t * 0.7 + f.ph) * 10) * dt;
+        f.y += (f.vy + Math.cos(t * 0.9 + f.ph) * 8) * dt;
+        if (f.x < g.xMin) f.x = g.xMax; if (f.x > g.xMax) f.x = g.xMin;
+        if (f.y < g.top) f.y = g.bot; if (f.y > g.bot) f.y = g.top;
+      }
+      if (!this.shoot && t >= this.nextShoot) {
+        var sk = this.sky;
+        this.shoot = { x: sk.xMin + (sk.xMax - sk.xMin) * (0.4 + Math.random() * 0.6), y: sk.top + (sk.bot - sk.top) * Math.random() * 0.4,
+          vx: -(520 + Math.random() * 200), vy: 230 + Math.random() * 100, age: 0, life: 0.9 };
+      }
+      if (this.shoot) {
+        var s = this.shoot;
+        s.x += s.vx * dt; s.y += s.vy * dt; s.age += dt;
+        if (s.age >= s.life) { this.shoot = null; this.nextShoot = t + 4 + Math.random() * 6; }
+      }
+    },
+    draw: function(){
+      var c = cover(NIGHT_IMG_W, NIGHT_IMG_H, NIGHT_MOON_X, NIGHT_MOON_Y);
+      // 달빛 번짐
+      var r = (95 + 8 * Math.sin(t * 0.9)) * c.sc;
+      var g = ctx.createRadialGradient(c.x, c.y, 0, c.x, c.y, r);
+      g.addColorStop(0, 'rgba(255,244,190,0.4)');
+      g.addColorStop(1, 'rgba(255,244,190,0)');
+      ctx.fillStyle = g;
+      ctx.fillRect(c.x - r, c.y - r, r * 2, r * 2);
+      // 별 깜박임(큰 별은 십자 모양)
+      for (var i = 0; i < this.stars.length; i++) {
+        var st = this.stars[i];
+        var a = 0.25 + 0.75 * Math.pow((Math.sin(t * st.sp + st.ph) + 1) / 2, 2);
+        ctx.globalAlpha = a; ctx.fillStyle = '#fffbe6';
+        var x = Math.round(st.x), y = Math.round(st.y);
+        if (st.big) { ctx.fillRect(x - 1, y - 1, 3, 3); ctx.fillRect(x - 4, y, 9, 1); ctx.fillRect(x, y - 4, 1, 9); }
+        else ctx.fillRect(x, y, 2, 2);
+      }
+      ctx.globalAlpha = 1;
+      // 별똥별
+      if (this.shoot) {
+        var s = this.shoot, k = 1 - s.age / s.life;
+        var tx = s.x - s.vx * 0.16, ty = s.y - s.vy * 0.16;
+        var lg = ctx.createLinearGradient(s.x, s.y, tx, ty);
+        lg.addColorStop(0, 'rgba(255,255,240,' + k + ')');
+        lg.addColorStop(1, 'rgba(255,255,240,0)');
+        ctx.strokeStyle = lg; ctx.lineWidth = 2; ctx.lineCap = 'round';
+        ctx.beginPath(); ctx.moveTo(s.x, s.y); ctx.lineTo(tx, ty); ctx.stroke();
+      }
+      // 반딧불이: 노란 빛 번짐 + 밝은 점이 천천히 깜박인다
+      for (var j = 0; j < this.flies.length; j++) {
+        var f = this.flies[j];
+        var fa = 0.15 + 0.85 * Math.pow((Math.sin(t * 1.5 + f.ph) + 1) / 2, 2);
+        var gr = ctx.createRadialGradient(f.x, f.y, 0, f.x, f.y, 9);
+        gr.addColorStop(0, 'rgba(246,255,140,' + (0.7 * fa) + ')');
+        gr.addColorStop(1, 'rgba(246,255,140,0)');
+        ctx.fillStyle = gr; ctx.fillRect(f.x - 9, f.y - 9, 18, 18);
+        ctx.globalAlpha = fa; ctx.fillStyle = '#fbffb8';
+        ctx.fillRect(Math.round(f.x) - 1, Math.round(f.y) - 1, 3, 3);
+        ctx.globalAlpha = 1;
+      }
+    }
+  };
+
+  var SKY_DARK = { rain: true, night: true, cloud: true };
+  var SKY_LIGHT = { sun: true, fog: true, snow: true, wind: true }; // 배경 그림이 어두운 날씨 → 카드 밖 글씨를 밝게
+  var EFFECTS = { rain: rain, sun: sun, fog: fog, night: night, snow: snow, wind: wind, cloud: cloud };
+  
+  function resize(){
+    dpr = window.devicePixelRatio || 1;
+    w = window.innerWidth; h = window.innerHeight;
+    canvas.width = Math.round(w * dpr); canvas.height = Math.round(h * dpr);
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    if (current) { current.init(); if (!running) frame(0); }
+  }
+
+  var current = null, want = null, running = false, last = 0, raf = 0;
+
+  function frame(dt){
+    t += dt;
+    ctx.clearRect(0, 0, w, h);
+    if (current) { current.update(dt); current.draw(); }
+  }
+  function tick(now){
+    if (!running) return;
+    var dt = last ? Math.min((now - last) / 1000, 0.05) : 0;
+    last = now;
+    frame(dt);
+    raf = requestAnimationFrame(tick);
+  }
+
+  // 켜고 끌 때 CSS 페이드(투명도 전환)를 잠깐 꺼서, 검은 블록이 덮은 사이에 배경이 즉시 바뀌게 한다
+  function instant(el, fn){ el.style.transition = 'none'; fn(); void el.offsetWidth; el.style.transition = ''; }
+
+  function start(kind){
+    current = EFFECTS[kind];
+    current.init();
+    if (SKY_IMG[kind]) {
+      sky.style.backgroundImage = 'url("' + SKY_IMG[kind] + '")';
+      instant(sky, function(){ sky.classList.add('on'); });
+    }
+    instant(canvas, function(){ canvas.classList.add('on'); });
+    if (reduceMotion) { frame(0); return; }
+    running = true; last = 0;
+    cancelAnimationFrame(raf); raf = requestAnimationFrame(tick);
+  }
+  function stop(){
+    running = false; cancelAnimationFrame(raf);
+    current = null;
+    ctx.clearRect(0, 0, w, h);
+  }
+  // 카드 밖 글씨 색: 어두운 배경은 밝은 글씨(sky-dark), 밝은 배경은 진한 글씨+흰 테두리(sky-light)
+  function applyTheme(kind){
+    document.body.classList.remove('sky-dark', 'sky-light');
+    if (kind && SKY_DARK[kind]) document.body.classList.add('sky-dark');
+    if (kind && SKY_LIGHT[kind]) document.body.classList.add('sky-light');
+  }
+  // holding=true: 검은 블록이 덮고 있는 동안이라 글씨는 밝은 색으로 두었다가, 걷히기 시작할 때 새 배경에 맞는 색으로 바꾼다
+  function applyNow(kind, holding){
+    stop();
+    instant(sky, function(){ sky.classList.remove('on'); });
+    instant(canvas, function(){ canvas.classList.remove('on'); });
+    if (holding) { document.body.classList.remove('sky-light'); document.body.classList.add('sky-dark'); } else applyTheme(kind);
+    if (kind) start(kind);
+    applied = kind;
+  }
+
+  // ---- 화면 전환: 게임처럼 검은 네모 블록이 (왼쪽 위 → 오른쪽 아래 방향으로 들쭉날쭉) 화면을 덮고, 덮인 사이에 배경을 바꾼 뒤, 같은 순서로 걷힌다 ----
+  var wipeCanvas = document.getElementById('wipeBg');
+  var wctx = wipeCanvas.getContext('2d');
+  var CELL = 24, COVER_MS = 1100, HOLD_MS = 250, REVEAL_MS = 1100;   // 블록 크기(px)와 덮는/멈춤/걷는 시간(ms): 작은 블록이 천천히 번져 나간다
+  var imgCache = {};
+  function loadImage(kind){                                   // 새 배경 그림을 미리 받아 둬서, 걷힐 때 빈(갈색) 화면이 비치지 않게 한다
+    var url = SKY_IMG[kind];
+    if (!url) return Promise.resolve();
+    if (!imgCache[kind]) imgCache[kind] = new Promise(function(res){ var im = new Image(); im.onload = im.onerror = function(){ res(); }; im.src = url; });
+    return imgCache[kind];
+  }
+  function runWipe(startBlack, swap, onReveal, done){
+    var cols = Math.ceil(w / CELL), rows = Math.ceil(h / CELL), n = cols * rows, d = new Float32Array(n);
+    for (var r = 0; r < rows; r++) for (var c = 0; c < cols; c++) d[r * cols + c] = (c / cols * 0.5 + r / rows * 0.3 + Math.random() * 0.3) / 1.1;
+    wipeCanvas.width = w; wipeCanvas.height = h;
+    wctx.fillStyle = '#000';
+    function cells(test){
+      for (var i = 0; i < n; i++) if (test(d[i] * 0.8)) wctx.fillRect((i % cols) * CELL, Math.floor(i / cols) * CELL, CELL, CELL);
+    }
+    var phase = 'cover', t0 = performance.now(), ready = false, holdStart = 0;
+    if (startBlack) { phase = 'hold'; holdStart = t0; Promise.resolve(swap()).then(function(){ ready = true; }); }   // 새로 고침: 이미 검은 화면이라 덮는 단계 없이 바로 교체 후 걷는다
+    function step(now){
+      wctx.clearRect(0, 0, w, h);
+      if (phase === 'cover') {
+        var p = Math.min(1, (now - t0) / COVER_MS);
+        cells(function(v){ return v <= p; });
+        if (p >= 1) {
+          phase = 'hold'; holdStart = now;
+          Promise.resolve(swap()).then(function(){ ready = true; });
+        }
+      } else if (phase === 'hold') {
+        wctx.fillRect(0, 0, w, h);
+        wipeCanvas.style.background = 'transparent';           // 이제부터는 캔버스에 그린 블록만 화면을 가린다
+        if (ready && now - holdStart >= HOLD_MS) { phase = 'reveal'; t0 = now; onReveal(); }
+      } else {
+        var q = Math.min(1, (now - t0) / REVEAL_MS);
+        cells(function(v){ return v > q; });
+        if (q >= 1) { wctx.clearRect(0, 0, w, h); done(); return; }
+      }
+      requestAnimationFrame(step);
+    }
+    requestAnimationFrame(step);
+  }
+
+  var transitioning = false, applied = null, seq = 0, handled = 0, booting = true, readyWaiters = [];
+  // 배경 전환(블록 덮기~걷기)이 끝나면 풀리는 약속. 코멘트는 이게 풀린 뒤에 쓰기 시작한다.
+  window.TIB = window.TIB || {};
+  window.TIB.bgReady = function(){ return transitioning ? new Promise(function(res){ readyWaiters.push(res); }) : Promise.resolve(); };
+  function transition(){
+    transitioning = true;
+    loadImage(want);
+    runWipe(booting, function(){
+      return Promise.race([loadImage(want), new Promise(function(res){ setTimeout(res, 4000); })]).then(function(){
+        handled = seq;
+        applyNow(want, true);                                 // 덮인 순간의 최신 목표로 교체
+      });
+    }, function(){ applyTheme(want); }, function(){
+      transitioning = false; booting = false;
+      if (handled !== seq) transition();                      // 걷히는 동안 또 지역이 바뀌었으면 한 번 더
+      else { var ws = readyWaiters; readyWaiters = []; ws.forEach(function(r){ r(); }); }
+    });
+  }
+  // 날씨 결과가 올 때마다(= 지역을 바꿀 때마다) 같은 날씨 배경이어도 블록 전환을 한다
+  function onWeather(kind){
+    want = kind; seq++;
+    if (reduceMotion) { applyNow(kind); booting = false; wipeCanvas.style.background = 'transparent'; return; }   // 움직임 줄이기: 블록 전환 없이 바로 교체
+    if (!transitioning) transition();
+  }
+  document.body.classList.add('sky-dark');                    // 검은 시작 화면 위에서도 카드 밖 글씨가 보이게 (첫 날씨가 정해지면 바뀐다)
+  setTimeout(function(){ if (booting && seq === 0) onWeather(null); }, 8000);   // 날씨 결과가 끝내 안 와도 검은 화면에 갇히지 않게
+
+  resize();
+  window.addEventListener('resize', resize);
+  // 어떤 효과를 보여줄지: 비·눈·안개·바람·구름은 밤낮과 상관없이 우선, 그 외에는 해가 졌으면(is_day=0) 밤, 낮이고 맑음이면 맑음. 나머지는 기본 배경.
+  function pickEffect(label, isDay){
+    if (label === '비') return 'rain';
+    if (label === '눈') return 'snow';
+    if (label === '안개') return 'fog';
+    if (label === '바람') return 'wind';
+    if (label === '구름') return 'cloud';
+    if (isDay === 0) return 'night';
+    if (label === '맑음') return 'sun';
+    return null;
+  }
+  document.addEventListener('tib:weather', function(e){
+    var d = e.detail || {};
+    onWeather(pickEffect(d.label, d.isDay));
+  });
+})();
+</script>
+
+<script>
+// 상단 코멘트의 오른쪽 끝을 전일 대비 제목 옆 시각 문구가 끝나는 x에 맞춘다(넓은 화면 배치에서만).
+(function(){
+  var tip = document.getElementById('tempTipOut');
+  var timeEl = document.getElementById('dayTitleTimeOut');
+  var wide = window.matchMedia('(min-width:1240px) and (min-height:620px)');
+  function align(){
+    tip.style.width = '';
+    if (!wide.matches || tip.hidden) return;
+    var end = timeEl.getBoundingClientRect().right;
+    var start = tip.getBoundingClientRect().left;
+    if (!timeEl.textContent || end <= start) return;
+    tip.style.width = Math.round(end - start) + 'px';
+  }
+  window.addEventListener('resize', align);
+  if (window.ResizeObserver) new ResizeObserver(align).observe(timeEl);
+  new MutationObserver(align).observe(tip, { attributes: true, attributeFilter: ['hidden'], childList: true });
+  if (document.fonts && document.fonts.ready) document.fonts.ready.then(align);
+  align();
+})();
+</script>
+
+<script>
+// ============================================================================
+// 상식 문제 (장식·재미용, 날씨 데이터와 무관): 서울 현재 기온 카드 아래에 문제를 하나씩 무작위로 보여준다.
+// 섞은 문제 묶음에서 차례로 꺼내므로 한 바퀴 돌기 전에는 같은 문제가 반복되지 않는다.
+// ============================================================================
+(function(){
+  var QUIZ = [
+    { q: '태양계에서 가장 큰 행성은?', c: ['목성', '토성', '지구'], a: 0 },
+    { q: '한글을 만든 임금은?', c: ['세종대왕', '태종', '정조'], a: 0 },
+    { q: '가장 큰 바다는?', c: ['태평양', '대서양', '인도양'], a: 0 },
+    { q: '세계 최고봉은?', c: ['에베레스트', 'K2', '백두산'], a: 0 },
+    { q: '우리나라 최고봉은?', c: ['한라산', '지리산', '설악산'], a: 0 },
+    { q: '광합성이 내는 기체는?', c: ['산소', '이산화탄소', '질소'], a: 0 },
+    { q: '물의 화학식은?', c: ['H₂O', 'CO₂', 'O₂'], a: 0 },
+    { q: '삼각형 세 내각의 합은?', c: ['180°', '90°', '360°'], a: 0 },
+    { q: '원주율(π)은 약 얼마일까?', c: ['3.14', '2.71', '1.61'], a: 0 },
+    { q: '가장 작은 소수(素數)는?', c: ['2', '1', '3'], a: 0 },
+    { q: '삼국에 없던 나라는?', c: ['고려', '신라', '백제'], a: 0 },
+    { q: '대한민국의 나라꽃은?', c: ['무궁화', '장미', '벚꽃'], a: 0 },
+    { q: '올림픽은 몇 년마다 열릴까?', c: ['4년', '2년', '5년'], a: 0 },
+    { q: '거북선의 장군은?', c: ['이순신', '강감찬', '을지문덕'], a: 0 },
+    { q: '무지개는 몇 가지 색?', c: ['7가지', '5가지', '9가지'], a: 0 },
+    { q: '소금의 주성분은?', c: ['염화나트륨', '설탕', '녹말'], a: 0 },
+    { q: '가장 큰 동물은?', c: ['대왕고래', '코끼리', '기린'], a: 0 },
+    { q: '사람 몸에서 가장 큰 장기는?', c: ['피부', '간', '폐'], a: 0 },
+    { q: '성인의 뼈는 몇 개?', c: ['206개', '156개', '306개'], a: 0 },
+    { q: '인구 최다 대륙은?', c: ['아시아', '아프리카', '유럽'], a: 0 },
+    { q: '표준 기압에서 물은 100℃에서 끓는다.', c: ['O', 'X'], a: 0 },
+    { q: '달은 스스로 빛을 낸다.', c: ['O', 'X'], a: 1 },
+    { q: '지구는 태양 주위를 돈다.', c: ['O', 'X'], a: 0 },
+    { q: '소리는 진공에서도 전달된다.', c: ['O', 'X'], a: 1 },
+    { q: '빛의 삼원색은 빨강·초록·파랑이다.', c: ['O', 'X'], a: 0 },
+    { q: '1리터는 1000밀리리터다.', c: ['O', 'X'], a: 0 },
+    { q: '광복절은 8월 15일이다.', c: ['O', 'X'], a: 0 },
+    { q: '추석은 음력 8월 15일이다.', c: ['O', 'X'], a: 0 },
+    { q: '무지개는 태양의 반대쪽 하늘에서 볼 수 있다.', c: ['O', 'X'], a: 0 },
+    { q: '고래는 물고기다.', c: ['O', 'X'], a: 1 },
+  ];
+
+  var box = document.getElementById('quizBox');
+  if (!box) return;
+  var textEl = document.getElementById('quizText');
+  var choicesEl = document.getElementById('quizChoices');
+  var resultEl = document.getElementById('quizResult');
+  var deck = [], last = -1, autoTimer = null;
+
+  function refill(){
+    deck = QUIZ.map(function(_, i){ return i; });
+    for (var i = deck.length - 1; i > 0; i--) {           // Fisher-Yates 섞기
+      var j = Math.floor(Math.random() * (i + 1));
+      var t = deck[i]; deck[i] = deck[j]; deck[j] = t;
+    }
+    if (deck[deck.length - 1] === last && deck.length > 1) { // 새 묶음의 첫 문제가 방금 문제와 같지 않게
+      var k = deck.length - 1; var tmp = deck[k]; deck[k] = deck[0]; deck[0] = tmp;
+    }
+  }
+
+  function showNext(){
+    clearTimeout(autoTimer);
+    if (!deck.length) refill();
+    last = deck.pop();
+    var item = QUIZ[last];
+    textEl.textContent = item.q;
+    choicesEl.innerHTML = '';
+    item.c.forEach(function(label, idx){
+      var b = document.createElement('button');
+      b.type = 'button';
+      b.className = 'quiz-choice';
+      b.textContent = label;
+      b.addEventListener('click', function(){ answer(item, idx); });
+      choicesEl.appendChild(b);
+    });
+    choicesEl.hidden = false;
+    resultEl.hidden = true;
+  }
+
+  function answer(item, idx){
+    var right = idx === item.a;
+    resultEl.className = 'quiz-result ' + (right ? 'ok' : 'no');
+    resultEl.textContent = right ? '정답!' : '오답 · ' + item.c[item.a];   // 보기 자리에 결과만 (틀리면 정답도 함께)
+    choicesEl.hidden = true;
+    resultEl.hidden = false;
+    clearTimeout(autoTimer);
+    autoTimer = setTimeout(showNext, 4000);
+  }
+
+  resultEl.addEventListener('click', showNext);
+  showNext();
 })();
 </script>
