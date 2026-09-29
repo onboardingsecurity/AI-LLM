@@ -260,6 +260,8 @@
   @keyframes caret-blink{ 50%{ opacity:0; } }
   /* 서울 현재 기온 카드 아래쪽(예전 코멘트 자리)의 상식 문제 */
   .quiz{ flex:1; margin-top:12px; padding-top:8px; border-top:1px dashed var(--line); display:flex; flex-direction:column; justify-content:center; min-width:0; }
+  /* 기온 조회 실패 시 문제·보기 영역(.quiz-row) 대신 이 한 자리에 오류 메시지를 보여준다(전일 대비 카드의 .day-compare-merged와 같은 패턴) */
+  .quiz .quiz-err{ margin:0; padding:0; border:0; }
   /* 한 줄 안에서 [문제 영역 | 나머지 = 보기 영역]. 보기는 그 나머지 영역 안에서 가로로 나열되어 가운데 정렬된다.
      답을 고르면 보기가 사라지고 같은 영역 가운데에 정답/오답 결과가 나온다(누르면 다음 문제, 가만히 두면 잠시 뒤 자동으로 다음 문제). */
   .quiz-row{ display:flex; flex-wrap:nowrap; align-items:center; gap:10px; }
@@ -276,7 +278,7 @@
   .quiz-result.no{ color:var(--warn); border-color:var(--warn); font-weight:600; }
   .bubble-icon{ display:inline-block; flex:none; width:1.35em; height:1.35em; vertical-align:-.3em; }
   .bubble-icon svg{ display:block; width:100%; height:100%; }
-  .bubble-body{ fill:#ddd2f8; stroke:#b7a5e6; stroke-width:1.2; stroke-linejoin:round; }
+  .bubble-body{ fill:#fff; stroke:#b7a5e6; stroke-width:1.2; stroke-linejoin:round; }
   .bubble-dot{ fill:#7a66b5; }
 
   h2{
@@ -451,11 +453,12 @@
        지역 탭은 서울 현재 기온 카드의 윗선에서 시작해 8시간 날씨 예보 카드의 아랫선에서 끝나고, 그 사이를 4등분한다. */
     .main-col{
       --tabw:112px;
+      position:relative; /* 출처·기준 시간대를 이 박스 기준 절대 위치로 맨 아래에 고정하기 위한 기준점 */
       min-height:0; width:min(100%, calc(780px + 16px + var(--tabw))); justify-self:center;
       display:grid; grid-template-columns:var(--tabw) minmax(0, 1fr) minmax(0, 1fr); /* 서울 현재 기온과 전일 대비는 같은 너비 */
-      grid-template-rows:auto auto auto auto auto auto;
+      grid-template-rows:auto auto auto auto auto;
       column-gap:16px; row-gap:8px;
-      align-content:center; /* 본문 덩어리를 화면 세로 가운데에 둬서 맨 위(코멘트 위)와 맨 아래(출처 아래) 공백이 같게 한다. 줄 사이를 벌리지는 않는다 */
+      align-content:center; /* 본문 덩어리(코멘트~8시간 예보)를 화면 세로 가운데에 둔다. 출처·기준 시간대는 이 덩어리에서 빠져 화면 맨 아래에 따로 고정된다 */
     }
     .head-row{ grid-column:2 / 4; grid-row:1; min-height:36px; justify-content:flex-start; margin-bottom:32px; } /* 코멘트 글자 윗선이 곧 본문 덩어리의 윗선. 코멘트~제목 간격은 8+32=40px */ /* 서울 현재 기온 카드 왼쪽 끝(x)에서 시작 */
     .ov-tabs{ grid-column:1; grid-row:3 / 6; grid-template-columns:1fr; grid-template-rows:repeat(4, minmax(0, 1fr)); gap:10px; min-height:0; }
@@ -470,7 +473,6 @@
     #dayCompareView > .card{ grid-column:3; grid-row:3; }
     #boardExtra > div:first-child{ grid-column:2 / 4; grid-row:4; margin-top:32px; } /* 서울 현재 기온·전일 대비 카드 ~ 8시간 날씨 예보 제목 간격도 8+32=40px */
     #boardExtra > .card{ grid-column:2 / 4; grid-row:5; }
-    #boardExtra > .source-fields{ grid-column:2 / 4; grid-row:6; }
     .title-row{ flex-wrap:nowrap; } /* 두 카드의 윗선이 어긋나지 않게 제목 줄은 항상 한 줄 */
     .title-row h2{ white-space:nowrap; }
     .wx-row{ margin-top:10px; }
@@ -489,12 +491,29 @@
     .chart-wrap{ flex:1; min-height:0; }
     .chart-wrap svg{ position:absolute; inset:0; height:100%; }
 
+    /* 8시간 날씨 예보 카드와 같은 가로 범위(탭 칸 제외, 카드와 같은 너비)에서 화면 맨 아래에 고정.
+       main-col이 position:relative 기준점 — 왼쪽은 탭 칸+간격만큼, 오른쪽은 main-col 오른쪽 끝까지: 카드와 정확히 같은 폭·중앙정렬이 된다. */
     .source-fields{
-      grid-template-columns:auto auto auto auto; justify-content:start; column-gap:12px;
+      position:absolute; left:calc(var(--tabw) + 16px); right:0; bottom:0; width:auto; margin:0;
+      grid-template-columns:auto auto auto auto; justify-content:center; column-gap:12px;
     }
     .source-fields dt:nth-of-type(2){ margin-left:16px; }
-    #boardExtra > .source-fields{ justify-self:center; }
 
+  }
+
+  /* 1600px 미만은 전부: 상단 코멘트(말풍선+텍스트)가 한 줄에 다 안 들어가 줄바꿈되기 쉬우므로, 폭이 줄어드는
+     정도에 맞춰 글자 크기를 단계적으로 줄여 한 줄에 들어가게 한다(대시보드 레이아웃 구간뿐 아니라 그 아래 좁은
+     화면 구간도 전부 포함). 말풍선 아이콘은 em 단위라 폰트 크기를 따라 함께 작아진다.
+     (.head-row .tip-line의 기본 25.5px 규칙보다 이 블록들이 소스상 뒤에 있어야 우선한다 — 같은 클래스 두 개짜리
+     선택자라 명시도가 같으므로 순서로 이긴다.) */
+  @media (max-width:1599px){
+    .head-row .tip-line{ font-size:16px; gap:6px; }
+  }
+  @media (max-width:900px){
+    .head-row .tip-line{ font-size:14px; gap:5px; }
+  }
+  @media (max-width:420px){
+    .head-row .tip-line{ font-size:12px; gap:4px; }
   }
 
   /* 좌우 대칭: 왼쪽 공간(리허설 패널 300px 포함)과 오른쪽 빈 공간을 같은 크기(--side)로 맞춰 본문을 화면 가운데에 둔다.
@@ -507,6 +526,13 @@
     }
   }
 
+  /* 오른쪽 여백 공룡(장식용, 채점 기준 밖): 위 --side 공백이 생기는 폭(1620px)부터만 보여준다.
+     현재 날씨에 맞는 그림이 있을 때만(JS가 .on을 붙인다) 나타나고, 세로 위치·높이는 8시간 날씨 예보 카드에 맞춰 JS가 계산한다. */
+  .side-dino{ display:none; position:fixed; right:48px; z-index:-1; pointer-events:none; width:min(200px, 14vw); height:auto; object-fit:contain; opacity:.92; }
+  @media (min-width:1620px) and (min-height:620px){
+    .side-dino.on{ display:block; }
+  }
+
 </style>
 
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Jua&display=swap">
@@ -514,6 +540,7 @@
 <div id="skyBg" aria-hidden="true"></div>
 <canvas id="fxBg" aria-hidden="true"></canvas>
 <canvas id="wipeBg" aria-hidden="true"></canvas>
+<img id="sideDino" class="side-dino" alt="" aria-hidden="true">
 
 <div class="page">
   <aside class="adapter-panel">
@@ -592,13 +619,14 @@
     </div>
 
     <div class="quiz" id="quizBox" aria-label="상식 문제">
-      <div class="quiz-row">
+      <div class="quiz-row" id="quizRow">
         <p class="quiz-q"><span class="quiz-tag">Q.</span> <span id="quizText"></span></p>
         <div class="quiz-area">
           <div class="quiz-a" id="quizChoices"></div>
           <button type="button" class="quiz-result" id="quizResult" aria-live="polite" title="누르면 다음 문제" hidden></button>
         </div>
       </div>
+      <p class="tip-line quiz-err" id="quizErrOut" hidden></p>
     </div>
   </div>
   </div>
@@ -871,6 +899,7 @@
     el.titleTime.textContent = '- ' + formatKoreanTime(sourceTime);
 
     renderBubble(el.tip, tempTip(raw.current.temperature_2m), '', { typing: true });
+    document.dispatchEvent(new CustomEvent('tib:tempStatus', { detail: { ok: true } }));
 
     // 날씨 코드가 없거나 숫자가 아니면 아이콘만 생략(기온 표시는 그대로)
     if (typeof raw.current.weather_code === 'number') {
@@ -896,6 +925,7 @@
     announceWeather(null);
     const msg = FAILURE_MESSAGES[code] || FAILURE_MESSAGES.http;
     renderBubble(el.tip, msg.explain, msg.next_action, { typing: true });
+    document.dispatchEvent(new CustomEvent('tib:tempStatus', { detail: { ok: false, explain: msg.explain, nextAction: msg.next_action } }));
   }
 
   window.TIB.loadCurrent = load;
@@ -1085,31 +1115,23 @@
   var DAILY_RECORDS_BY_REGION = {
     seoul: [
       {
-        date: '2026-09-27',
-        value: 25.8,
-        unit: '°C',
-        source: 'Open-Meteo (api.open-meteo.com)',
-        source_url: 'https://api.open-meteo.com/v1/forecast?latitude=37.5665&longitude=126.978&current=temperature_2m,relative_humidity_2m,weather_code&timezone=Asia%2FSeoul',
-        source_time: '2026-09-27T13:15:00+09:00'
-      },
-      {
         date: '2026-09-28',
         value: 20.1,
         unit: '°C',
         source: 'Open-Meteo (api.open-meteo.com)',
         source_url: 'https://api.open-meteo.com/v1/forecast?latitude=37.5665&longitude=126.978&current=temperature_2m,relative_humidity_2m,weather_code&timezone=Asia%2FSeoul',
         source_time: '2026-09-28T10:00:00+09:00'
+      },
+      {
+        date: '2026-09-29',
+        value: 18.8,
+        unit: '°C',
+        source: 'Open-Meteo (api.open-meteo.com)',
+        source_url: 'https://api.open-meteo.com/v1/forecast?latitude=37.5665&longitude=126.978&current=temperature_2m,relative_humidity_2m,weather_code&timezone=Asia%2FSeoul',
+        source_time: '2026-09-29T10:00:00+09:00'
       }
     ],
     gumi: [
-      {
-        date: '2026-09-27',
-        value: 25.5,
-        unit: '°C',
-        source: 'Open-Meteo (api.open-meteo.com)',
-        source_url: 'https://api.open-meteo.com/v1/forecast?latitude=36.1195&longitude=128.3446&current=temperature_2m,relative_humidity_2m,weather_code&timezone=Asia%2FSeoul',
-        source_time: '2026-09-27T13:15:00+09:00'
-      },
       {
         date: '2026-09-28',
         value: 22,
@@ -1117,17 +1139,17 @@
         source: 'Open-Meteo (api.open-meteo.com)',
         source_url: 'https://api.open-meteo.com/v1/forecast?latitude=36.1195&longitude=128.3446&current=temperature_2m,relative_humidity_2m,weather_code&timezone=Asia%2FSeoul',
         source_time: '2026-09-28T10:00:00+09:00'
+      },
+      {
+        date: '2026-09-29',
+        value: 20.1,
+        unit: '°C',
+        source: 'Open-Meteo (api.open-meteo.com)',
+        source_url: 'https://api.open-meteo.com/v1/forecast?latitude=36.1195&longitude=128.3446&current=temperature_2m,relative_humidity_2m,weather_code&timezone=Asia%2FSeoul',
+        source_time: '2026-09-29T10:00:00+09:00'
       }
     ],
     daegu: [
-      {
-        date: '2026-09-27',
-        value: 26.1,
-        unit: '°C',
-        source: 'Open-Meteo (api.open-meteo.com)',
-        source_url: 'https://api.open-meteo.com/v1/forecast?latitude=35.8714&longitude=128.6014&current=temperature_2m,relative_humidity_2m,weather_code&timezone=Asia%2FSeoul',
-        source_time: '2026-09-27T13:15:00+09:00'
-      },
       {
         date: '2026-09-28',
         value: 22.7,
@@ -1135,17 +1157,17 @@
         source: 'Open-Meteo (api.open-meteo.com)',
         source_url: 'https://api.open-meteo.com/v1/forecast?latitude=35.8714&longitude=128.6014&current=temperature_2m,relative_humidity_2m,weather_code&timezone=Asia%2FSeoul',
         source_time: '2026-09-28T10:00:00+09:00'
+      },
+      {
+        date: '2026-09-29',
+        value: 22.3,
+        unit: '°C',
+        source: 'Open-Meteo (api.open-meteo.com)',
+        source_url: 'https://api.open-meteo.com/v1/forecast?latitude=35.8714&longitude=128.6014&current=temperature_2m,relative_humidity_2m,weather_code&timezone=Asia%2FSeoul',
+        source_time: '2026-09-29T10:00:00+09:00'
       }
     ],
     'grace-cc': [
-      {
-        date: '2026-09-27',
-        value: 25.1,
-        unit: '°C',
-        source: 'Open-Meteo (api.open-meteo.com)',
-        source_url: 'https://api.open-meteo.com/v1/forecast?latitude=35.661&longitude=128.6439&current=temperature_2m,relative_humidity_2m,weather_code&timezone=Asia%2FSeoul',
-        source_time: '2026-09-27T13:15:00+09:00'
-      },
       {
         date: '2026-09-28',
         value: 22.5,
@@ -1153,6 +1175,14 @@
         source: 'Open-Meteo (api.open-meteo.com)',
         source_url: 'https://api.open-meteo.com/v1/forecast?latitude=35.661&longitude=128.6439&current=temperature_2m,relative_humidity_2m,weather_code&timezone=Asia%2FSeoul',
         source_time: '2026-09-28T10:00:00+09:00'
+      },
+      {
+        date: '2026-09-29',
+        value: 22.8,
+        unit: '°C',
+        source: 'Open-Meteo (api.open-meteo.com)',
+        source_url: 'https://api.open-meteo.com/v1/forecast?latitude=35.661&longitude=128.6439&current=temperature_2m,relative_humidity_2m,weather_code&timezone=Asia%2FSeoul',
+        source_time: '2026-09-29T10:00:00+09:00'
       }
     ]
   };
@@ -1242,11 +1272,25 @@
   var ovTabs = document.getElementById('ovTabs');
   var boardTitle = document.getElementById('boardTitle');
   var shownIndex = -1;
+  var LAST_REGION_KEY = 'tib:lastRegionId';
+
+  function saveLastRegion(regionId){
+    try { localStorage.setItem(LAST_REGION_KEY, regionId); } catch (e) {}
+  }
+
+  function lastRegionIndex(){
+    var savedId;
+    try { savedId = localStorage.getItem(LAST_REGION_KEY); } catch (e) {}
+    if (!savedId) return 0;
+    var idx = REGIONS.findIndex(function(r){ return r.id === savedId; });
+    return idx === -1 ? 0 : idx;
+  }
 
   function selectRegion(i){
     if (i === shownIndex) return;
     shownIndex = i;
     var region = REGIONS[i];
+    saveLastRegion(region.id);
     boardTitle.textContent = region.name + ' 현재 기온';
     window.TIB.loadCurrent(region);
     window.TIB.loadTrend(region);
@@ -1256,12 +1300,14 @@
     });
   }
 
+  var initialIndex = lastRegionIndex();
+
   REGIONS.forEach(function(region, i){
     var tab = document.createElement('button');
     tab.type = 'button';
     tab.className = 'ov-tab';
     tab.setAttribute('role', 'tab');
-    tab.setAttribute('aria-selected', i === 0 ? 'true' : 'false');
+    tab.setAttribute('aria-selected', i === initialIndex ? 'true' : 'false');
     tab.setAttribute('aria-label', region.name);
     tab.title = region.name;
     var img = document.createElement('img');
@@ -1272,7 +1318,7 @@
     ovTabs.appendChild(tab);
   });
 
-  selectRegion(0);
+  selectRegion(initialIndex);
 })();
 </script>
 
@@ -2112,10 +2158,12 @@
 
   var box = document.getElementById('quizBox');
   if (!box) return;
+  var rowEl = document.getElementById('quizRow');
+  var errEl = document.getElementById('quizErrOut');
   var textEl = document.getElementById('quizText');
   var choicesEl = document.getElementById('quizChoices');
   var resultEl = document.getElementById('quizResult');
-  var deck = [], last = -1, autoTimer = null;
+  var deck = [], last = -1, autoTimer = null, failed = false;
 
   function refill(){
     deck = QUIZ.map(function(_, i){ return i; });
@@ -2129,6 +2177,7 @@
   }
 
   function showNext(){
+    if (failed) return; // 기온 조회 실패 중에는 문제를 새로 내지 않는다
     clearTimeout(autoTimer);
     if (!deck.length) refill();
     last = deck.pop();
@@ -2158,6 +2207,58 @@
   }
 
   resultEl.addEventListener('click', showNext);
+
+  // 실시간 기온 조회가 실패하면 문제·보기 자리를 하나로 합쳐 그 자리에 오류 메시지를 보여주고,
+  // 조회가 되살아나면 다시 문제를 낸다(전일 대비 카드가 .day-compare-merged로 하는 것과 같은 패턴).
+  document.addEventListener('tib:tempStatus', function(e){
+    if (e.detail && e.detail.ok === false) {
+      failed = true;
+      clearTimeout(autoTimer);
+      rowEl.hidden = true;
+      window.TIB.renderBubble(errEl, e.detail.explain, e.detail.nextAction, { typing: true });
+    } else {
+      failed = false;
+      errEl.hidden = true;
+      rowEl.hidden = false;
+      showNext();
+    }
+  });
+
   showNext();
+})();
+</script>
+
+<script>
+// ============================================================================
+// 오른쪽 여백 공룡 마스코트 (장식용, 채점 기준 밖): 1620px 이상 넓은 화면에서 --side 공백이 생기면,
+// 8시간 날씨 예보 카드 옆에 현재 날씨에 맞는 공룡 그림(assets/side/*.png)을 띄운다.
+// 맑음·구름·비·눈만 그림이 있다(assets/side에 안개·바람용은 없음) — 그 외 날씨거나 조회 실패면 숨긴다.
+// ============================================================================
+(function(){
+  var img = document.getElementById('sideDino');
+  if (!img) return;
+  var SIDE_IMG = { '맑음': '../assets/side/sun.png', '구름': '../assets/side/cloud.png', '비': '../assets/side/rain.png', '눈': '../assets/side/snow.png' };
+
+  function reposition(){
+    if (!img.classList.contains('on')) return;
+    var target = document.querySelector('#boardExtra .card');
+    if (!target) return;
+    var r = target.getBoundingClientRect();
+    img.style.top = r.top + 'px';
+    img.style.height = r.height + 'px';
+  }
+
+  document.addEventListener('tib:weather', function(e){
+    var label = e.detail && e.detail.label;
+    var src = SIDE_IMG[label];
+    if (!src) { img.classList.remove('on'); return; }
+    if (img.getAttribute('src') !== src) img.setAttribute('src', src);
+    img.classList.add('on');
+    reposition();
+  });
+
+  window.addEventListener('resize', reposition);
+  var trendTarget = document.querySelector('#boardExtra .card');
+  if (window.ResizeObserver && trendTarget) new ResizeObserver(reposition).observe(trendTarget);
 })();
 </script>
