@@ -22,6 +22,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>하우스 웨더</title>
 <link rel="icon" type="image/png" href="../assets/common/favicon.png">
+<link rel="apple-touch-icon" href="../assets/common/favicon.png">
+<meta name="apple-mobile-web-app-title" content="하우스 웨더">
 <style>
   :root{
     --bg:#f6efd9;
@@ -1309,23 +1311,31 @@ window.TIB.onReveal = function(fn){
   var DAILY_RECORDS_BY_REGION = {
     seoul: [
       {
-        date: '2026-09-28',
-        value: 20.1,
-        unit: '°C',
-        source: 'Open-Meteo (api.open-meteo.com)',
-        source_url: 'https://api.open-meteo.com/v1/forecast?latitude=37.5665&longitude=126.978&current=temperature_2m,relative_humidity_2m,weather_code&timezone=Asia%2FSeoul',
-        source_time: '2026-09-28T10:00:00+09:00'
-      },
-      {
         date: '2026-09-29',
         value: 18.8,
         unit: '°C',
         source: 'Open-Meteo (api.open-meteo.com)',
         source_url: 'https://api.open-meteo.com/v1/forecast?latitude=37.5665&longitude=126.978&current=temperature_2m,relative_humidity_2m,weather_code&timezone=Asia%2FSeoul',
         source_time: '2026-09-29T10:00:00+09:00'
+      },
+      {
+        date: '2026-09-30',
+        value: 19.4,
+        unit: '°C',
+        source: 'Open-Meteo (api.open-meteo.com)',
+        source_url: 'https://api.open-meteo.com/v1/forecast?latitude=37.5665&longitude=126.978&current=temperature_2m,relative_humidity_2m,weather_code&timezone=Asia%2FSeoul',
+        source_time: '2026-09-30T10:00:00+09:00'
       }
     ],
     gumi: [
+      {
+        date: '2026-09-27',
+        value: 25.5,
+        unit: '°C',
+        source: 'Open-Meteo (api.open-meteo.com)',
+        source_url: 'https://api.open-meteo.com/v1/forecast?latitude=36.1195&longitude=128.3446&current=temperature_2m,relative_humidity_2m,weather_code&timezone=Asia%2FSeoul',
+        source_time: '2026-09-27T13:15:00+09:00'
+      },
       {
         date: '2026-09-28',
         value: 22,
@@ -1341,9 +1351,25 @@ window.TIB.onReveal = function(fn){
         source: 'Open-Meteo (api.open-meteo.com)',
         source_url: 'https://api.open-meteo.com/v1/forecast?latitude=36.1195&longitude=128.3446&current=temperature_2m,relative_humidity_2m,weather_code&timezone=Asia%2FSeoul',
         source_time: '2026-09-29T10:00:00+09:00'
+      },
+      {
+        date: '2026-09-30',
+        value: 22.1,
+        unit: '°C',
+        source: 'Open-Meteo (api.open-meteo.com)',
+        source_url: 'https://api.open-meteo.com/v1/forecast?latitude=36.1195&longitude=128.3446&current=temperature_2m,relative_humidity_2m,weather_code&timezone=Asia%2FSeoul',
+        source_time: '2026-09-30T10:00:00+09:00'
       }
     ],
     daegu: [
+      {
+        date: '2026-09-27',
+        value: 26.1,
+        unit: '°C',
+        source: 'Open-Meteo (api.open-meteo.com)',
+        source_url: 'https://api.open-meteo.com/v1/forecast?latitude=35.8714&longitude=128.6014&current=temperature_2m,relative_humidity_2m,weather_code&timezone=Asia%2FSeoul',
+        source_time: '2026-09-27T13:15:00+09:00'
+      },
       {
         date: '2026-09-28',
         value: 22.7,
@@ -1359,9 +1385,25 @@ window.TIB.onReveal = function(fn){
         source: 'Open-Meteo (api.open-meteo.com)',
         source_url: 'https://api.open-meteo.com/v1/forecast?latitude=35.8714&longitude=128.6014&current=temperature_2m,relative_humidity_2m,weather_code&timezone=Asia%2FSeoul',
         source_time: '2026-09-29T10:00:00+09:00'
+      },
+      {
+        date: '2026-09-30',
+        value: 22.4,
+        unit: '°C',
+        source: 'Open-Meteo (api.open-meteo.com)',
+        source_url: 'https://api.open-meteo.com/v1/forecast?latitude=35.8714&longitude=128.6014&current=temperature_2m,relative_humidity_2m,weather_code&timezone=Asia%2FSeoul',
+        source_time: '2026-09-30T10:00:00+09:00'
       }
     ],
     'grace-cc': [
+      {
+        date: '2026-09-27',
+        value: 25.1,
+        unit: '°C',
+        source: 'Open-Meteo (api.open-meteo.com)',
+        source_url: 'https://api.open-meteo.com/v1/forecast?latitude=35.661&longitude=128.6439&current=temperature_2m,relative_humidity_2m,weather_code&timezone=Asia%2FSeoul',
+        source_time: '2026-09-27T13:15:00+09:00'
+      },
       {
         date: '2026-09-28',
         value: 22.5,
@@ -1377,6 +1419,14 @@ window.TIB.onReveal = function(fn){
         source: 'Open-Meteo (api.open-meteo.com)',
         source_url: 'https://api.open-meteo.com/v1/forecast?latitude=35.661&longitude=128.6439&current=temperature_2m,relative_humidity_2m,weather_code&timezone=Asia%2FSeoul',
         source_time: '2026-09-29T10:00:00+09:00'
+      },
+      {
+        date: '2026-09-30',
+        value: 22.5,
+        unit: '°C',
+        source: 'Open-Meteo (api.open-meteo.com)',
+        source_url: 'https://api.open-meteo.com/v1/forecast?latitude=35.661&longitude=128.6439&current=temperature_2m,relative_humidity_2m,weather_code&timezone=Asia%2FSeoul',
+        source_time: '2026-09-30T10:00:00+09:00'
       }
     ]
   };
