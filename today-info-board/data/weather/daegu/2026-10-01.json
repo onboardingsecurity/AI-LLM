@@ -1,0 +1,40 @@
+{
+  "raw_response": {
+    "latitude": 35.85,
+    "longitude": 128.625,
+    "generationtime_ms": 0.07748603820800781,
+    "utc_offset_seconds": 32400,
+    "timezone": "Asia/Seoul",
+    "timezone_abbreviation": "GMT+9",
+    "elevation": 45.0,
+    "current_units": {
+      "time": "iso8601",
+      "interval": "seconds",
+      "temperature_2m": "°C",
+      "relative_humidity_2m": "%",
+      "weather_code": "wmo code"
+    },
+    "current": {
+      "time": "2026-10-01T10:00",
+      "interval": 900,
+      "temperature_2m": 17.8,
+      "relative_humidity_2m": 62,
+      "weather_code": 2
+    }
+  },
+  "stored": {
+    "value": 17.8,
+    "unit": "°C",
+    "source": "Open-Meteo (api.open-meteo.com)",
+    "source_url": "https://api.open-meteo.com/v1/forecast?latitude=35.8714&longitude=128.6014&current=temperature_2m,relative_humidity_2m,weather_code&timezone=Asia%2FSeoul",
+    "source_time": "2026-10-01T10:00:00+09:00",
+    "query_time_utc": "2026-10-01T01:04:53Z",
+    "reference_timezone": "Asia/Seoul"
+  },
+  "daily_meta": {
+    "date_key": "2026-10-01",
+    "first_seen_query_time_utc": "2026-10-01T01:04:53Z",
+    "last_seen_query_time_utc": "2026-10-01T01:04:53Z",
+    "revision_count": 1
+  }
+}
