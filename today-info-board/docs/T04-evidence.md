@@ -161,7 +161,7 @@ freshness/error_code/값/오래됨 배지/전일 대비/합성 기록 건수가 
 - 구미·대구·청도 그레이스 CC 세 지역은 2026-09-27에 실제 Open-Meteo 호출로 1일차 기록을 확보했다(값·출처시각·조회시각 전부 실제 응답, 합성값 아님). `scripts/verify_daily_records_sync.mjs`로 4개 지역 전부 화면 임베드 값과 저장 파일이 일치함을 확인했다(2026-09-27 실행). 이전 2026-09-23 지역 기록은 사용자 결정으로 삭제했다.
 - 현재 4개 지역 모두 실제 기록이 1건뿐이라 T04-C22(서로 다른 실제 날짜 기록 정확히 2건)는 서울도 충족하지 못한다(5단계 참고). 다음 실제 날짜(Asia/Seoul 기준)에 `python3 scripts/fetch_weather.py <지역id>`를 한 번 더 실행하고 `web/index.html`의 `DAILY_RECORDS_BY_REGION`에 그 값을 추가하면 채워진다. 공식 T04 채점 대상은 서울 하나이며, 이 확장은 코드 코멘트에 명시된 대로 "채점 기준 밖의 추가 기능"이다.
 - `scripts/verify_asset_manifest.mjs`가 `assets/studio-task-assets/` 패키지 17개 파일 전부에서 바이트 수·해시 불일치로 실패한다. 원인 분석(2026-09-27): git에 커밋된 원본(blob)은 LF이고 asset-manifest.json의 SHA-256과 17/17 일치하지만, Windows의 `core.autocrlf=true` 설정으로 작업 폴더에 체크아웃된 파일이 CRLF로 바뀌어 바이트가 달라진 것이다(작업 폴더 파일을 CRLF→LF로 정규화해 해시하면 17/17 일치). 원본 패키지는 채점 기준이라 임의로 줄바꿈을 고치지 않았다.
-- 이미지 자산 출처: `assets/tab/*.png`(seoul-money, gumi-noodle, daegu-chicken, grace-golf — 지역 탭 이미지 4개)와 `assets/common/mouse-cursor.png`(커스텀 마우스 커서)는 전부 ChatGPT로 생성한 이미지다(사용자 확인). 실제 사진이나 제3자 저작물이 아니라 개인정보·저작권 문제는 없다. (이전에 쓰던 `assets/region/*.png`는 삭제되어 더 이상 사용하지 않는다.)
+- 이미지 자산 출처: `assets/tab/*.png`(seoul, gumi, daegu, grace-cc — 지역 탭 이미지 4개)와 `assets/common/mouse-cursor.png`(커스텀 마우스 커서)는 전부 ChatGPT로 생성한 이미지다(사용자 확인). 실제 사진이나 제3자 저작물이 아니라 개인정보·저작권 문제는 없다. (이전에 쓰던 `assets/region/*.png`는 삭제되어 더 이상 사용하지 않는다.)
 
 
 ## 7단계: 슬라이드 화면·지역 탭 이미지 (보강 기능, 채점 기준 밖)

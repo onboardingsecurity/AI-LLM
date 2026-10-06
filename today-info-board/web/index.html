@@ -1483,9 +1483,13 @@ window.TIB.onReveal = function(fn){
     var formatKoreanTime = window.TIB.formatKoreanTime;
     var renderBubble = window.TIB.renderBubble;
 
-    var sorted = records.slice().sort(function(a, b){ return a.date.localeCompare(b.date); });
+    // 어제·오늘(KST) 기록이 둘 다 있어야 한다. 임베드 값이 옛 날짜뿐이어도 정상처럼 보이지 않게 날짜로 거른다.
+    var yDate = kstDate(-1), tDate = kstDate(0);
+    var sorted = records.filter(function(r){ return r.date === yDate || r.date === tDate; })
+      .sort(function(a, b){ return a.date.localeCompare(b.date); });
+    var missing = [yDate, tDate].filter(function(d){ return !sorted.some(function(r){ return r.date === d; }); });
 
-    if (sorted.length >= 2) {
+    if (!missing.length) {
       var earlier = sorted[0], later = sorted[sorted.length - 1];
       var delta = later.value - earlier.value; // 계산 규칙: 늦은 날짜 값 - 이른 날짜 값
       var sign = delta > 0 ? '+' : (delta < 0 ? '' : '±');
@@ -1500,10 +1504,9 @@ window.TIB.onReveal = function(fn){
       dot.className = 'dot err';
       window.TIB.typeSegments(deltaOut, [{ text: '—' }]);
       pairEl.hidden = true;
-      var have = sorted.length === 1 ? '1건' : '0건';
       renderBubble(mergedEl,
-        '어제·오늘 기온이 모두 있어야 전일 대비를 구할 수 있는데, 지금은 서로 다른 날짜 기록이 ' + have + '뿐입니다.',
-        '다음 날 기록이 쌓이면 자동으로 채워집니다.', { typing: true });
+        '어제·오늘 기온이 모두 있어야 전일 대비를 구할 수 있는데, ' + missing.join(', ') + ' 기록이 없습니다.',
+        '해당 날짜의 기록을 받아 오면(fetch_weather.py) 채워집니다.', { typing: true });
       window.TIB.typeSegments(titleTimeOut, [{ text: sorted.length === 1 ? '- ' + formatKoreanTime(sorted[0].source_time) : '' }]);
     }
   }
@@ -1518,10 +1521,10 @@ window.TIB.onReveal = function(fn){
 // ============================================================================
 (function(){
   var TAB_IMG = {
-    seoul: '../assets/tab/seoul-money.png',
-    gumi: '../assets/tab/gumi-noodle.png',
-    daegu: '../assets/tab/daegu-chicken.png',
-    'grace-cc': '../assets/tab/grace-golf.png',
+    seoul: '../assets/tab/seoul.png',
+    gumi: '../assets/tab/gumi.png',
+    daegu: '../assets/tab/daegu.png',
+    'grace-cc': '../assets/tab/grace-cc.png',
   };
   var REGIONS = window.TIB.REGIONS;
   var ovTabs = document.getElementById('ovTabs');
