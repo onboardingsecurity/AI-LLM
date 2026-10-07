@@ -59,8 +59,13 @@ for (const regionId of regionIds) {
     check(`${regionId} ${date}: source_time 일치`, embedded.source_time === real.stored.source_time,
       `임베드=${embedded.source_time} 원본=${real.stored.source_time}`);
     // 원자료(raw_response)와 저장값(stored)도 다시 대조 (T04-C23 원자료 쪽)
-    check(`${regionId} ${date}: 원자료 current.temperature_2m와 저장값 일치`,
-      real.raw_response.current.temperature_2m === real.stored.value);
+    // 실제 조회 기록은 raw_response.current를, 테스트용 소급 기록(daily_meta.test_backfill)은 시간별 값 raw_response.hourly를 원자료로 쓴다.
+    const raw = real.raw_response || {};
+    const isBackfill = !!(real.daily_meta && real.daily_meta.test_backfill);
+    const rawValue = raw.current ? raw.current.temperature_2m
+      : (isBackfill && raw.hourly && raw.hourly.temperature_2m ? raw.hourly.temperature_2m[0] : undefined);
+    check(`${regionId} ${date}: 원자료 ${raw.current ? 'current' : 'hourly(소급 테스트)'}.temperature_2m와 저장값 일치`,
+      rawValue === real.stored.value, `원자료=${rawValue} 저장값=${real.stored.value}`);
   }
 
   // T04-C24: 두 값의 날짜순 재계산이 화면 표시 규칙과 같은지 (2건 이상 쌓인 지역만)
