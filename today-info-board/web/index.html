@@ -213,6 +213,11 @@
   .wx-cell{ display:flex; align-items:center; justify-content:center; align-self:stretch; min-height:80px; border-left:1px dashed var(--line); }
   .wx-icon{ width:120px; height:80px; object-fit:contain; flex:none; }
   .wx-icon[hidden]{ display:none; }
+  /* 전일 대비 카드 오른쪽 날씨 칸: 아이콘이 없으면(조회 전·실시간 조회 실패) 기온차처럼 '—'를 보여주고,
+     전일 대비가 오류일 때는 실시간 날씨 아이콘이 있어도 숨기고 '—'만 보여준다. */
+  #dayWxIcon:not([hidden]) ~ .wx-dash{ display:none; }
+  #dayCompareView .card.is-error #dayWxIcon{ display:none; }
+  #dayCompareView .card.is-error .wx-dash{ display:block; }
   @media (max-width:420px){
     .wx-main .value, .day-compare-value--main{ font-size:40px; }
     .wx-icon{ width:96px; height:64px; }
@@ -285,6 +290,7 @@
   /* 한 줄 안에서 [문제 영역 | 나머지 = 보기 영역]. 보기는 그 나머지 영역 안에서 가로로 나열되어 가운데 정렬된다.
      답을 고르면 보기가 사라지고 같은 영역 가운데에 정답/오답 결과가 나온다(누르면 다음 문제, 가만히 두면 잠시 뒤 자동으로 다음 문제). */
   .quiz-row{ display:flex; flex-wrap:nowrap; align-items:center; gap:10px; }
+  .quiz-row[hidden]{ display:none; } /* display:flex가 hidden 속성을 이기면 조회 실패 때도 문제·보기가 계속 보인다 */
   .quiz-q{ flex:0 1 auto; min-width:0; margin:0; font-size:13.5px; line-height:1.35; color:var(--ink); word-break:keep-all; }
   .quiz-tag{ color:var(--accent); font-weight:600; }
   .quiz-area{ flex:1 0 auto; display:flex; justify-content:center; align-items:center; min-height:26px; }
@@ -369,11 +375,24 @@
   .day-compare-main .day-compare-label{ display:inline-flex; align-items:center; gap:6px; height:16px; line-height:16px; margin-bottom:0; }
   .day-compare-hr{ margin:14px 0; border-top:1px dashed var(--line); }
   .day-compare-pair{ display:flex; gap:24px; }
+  /* 어제·오늘 기록이 없을 때의 오류 말풍선: 실시간 기온 카드의 오류(.quiz-err)와 같게, 구분선 아래 남는 자리의 세로 가운데에 놓는다 */
+  #dayCompareView .card{ display:flex; flex-direction:column; }
+  #dayCompareMerged{ margin:auto 0; padding:0; border:0; }
+  .day-compare-pair[hidden]{ display:none; } /* 어제·오늘 기록이 없으면 이 칸을 숨기고 그 자리에 오류 말풍선만 보인다 */
   .day-compare-pair .day-compare-item{ flex:1 1 0; text-align:left; }
   .day-compare-pair .day-compare-item + .day-compare-item{ padding-left:24px; border-left:1px dashed var(--line); }
 
   .chart-wrap{ position:relative; }
-  .chart-wrap svg{ display:block; width:100%; height:auto; overflow:visible; }
+  .chart-wrap > svg{ display:block; width:100%; height:auto; overflow:visible; }
+  /* 8시간 예보 조회 실패: 그래프 자리에 빈 화면 그림(공룡)을 가운데 두고 그 바로 아래에 오류 말풍선 한 줄(explain)만 보여준다.
+     창 크기는 그래프가 있을 때와 같아야 하므로 그래프(svg)와 같은 가로세로 비율로 자리를 잡는다. */
+  .chart-wrap.is-error{ width:100%; aspect-ratio:320 / 152; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:6px; }
+  .chart-wrap.is-error .trend-empty{ position:relative; overflow:hidden; flex:0 1 auto; height:clamp(60px, 62%, 150px); aspect-ratio:249 / 261; }
+  /* empty.png는 500×500 가운데에 그림이 있고 둘레가 비어 있어서, 그림이 있는 부분(약 249×261)만 보이게 잘라 쓴다 */
+  .chart-wrap.is-error .trend-empty img{ position:absolute; width:200.8%; left:-51.4%; top:-49.8%; max-width:none; image-rendering:pixelated; }
+  .chart-wrap.is-error .tip-line{ margin:0; padding:0; border:0; text-align:center; flex:none; }
+  .chart-wrap.is-error .tip-line[hidden]{ display:block; visibility:hidden; } /* 타자 효과로 말풍선이 나타나기 전에도 자리를 잡아 두어 그림이 움직이지 않게 한다 */
+  @media (max-width:900px){ .chart-wrap.is-error{ aspect-ratio:320 / 177; } }
   .chart-grid{ stroke:var(--line); stroke-width:1; }
   .chart-tick{ font-family:'Jua', sans-serif; font-size:9px; fill:var(--ink-dim); }
   .chart-point-label{ font-family:'Jua', sans-serif; font-size:7px; fill:var(--ink-dim); }
@@ -390,8 +409,17 @@
   .ov-card .ov-cond{ font-size:15px; }
   .ov-card .ov-meta{ font-size:12px; }
   .ov-tabs{ display:grid; grid-template-columns:repeat(4, 1fr); gap:8px; }
-  .ov-tab{ padding:clamp(8px, 3vw, 16px); border:3px solid transparent; border-radius:14px; background:#fff; overflow:hidden; line-height:0; opacity:.55; cursor:var(--cursor); transition:opacity .2s, border-color .2s, transform .2s; }
+  .ov-tab{ padding:clamp(8px, 3vw, 16px); border:3px solid transparent; border-radius:14px; background:rgba(255,255,255,.3); overflow:hidden; line-height:0; opacity:.55; cursor:var(--cursor); transition:opacity .2s, border-color .2s, transform .2s; }
   .ov-tab img{ display:block; width:100%; aspect-ratio:3/2; object-fit:cover; border-radius:12px; }
+  /* 오른쪽 아래 장식 그림(sun.png): 그림 둘레의 빈 여백은 잘라내고 그림이 있는 부분(--bx/--by/--bw/--bh)만 보이게 한다. 넓은 화면 배치에서만 보인다. */
+  .side-sun{ display:none; }
+  /* 지역 탭 배경: 그 지역의 현재 날씨에 맞는 배경 그림(화면 배경과 같은 그림·같은 규칙)을 네모 칸 뒤에 깐다. 그림이 없으면(조회 전·실패) 그대로 투명한 흰색 칸. */
+  .ov-tab{ position:relative; }
+  .ov-tab::before{ content:''; position:absolute; inset:0; border-radius:inherit; background:var(--tab-bg, none) var(--tab-pos, 50% 50%) / cover no-repeat; opacity:0; transition:opacity .6s; pointer-events:none; }
+  .ov-tab.has-sky::before{ opacity:1; }
+  .ov-tab img{ position:relative; z-index:1; }
+  @media (prefers-color-scheme: dark){ :root:not([data-theme="light"]) .ov-tab::before{ filter:brightness(.55); } }
+  :root[data-theme="dark"] .ov-tab::before{ filter:brightness(.55); }
   .ov-tab:hover{ opacity:.85; }
   .ov-tab[aria-selected="true"]{ opacity:1; border-color:var(--accent); transform:translateY(-2px); }
   .ov-tab:focus-visible{ outline:2px solid var(--accent); outline-offset:2px; }
@@ -430,10 +458,19 @@
   .adapter-panel .btn{ display:flex; flex-direction:column; align-items:center; justify-content:center; gap:1px; text-align:center; line-height:1.25; }
   .adapter-panel .btn small, .code-note{ font-size:9.5px; letter-spacing:.03em; opacity:.6; }
   .adapter-panel .btn.retry{ width:100%; }
+  /* 안내 메시지 창에서 내용(버튼 결과·기록)이 짧을 때 남는 빈 공간 가운데에 그림을 둔다(넓은 화면 배치에서만 나타남, 아래 media 참고).
+     그림 파일은 둘레가 비어 있어서, 그림이 있는 부분(--bx/--by/--bw/--bh)만 보이게 잘라 쓴다. */
+  .space-fill{ display:none; }
+  .space-img{ position:relative; overflow:hidden; display:block; aspect-ratio:calc(var(--bw) / var(--bh)); }
+  .space-img[hidden]{ display:none; }
+  .space-img img{ position:absolute; max-width:none; width:calc(var(--iw) / var(--bw) * 100%); left:calc(var(--bx) / var(--bw) * -100%); top:calc(var(--by) / var(--bh) * -100%); image-rendering:pixelated; }
   .adapter-panel .btn[hidden]{ display:none; } /* display:flex가 hidden 속성을 이기지 않게 */
   .code-note{ margin-left:4px; }
   /* 하단 출처·기준 시간대: 8시간 날씨 예보 카드 너비 기준 가운데 정렬, 30% 투명(불투명도 70%) */
   .source-fields{ margin:0; align-self:center; width:max-content; max-width:none; opacity:.7; } /* max-content: 카드보다 넓어져도 줄바꿈 없이 가운데 유지 */
+  /* 출처·기준 시간대는 어떤 너비에서도 [출처 값 | 기준 시간대 값] 한 줄로 놓는다(기본 .fields는 두 줄짜리 2열 격자라서 4열로 바꾼다). */
+  .source-fields{ grid-template-columns:auto auto auto auto; justify-content:center; column-gap:12px; }
+  .source-fields dt:nth-of-type(2){ margin-left:16px; }
   .source-fields dt{ color:var(--ink); } /* 라벨(출처·기준 시간대)도 값과 같은 색 */
   .ov-source{ margin-top:4px; row-gap:6px; font-size:12px; }
   .ov-nav{ display:flex; align-items:center; justify-content:center; gap:14px; }
@@ -459,12 +496,15 @@
       gap:20px;
       /* 오른쪽에 리허설 패널(300px)+간격(20px)만큼(320px) 빈 여백을 둔다. 본문이 좁아지지 않게 1240px부터 서서히 늘어난다.
          1620px 이상에서는 아래 블록이 좌우를 같은 크기로 맞춘다 */
-      padding-right:clamp(0px, calc(100vw - 1240px), 320px);
+      padding-right:clamp(0px, calc(100vw - 1368px), 320px); /* 지역 탭이 본문 오른쪽에도 붙어(+128px) 본문이 더 넓어졌으므로 1368px부터 늘린다 */
     }
     .card{ --pad-y:16px; --pad-x:20px; }
 
     .adapter-panel{ order:0; gap:8px; min-height:0; width:300px; }
-    .adapter-panel .card{ flex:1; min-height:0; overflow-y:auto; }
+    .adapter-panel .card{ flex:1; min-height:0; overflow-y:auto; display:flex; flex-direction:column; }
+    .adapter-panel .card[hidden]{ display:none; } /* display:flex가 hidden 속성을 이기지 않게 */
+    .adapter-panel .card > *{ flex:none; }
+    .adapter-panel .card > .space-fill{ flex:1 1 0; min-height:0; display:flex; align-items:center; justify-content:center; overflow:hidden; }
     .adapter-panel .btn-grid{ gap:6px; }
     .adapter-panel .btn{ padding:6px 10px; }
     .sim-status{ margin-top:12px; }
@@ -475,25 +515,30 @@
     .adapter-panel .btn.retry{ margin-top:10px; }
     .adapter-panel .records{ margin-top:10px; padding-top:8px; }
 
-    /* 본문 격자: [지역 탭 | 서울 현재 기온 | 전일 대비] / 8시간 날씨 예보. 카드·예보 영역은 780px 폭이고, 왼쪽에 지역 탭 세로줄(--tabw)이 붙는다.
+    /* 본문 격자: [지역 탭 | 서울 현재 기온 | 전일 대비 | 지역 탭] / 8시간 날씨 예보. 카드·예보 영역은 780px 폭이고, 왼쪽(서울·구미)과 오른쪽(대구·청도 그레이스 CC)에 지역 탭이 두 개씩 붙는다(--tabw).
        지역 탭은 서울 현재 기온 카드의 윗선에서 시작해 8시간 날씨 예보 카드의 아랫선에서 끝나고, 그 사이를 4등분한다. */
     .main-col{
       --tabw:112px;
       position:relative; /* 출처·기준 시간대를 이 박스 기준 절대 위치로 맨 아래에 고정하기 위한 기준점 */
-      min-height:0; width:min(100%, calc(780px + 16px + var(--tabw))); justify-self:center;
-      display:grid; grid-template-columns:var(--tabw) minmax(0, 1fr) minmax(0, 1fr); /* 서울 현재 기온과 전일 대비는 같은 너비 */
+      min-height:0; width:min(100%, calc(780px + 2 * (16px + var(--tabw)))); justify-self:center;
+      display:grid; grid-template-columns:var(--tabw) minmax(0, 1fr) minmax(0, 1fr) var(--tabw); /* 서울 현재 기온과 전일 대비는 같은 너비 */
       grid-template-rows:auto auto auto auto auto;
       column-gap:16px; row-gap:8px;
       align-content:center; /* 본문 덩어리(코멘트~8시간 예보)를 화면 세로 가운데에 둔다. 출처·기준 시간대는 이 덩어리에서 빠져 화면 맨 아래에 따로 고정된다 */
     }
     .head-row{ grid-column:2 / 4; grid-row:1; min-height:36px; justify-content:flex-start; margin-bottom:32px; } /* 코멘트 글자 윗선이 곧 본문 덩어리의 윗선. 코멘트~제목 간격은 8+32=40px */ /* 서울 현재 기온 카드 왼쪽 끝(x)에서 시작 */
+    /* 지역 탭 네 개: 왼쪽 한 줄에 세로로 4등분해 놓는다(서울 현재 기온 카드 윗선에서 시작해 8시간 날씨 예보 카드 아랫선에서 끝남).
+       오른쪽 빈 줄의 맨 아래(예전 청도 그레이스 CC 탭 자리)에는 장식 그림(.side-sun)이 놓인다. */
     .ov-tabs{ grid-column:1; grid-row:3 / 6; grid-template-columns:1fr; grid-template-rows:repeat(4, minmax(0, 1fr)); gap:10px; min-height:0; }
+    .side-sun{ display:block; position:relative; grid-column:4; grid-row:3 / 6; min-height:0; pointer-events:none; } /* 지역 탭 줄과 같은 높이 구간(서울 현재 기온 카드 윗선 ~ 8시간 날씨 예보 카드 아랫선)을 차지하되, 그림은 흐름에서 빼서 격자 크기에 영향을 주지 않게 한다 */
+    .side-sun .space-img{ position:absolute; left:0; bottom:0; width:100%; height:auto; } /* 지역 탭과 같은 폭(--tabw)으로 카드에서 16px 떨어져 맨 아래(예보 카드 아랫선)에 놓는다: 왼쪽의 '탭 + 오른쪽 여백'과 오른쪽의 '공룡 + 왼쪽 여백'이 같다. 그림이 칸보다 키가 크면 위로 늘어난다. */
     .ov-tab{ position:relative; min-height:0; padding:0; border-width:2px; border-radius:14px; }
     .ov-tab img{ position:absolute; inset:8px; width:calc(100% - 16px); height:calc(100% - 16px); aspect-ratio:auto; object-fit:contain; border-radius:8px; } /* 칸 크기에 맞춰 그림이 잘리지 않게 */
 
     /* 감싸는 상자들은 격자 배치에만 끼어들도록 풀고, 제목·카드를 각 칸에 직접 놓는다 */
     .row-2col, #boardView:not([hidden]), #dayCompareView:not([hidden]), #boardExtra:not([hidden]){ display:contents; }
     #boardView > .title-row{ grid-column:2; grid-row:2; }
+    #boardView > .card, #dayCompareView > .card{ min-height:191px; } /* 값이 비는 조회 중에도 카드 높이(= 지역 탭 칸 높이)가 줄었다 늘지 않게, 정상 값이 채워졌을 때의 높이로 맞춘다 */
     #boardView > .card{ grid-column:2; grid-row:3; margin-top:0; } /* 이 격자 배치에서는 grid-row 간격(row-gap)이 이미 간격을 맡으므로, 좁은 화면용 margin-top 조정은 여기서 끈다 */
     #dayCompareView > .title-row{ grid-column:3; grid-row:2; }
     #dayCompareView > .card{ grid-column:3; grid-row:3; margin-top:0; }
@@ -507,20 +552,21 @@
     .wx-cell{ min-height:64px; }
     .day-compare-hr{ margin:10px 0; }
 
-    /* 예보 카드 높이는 남는 높이를 다 채우지 않고 화면 높이의 약 34%(최대 318px)만 쓴다. 낮은 화면(약 730px 미만)에서는 위·아래 공백이 너무 좁아지지 않게 더 줄어든다(최소 170px).
+    /* 예보 카드 높이는 남는 높이를 다 채우지 않고 화면 높이의 약 34%에 94px를 더한 만큼(최대 412px)만 쓴다. 위쪽 두 카드가 정상 높이(191px)로 줄어든 만큼 예보 카드를 키워, 지역 탭·안내 메시지 창의 하단이 화면 아래쪽까지 닿게 한다. 낮은 화면(약 730px 미만)에서는 위·아래 공백이 너무 좁아지지 않게 더 줄어든다(최소 170px).
        너비는 위의 서울 현재 기온 + 전일 대비 두 카드를 합친 너비(= 본문 전체 폭)와 같다. */
     #boardExtra:not([hidden]){
-      --fh:clamp(170px, min(34vh, calc(100vh - 437px)), 318px);
+      --fh:clamp(170px, min(calc(34vh + 94px), calc(100vh - 464px)), 412px); /* 화면 높이 약 845px 아래에서는 하단 출처·기준 시간대 줄과 겹치지 않도록(약 13px 간격) 화면 높이에 맞춰 함께 줄어든다 */
       flex:none;
     }
     #boardExtra > .card{ flex:none; height:var(--fh); display:flex; flex-direction:column; }
     .chart-wrap{ flex:1; min-height:0; }
-    .chart-wrap svg{ position:absolute; inset:0; height:100%; }
+    .chart-wrap.is-error{ aspect-ratio:auto; }
+    .chart-wrap > svg{ position:absolute; inset:0; height:100%; }
 
     /* 8시간 날씨 예보 카드와 같은 가로 범위(탭 칸 제외, 카드와 같은 너비)에서 화면 맨 아래에 고정.
        main-col이 position:relative 기준점 — 왼쪽은 탭 칸+간격만큼, 오른쪽은 main-col 오른쪽 끝까지: 카드와 정확히 같은 폭·중앙정렬이 된다. */
     .source-fields{
-      position:absolute; left:calc(var(--tabw) + 16px); right:0; bottom:0; width:auto; margin:0;
+      position:absolute; left:calc(var(--tabw) + 16px); right:calc(var(--tabw) + 16px); bottom:0; width:auto; margin:0;
       grid-template-columns:auto auto auto auto; justify-content:center; column-gap:12px;
     }
     .source-fields dt:nth-of-type(2){ margin-left:16px; }
@@ -545,12 +591,29 @@
        "항상 최하단"을 보장할 수 없었다. 화면(뷰포트) 기준으로 고정해 어떤 경우에도 맨 아래에 붙어 있게 하되,
        띠(막대바)처럼 보이는 배경·테두리·블러는 없애고 글자만 그 자리에 떠 있게 한다. */
     body{ padding-bottom:calc(44px + env(safe-area-inset-bottom)); } /* 고정된 글자에 마지막 콘텐츠가 가리지 않게 여유를 둔다 */
+    /* body의 아래 여백은 넘쳐 나온 본문 아래로는 이어지지 않아서, 본문(main-col) 자체에 아래 여유를 둔다: 스크롤 맨 아래에서 8시간 날씨 예보 카드와 고정된 출처 줄 사이에 약 14px 간격이 생긴다. */
+    .main-col{ padding-bottom:calc(52px + env(safe-area-inset-bottom)); }
+    /* 화면이 낮아 한 화면에 안 들어오면 8시간 날씨 예보 그래프를 줄인다(--chart-max-h는 아래 스크립트가 잰다). */
+    .chart-wrap > svg, .chart-wrap.is-error{ max-height:var(--chart-max-h, none); }
     .source-fields{
       position:fixed; left:0; right:0; bottom:0; margin:0; width:auto; max-width:none;
       grid-template-columns:auto auto auto auto; justify-content:center; column-gap:12px;
       padding:10px 16px calc(10px + env(safe-area-inset-bottom)); z-index:5;
     }
     .source-fields dt:nth-of-type(2){ margin-left:16px; }
+  }
+  /* 서울 현재 기온·전일 대비 창은 오류가 떠도 정상일 때와 같은 크기여야 한다. 넓은 배치(1240px 이상)는 아래 media에서 191px로 고정되어 있고,
+     그보다 좁은 화면은 정상 상태 내용 높이(측정: 900px 이하 207px, 901~1239px 247px)를 최소 높이로 둔다. 더 좁은 곳에서 글이 더 줄바꿈되면 아래 스크립트가 그만큼 키운다. */
+  @media (max-width:900px){ #boardView > .card, #dayCompareView > .card{ min-height:207px; } }
+  @media (min-width:901px) and (max-width:1239px){ #boardView > .card, #dayCompareView > .card{ min-height:247px; } }
+  @media (max-width:359px){ #boardView > .card, #dayCompareView > .card{ min-height:226px; } } /* 아주 좁은 폰에서는 오류 문구가 두 줄이 되어 정상 상태보다 높아지므로, 오류 때도 크기가 같도록 그 높이로 맞춘다 */
+  /* 넓은 배치에서 카드가 가장 좁은 구간(너비 1240~1339px): 제목 옆 시각이 한 줄에 들어가도록 글씨를 11px로 줄인다. */
+  @media (min-width:1240px) and (max-width:1339px) and (min-height:620px){
+    .title-time{ font-size:11px; }
+  }
+  /* 화면 너비가 1240px 미만이면 시험용 리허설 패널(날씨 연결 안내 메시지)을 보여주지 않는다. */
+  @media (max-width:1239px){
+    .adapter-panel{ display:none; }
   }
   @media (max-width:420px){
     .head-row .tip-line{ font-size:12px; gap:4px; }
@@ -559,10 +622,10 @@
   }
 
   /* 좌우 대칭: 왼쪽 공간(리허설 패널 300px 포함)과 오른쪽 빈 공간을 같은 크기(--side)로 맞춰 본문을 화면 가운데에 둔다.
-     본문 폭이 800px 아래로 줄지 않도록 --side는 (화면폭-840px)/2까지만 커지고, 최대 640px. */
+     본문 폭이 (카드 780px + 좌우 지역 탭 포함 약 1040px) 아래로 줄지 않도록 --side는 (화면폭-1088px)/2까지만 커지고, 최대 640px. */
   @media (min-width:1620px) and (min-height:620px){
     .page{
-      --side:clamp(320px, calc((100vw - 960px) / 2), 640px);
+      --side:clamp(320px, calc((100vw - 1088px) / 2), 640px);
       grid-template-columns:calc(var(--side) - 20px) minmax(0, 1fr);
       padding-right:var(--side);
     }
@@ -625,6 +688,11 @@
         시험용 기록(실제 날씨 기록과 무관): <span id="simRecordCount">0</span>건
         <ul id="simRecordList"></ul>
       </div>
+
+      <div class="space-fill" id="adapterSpace" aria-hidden="true">
+        <span class="space-img" id="spaceGeneral" hidden style="--iw:500;--bx:91;--by:104;--bw:339;--bh:312"><img src="../assets/etc/general-space.png" alt="" loading="lazy" decoding="async"></span>
+        <span class="space-img" id="spaceSmall" hidden style="--iw:1314;--bx:0;--by:0;--bw:1314;--bh:558"><img src="../assets/optimized/etc/small-space.webp" alt="" loading="lazy" decoding="async"></span>
+      </div>
     </div>
   </aside>
 
@@ -633,6 +701,7 @@
     <p class="tip-line" id="tempTipOut" hidden></p>
   </div>
   <div class="ov-tabs" id="ovTabs" role="tablist" aria-label="지역 탭"></div>
+  <div class="side-sun" aria-hidden="true"><span class="space-img" style="--iw:561;--bx:0;--by:0;--bw:561;--bh:971"><img src="../assets/optimized/etc/sun.webp" alt="" loading="lazy" decoding="async"></span></div>
 
   <div class="row-2col">
   <div id="boardView">
@@ -678,7 +747,7 @@
         <div class="wx-main">
           <div class="day-compare-value day-compare-value--main" id="dayDeltaOut">—</div>
         </div>
-        <div class="wx-cell"><img class="wx-icon" id="dayWxIcon" hidden alt=""></div>
+        <div class="wx-cell"><img class="wx-icon" id="dayWxIcon" hidden alt=""><span class="day-compare-value day-compare-value--main wx-dash" aria-hidden="true">—</span></div>
       </div>
     </div>
     <div class="day-compare-hr"></div>
@@ -799,6 +868,7 @@ window.TIB.onReveal = function(fn){
     http: { explain: '서버가 오류 응답을 반환했습니다.', next_action: '잠시 후 다시 시도해 보세요.' },
     schema_error: { explain: '응답 형식이 예상과 달라 값을 해석할 수 없습니다.', next_action: '형식이 바뀌었는지 확인이 필요합니다.' },
   };
+  window.TIB.FAILURE_MESSAGES = FAILURE_MESSAGES; // 8시간 날씨 예보도 같은 문구를 쓴다
 
   // opts.typing이 true면 코멘트를 타자 치듯 한 글자씩 보여준다(움직임 줄이기 설정이면 바로 전체를 보여준다).
   function renderBubble(target, explain, nextAction, opts){
@@ -997,12 +1067,15 @@ window.TIB.onReveal = function(fn){
     el.status.textContent = '조회 중…';
     el.value.textContent = '—';
     el.unit.textContent = '';
+    el.titleTime.removeAttribute('aria-label');
+    window.TIB.typeSegments(el.titleTime, [{ text: '' }]);   // 이전 지역의 출처 시각이 새 값이 올 때까지 남지 않게, 값·단위처럼 조회를 시작할 때 바로 비운다
     el.tip.hidden = true;
     el.tip._rid = (el.tip._rid || 0) + 1; clearInterval(el.tip._typeTimer);   // 이전 지역 코멘트의 예약·타자 중단
     setIcon(el.curIcon, null);
     setIcon(el.dayIcon, null);
 
     let res;
+    const queriedAtMs = Date.now();   // 조회 시각: 화면이 날씨 요청을 보낸 순간
     try{
       res = await fetch(apiUrl(region), { cache: 'no-store' });
     }catch(networkErr){
@@ -1040,7 +1113,14 @@ window.TIB.onReveal = function(fn){
     // 출처·기준 시간대는 어떤 경우에도 계속 보여야 해서 비웠다 타이핑하지 않고 바로 갱신한다
     el.source.textContent = isMobileWidth() ? 'Open-Meteo' : 'Open-Meteo (api.open-meteo.com)';
     el.tz.textContent = isMobileWidth() ? raw.timezone : raw.timezone + ' (UTC' + offsetStr + ')';
-    window.TIB.typeSegments(el.titleTime, [{ text: '- ' + formatKoreanTime(sourceTime) }]);
+    // 조회 시각은 출처와 같은 기준 시간대(응답의 utc_offset_seconds)로 바꿔 표시한다.
+    const queriedLocal = new Date(queriedAtMs + raw.utc_offset_seconds * 1000).toISOString().slice(0, 16) + ':00' + offsetStr;
+    // 기준 = 출처 시각(출처가 알려준 값의 기준 시각), 현재 = 조회 시각(API를 조회한 시각). 전일 대비 제목의 '어제 · 오늘'과 같은 모양이다.
+    // 두 시각이 같은 날이면 '현재' 쪽 날짜(월·일)는 생략해 한 줄에 들어가게 한다(예: 기준 10월 8일 2시 30분 · 현재 2시 42분).
+    const sameDay = sourceTime.slice(0, 10) === queriedLocal.slice(0, 10);
+    const nowText = sameDay ? formatKoreanTime(queriedLocal).replace(/^\d+월 \d+일 /, '') : formatKoreanTime(queriedLocal);
+    window.TIB.typeSegments(el.titleTime, [{ text: '- 기준 ' + formatKoreanTime(sourceTime) + ' · 현재 ' + nowText }]);
+    el.titleTime.setAttribute('aria-label', '기준(출처 시각) ' + formatKoreanTime(sourceTime) + ', 현재(조회 시각) ' + formatKoreanTime(queriedLocal));
 
     // 날씨 코드가 없거나 숫자가 아니면 아이콘·날씨별 코멘트는 생략하고 기온 구간만의 코멘트를 쓴다
     const icon = typeof raw.current.weather_code === 'number'
@@ -1070,8 +1150,8 @@ window.TIB.onReveal = function(fn){
     setIcon(el.dayIcon, null);
     announceWeather(null);
     const msg = FAILURE_MESSAGES[code] || FAILURE_MESSAGES.http;
-    renderBubble(el.tip, msg.explain, msg.next_action, { typing: true });
-    document.dispatchEvent(new CustomEvent('tib:tempStatus', { detail: { ok: false, explain: msg.explain, nextAction: msg.next_action } }));
+    renderBubble(el.tip, msg.explain, '', { typing: true }); // 오류는 한 줄(explain)만 보여준다
+    document.dispatchEvent(new CustomEvent('tib:tempStatus', { detail: { ok: false, explain: msg.explain } }));
   }
 
   window.TIB.loadCurrent = load;
@@ -1127,24 +1207,47 @@ window.TIB.onReveal = function(fn){
   }
 
   async function load(region){
+    wrap.classList.remove('is-error');
     wrap.innerHTML = '<span class="status" id="trendStatus"><span class="dot"></span><span>추이 조회 중…</span></span>';
     var titleEl = document.getElementById('trendTitle');
     if (titleEl) window.TIB.typeSegments(titleEl, [{ text: '8시간 날씨 예보' }]); // 다른 카드 제목과 같은 신호로 비웠다 타이핑
     const G = chartGeometry();
     const W = G.W, H = G.H, PAD_T = G.PAD_T, ICON_W = G.ICON_W, ICON_H = G.ICON_H, ICON_TOP_GAP = G.ICON_TOP_GAP;
 
+    // 실시간 기온과 같은 방식: 실패 원인을 구분해 같은 문구(설명 + 다음 행동)를 보여준다.
+    function showError(code){
+      const msg = window.TIB.FAILURE_MESSAGES[code] || window.TIB.FAILURE_MESSAGES.http;
+      wrap.classList.add('is-error');
+      wrap.innerHTML = '<div class="trend-empty" aria-hidden="true"><img src="../assets/etc/empty.png" alt=""></div>';
+      const p = document.createElement('p');
+      p.className = 'tip-line';
+      wrap.appendChild(p);
+      window.TIB.renderBubble(p, msg.explain, '', { typing: true });
+    }
+
     let res, json;
     try{
       res = await fetch(trendUrl(region), { cache: 'no-store' });
-      if(!res.ok) throw new Error('HTTP ' + res.status);
+    }catch(networkErr){
+      showError('network');
+      return;
+    }
+    if(!res.ok){
+      if(res.status === 401 || res.status === 403) showError('auth');
+      else if(res.status === 429) showError('rate_limit');
+      else showError('http');
+      return;
+    }
+    try{
       json = await res.json();
-      if(!json.hourly || !Array.isArray(json.hourly.time)) throw new Error('unexpected shape');
-    }catch(err){
-      wrap.innerHTML = '';
-      const p = document.createElement('p');
-      p.className = 'tip-line';
-      p.textContent = '추이를 불러오지 못했습니다: ' + (err.message || err);
-      wrap.appendChild(p);
+    }catch(parseErr){
+      showError('schema_error');
+      return;
+    }
+    const h = json && json.hourly;
+    if(!h || !Array.isArray(h.time) || !Array.isArray(h.temperature_2m)
+       || !json.hourly_units || typeof json.hourly_units.temperature_2m !== 'string'){
+      showError('schema_error');
       return;
     }
 
@@ -1162,6 +1265,12 @@ window.TIB.onReveal = function(fn){
     const allWinds = json.hourly.wind_speed_10m || [];
     const codes = allCodes.slice(startIdx, startIdx + HOURS_AHEAD + 1);
     const winds = allWinds.slice(startIdx, startIdx + HOURS_AHEAD + 1);
+
+    // 지금부터 8시간 구간이 2개 미만이거나 기온이 숫자가 아닌 값이 섞여 있으면 그래프를 그릴 수 없다
+    if(temps.length < 2 || times.length !== temps.length || !temps.every(v => typeof v === 'number' && isFinite(v))){
+      showError('schema_error');
+      return;
+    }
 
     const dataMin = Math.min(...temps);
     const dataMax = Math.max(...temps);
@@ -1301,8 +1410,10 @@ window.TIB.onReveal = function(fn){
 // ============================================================================
 // T04-C22~C24: 서로 다른 실제 날짜 기록 2건 + 전일 대비 재계산
 // 아래 레코드들은 data/weather/<지역id>/<날짜>.json의 stored 블록을 그대로 옮긴 것이다
-// (scripts/verify_daily_records_sync.mjs로 원본과 대조). 현재 모든 지역(서울 포함)은 2026-09-27 1건만 있으며,
-// 다른 날짜 기록이 쌓이면 이 배열에 추가해서 채운다 (서울이 2건이 되어야 C22 충족).
+// (scripts/verify_daily_records_sync.mjs로 원본과 대조). data/ 폴더를 읽을 수 없는 환경(file:// 등)에서 쓰는 대체 값이다.
+// 현재(2026-10-08) 각 지역에 2026-10-07, 2026-10-08 두 건이 있다. 10-08은 그날 실제로 조회한 기록이고,
+// 10-07은 전일 대비 화면 시험용으로 10-08에 Open-Meteo 시간별 과거 값(past_days=1)을 소급해 만든 테스트 기록이다
+// (파일의 daily_meta.test_backfill 참고). 실제 날짜 두 건의 증거(C22~C24)로 쓰지 않는다 — docs/T04-evidence.md 참고.
 // ============================================================================
 (function(){
   window.TIB = window.TIB || {};
@@ -1311,122 +1422,74 @@ window.TIB.onReveal = function(fn){
   var DAILY_RECORDS_BY_REGION = {
     seoul: [
       {
-        date: '2026-09-29',
-        value: 18.8,
+        date: '2026-10-07',
+        value: 14.4,
         unit: '°C',
         source: 'Open-Meteo (api.open-meteo.com)',
-        source_url: 'https://api.open-meteo.com/v1/forecast?latitude=37.5665&longitude=126.978&current=temperature_2m,relative_humidity_2m,weather_code&timezone=Asia%2FSeoul',
-        source_time: '2026-09-29T10:00:00+09:00'
+        source_url: 'https://api.open-meteo.com/v1/forecast?latitude=37.5665&longitude=126.978&hourly=temperature_2m&timezone=Asia%2FSeoul&past_days=1&forecast_days=1',
+        source_time: '2026-10-07T01:00:00+09:00'
       },
       {
-        date: '2026-09-30',
-        value: 19.4,
+        date: '2026-10-08',
+        value: 13.8,
         unit: '°C',
         source: 'Open-Meteo (api.open-meteo.com)',
         source_url: 'https://api.open-meteo.com/v1/forecast?latitude=37.5665&longitude=126.978&current=temperature_2m,relative_humidity_2m,weather_code&timezone=Asia%2FSeoul',
-        source_time: '2026-09-30T10:00:00+09:00'
+        source_time: '2026-10-08T01:15:00+09:00'
       }
     ],
     gumi: [
       {
-        date: '2026-09-27',
-        value: 25.5,
+        date: '2026-10-07',
+        value: 11.6,
         unit: '°C',
         source: 'Open-Meteo (api.open-meteo.com)',
-        source_url: 'https://api.open-meteo.com/v1/forecast?latitude=36.1195&longitude=128.3446&current=temperature_2m,relative_humidity_2m,weather_code&timezone=Asia%2FSeoul',
-        source_time: '2026-09-27T13:15:00+09:00'
+        source_url: 'https://api.open-meteo.com/v1/forecast?latitude=36.1195&longitude=128.3446&hourly=temperature_2m&timezone=Asia%2FSeoul&past_days=1&forecast_days=1',
+        source_time: '2026-10-07T01:00:00+09:00'
       },
       {
-        date: '2026-09-28',
-        value: 22,
+        date: '2026-10-08',
+        value: 13.6,
         unit: '°C',
         source: 'Open-Meteo (api.open-meteo.com)',
         source_url: 'https://api.open-meteo.com/v1/forecast?latitude=36.1195&longitude=128.3446&current=temperature_2m,relative_humidity_2m,weather_code&timezone=Asia%2FSeoul',
-        source_time: '2026-09-28T10:00:00+09:00'
-      },
-      {
-        date: '2026-09-29',
-        value: 20.1,
-        unit: '°C',
-        source: 'Open-Meteo (api.open-meteo.com)',
-        source_url: 'https://api.open-meteo.com/v1/forecast?latitude=36.1195&longitude=128.3446&current=temperature_2m,relative_humidity_2m,weather_code&timezone=Asia%2FSeoul',
-        source_time: '2026-09-29T10:00:00+09:00'
-      },
-      {
-        date: '2026-09-30',
-        value: 22.1,
-        unit: '°C',
-        source: 'Open-Meteo (api.open-meteo.com)',
-        source_url: 'https://api.open-meteo.com/v1/forecast?latitude=36.1195&longitude=128.3446&current=temperature_2m,relative_humidity_2m,weather_code&timezone=Asia%2FSeoul',
-        source_time: '2026-09-30T10:00:00+09:00'
+        source_time: '2026-10-08T01:15:00+09:00'
       }
     ],
     daegu: [
       {
-        date: '2026-09-27',
-        value: 26.1,
+        date: '2026-10-07',
+        value: 13.3,
         unit: '°C',
         source: 'Open-Meteo (api.open-meteo.com)',
-        source_url: 'https://api.open-meteo.com/v1/forecast?latitude=35.8714&longitude=128.6014&current=temperature_2m,relative_humidity_2m,weather_code&timezone=Asia%2FSeoul',
-        source_time: '2026-09-27T13:15:00+09:00'
+        source_url: 'https://api.open-meteo.com/v1/forecast?latitude=35.8714&longitude=128.6014&hourly=temperature_2m&timezone=Asia%2FSeoul&past_days=1&forecast_days=1',
+        source_time: '2026-10-07T01:00:00+09:00'
       },
       {
-        date: '2026-09-28',
-        value: 22.7,
+        date: '2026-10-08',
+        value: 14.3,
         unit: '°C',
         source: 'Open-Meteo (api.open-meteo.com)',
         source_url: 'https://api.open-meteo.com/v1/forecast?latitude=35.8714&longitude=128.6014&current=temperature_2m,relative_humidity_2m,weather_code&timezone=Asia%2FSeoul',
-        source_time: '2026-09-28T10:00:00+09:00'
-      },
-      {
-        date: '2026-09-29',
-        value: 22.3,
-        unit: '°C',
-        source: 'Open-Meteo (api.open-meteo.com)',
-        source_url: 'https://api.open-meteo.com/v1/forecast?latitude=35.8714&longitude=128.6014&current=temperature_2m,relative_humidity_2m,weather_code&timezone=Asia%2FSeoul',
-        source_time: '2026-09-29T10:00:00+09:00'
-      },
-      {
-        date: '2026-09-30',
-        value: 22.4,
-        unit: '°C',
-        source: 'Open-Meteo (api.open-meteo.com)',
-        source_url: 'https://api.open-meteo.com/v1/forecast?latitude=35.8714&longitude=128.6014&current=temperature_2m,relative_humidity_2m,weather_code&timezone=Asia%2FSeoul',
-        source_time: '2026-09-30T10:00:00+09:00'
+        source_time: '2026-10-08T01:15:00+09:00'
       }
     ],
     'grace-cc': [
       {
-        date: '2026-09-27',
-        value: 25.1,
+        date: '2026-10-07',
+        value: 12.9,
         unit: '°C',
         source: 'Open-Meteo (api.open-meteo.com)',
-        source_url: 'https://api.open-meteo.com/v1/forecast?latitude=35.661&longitude=128.6439&current=temperature_2m,relative_humidity_2m,weather_code&timezone=Asia%2FSeoul',
-        source_time: '2026-09-27T13:15:00+09:00'
+        source_url: 'https://api.open-meteo.com/v1/forecast?latitude=35.661&longitude=128.6439&hourly=temperature_2m&timezone=Asia%2FSeoul&past_days=1&forecast_days=1',
+        source_time: '2026-10-07T01:00:00+09:00'
       },
       {
-        date: '2026-09-28',
-        value: 22.5,
+        date: '2026-10-08',
+        value: 14.4,
         unit: '°C',
         source: 'Open-Meteo (api.open-meteo.com)',
         source_url: 'https://api.open-meteo.com/v1/forecast?latitude=35.661&longitude=128.6439&current=temperature_2m,relative_humidity_2m,weather_code&timezone=Asia%2FSeoul',
-        source_time: '2026-09-28T10:00:00+09:00'
-      },
-      {
-        date: '2026-09-29',
-        value: 22.8,
-        unit: '°C',
-        source: 'Open-Meteo (api.open-meteo.com)',
-        source_url: 'https://api.open-meteo.com/v1/forecast?latitude=35.661&longitude=128.6439&current=temperature_2m,relative_humidity_2m,weather_code&timezone=Asia%2FSeoul',
-        source_time: '2026-09-29T10:00:00+09:00'
-      },
-      {
-        date: '2026-09-30',
-        value: 22.5,
-        unit: '°C',
-        source: 'Open-Meteo (api.open-meteo.com)',
-        source_url: 'https://api.open-meteo.com/v1/forecast?latitude=35.661&longitude=128.6439&current=temperature_2m,relative_humidity_2m,weather_code&timezone=Asia%2FSeoul',
-        source_time: '2026-09-30T10:00:00+09:00'
+        source_time: '2026-10-08T01:15:00+09:00'
       }
     ]
   };
@@ -1461,6 +1524,7 @@ window.TIB.onReveal = function(fn){
     document.getElementById('dayTitleTimeOut').textContent = '';
     document.getElementById('dayCompareMerged').hidden = true;
     document.getElementById('dayComparePair').hidden = false;
+    document.querySelector('#dayCompareView .card').classList.remove('is-error');
   }
   function render(region){
     var seq = ++renderSeq;
@@ -1485,7 +1549,8 @@ window.TIB.onReveal = function(fn){
 
     // 어제·오늘(KST) 기록이 둘 다 있어야 한다. 임베드 값이 옛 날짜뿐이어도 정상처럼 보이지 않게 날짜로 거른다.
     var yDate = kstDate(-1), tDate = kstDate(0);
-    var sorted = records.filter(function(r){ return r.date === yDate || r.date === tDate; })
+    // 값이 비어 있거나 숫자가 아닌 기록도 '없는 기록'으로 본다(화면에 쓰기 전에 걸러야 계산·표시에서 예외가 나지 않는다).
+    var sorted = records.filter(function(r){ return (r.date === yDate || r.date === tDate) && typeof r.value === 'number' && isFinite(r.value); })
       .sort(function(a, b){ return a.date.localeCompare(b.date); });
     var missing = [yDate, tDate].filter(function(d){ return !sorted.some(function(r){ return r.date === d; }); });
 
@@ -1502,11 +1567,11 @@ window.TIB.onReveal = function(fn){
       window.TIB.typeSegments(titleTimeOut, [{ text: '- 어제 ' + formatKoreanTime(earlier.source_time) + ' · 오늘 ' + formatKoreanTime(later.source_time) }]);
     } else {
       dot.className = 'dot err';
+      document.querySelector('#dayCompareView .card').classList.add('is-error'); // 오른쪽 날씨 칸도 기온차처럼 '—'
       window.TIB.typeSegments(deltaOut, [{ text: '—' }]);
       pairEl.hidden = true;
-      renderBubble(mergedEl,
-        '어제·오늘 기온이 모두 있어야 전일 대비를 구할 수 있는데, ' + missing.join(', ') + ' 기록이 없습니다.',
-        '해당 날짜의 기록을 받아 오면(fetch_weather.py) 채워집니다.', { typing: true });
+      var msg = window.TIB.FAILURE_MESSAGES.schema_error; // 어제·오늘 기록(값)이 없으면 값을 해석할 수 없으므로 공용 문구를 그대로 쓴다
+      renderBubble(mergedEl, msg.explain, '', { typing: true });
       window.TIB.typeSegments(titleTimeOut, [{ text: sorted.length === 1 ? '- ' + formatKoreanTime(sorted[0].source_time) : '' }]);
     }
   }
@@ -1521,10 +1586,11 @@ window.TIB.onReveal = function(fn){
 // ============================================================================
 (function(){
   var TAB_IMG = {
-    seoul: '../assets/tab/seoul.png',
-    gumi: '../assets/tab/gumi.png',
-    daegu: '../assets/tab/daegu.png',
-    'grace-cc': '../assets/tab/grace-cc.png',
+    // 원본(assets/tab/*.png, 1536×1024 약 2MB)을 화면에 보이는 크기에 맞춰 폭 480px 무손실 WebP로 줄인 복사본(assets/optimized/tab/)을 쓴다.
+    seoul: '../assets/optimized/tab/seoul.webp',
+    gumi: '../assets/optimized/tab/gumi.webp',
+    daegu: '../assets/optimized/tab/daegu.webp',
+    'grace-cc': '../assets/optimized/tab/grace-cc.webp',
   };
   var REGIONS = window.TIB.REGIONS;
   var ovTabs = document.getElementById('ovTabs');
@@ -1551,6 +1617,7 @@ window.TIB.onReveal = function(fn){
     saveLastRegion(region.id);
     document.body.classList.remove('bg-revealed'); // 값들을 다시 비워 두고, 배경 전환이 끝나면 한꺼번에 채워 보여준다
     window.TIB.typeSegments(boardTitle, [{ text: region.name + ' 현재 기온' }]); // 제목도 바로 옆 시각과 같은 한 줄이라 같이 비웠다 타이핑한다
+    document.dispatchEvent(new CustomEvent('tib:regionChange'));
     window.TIB.loadCurrent(region);
     window.TIB.loadTrend(region);
     window.TIB.renderDailyRecords(region);
@@ -1568,10 +1635,10 @@ window.TIB.onReveal = function(fn){
     tab.setAttribute('role', 'tab');
     tab.setAttribute('aria-selected', i === initialIndex ? 'true' : 'false');
     tab.setAttribute('aria-label', region.name);
-    tab.title = region.name;
     var img = document.createElement('img');
     img.src = TAB_IMG[region.id];
     img.alt = region.name;
+    img.decoding = 'async';
     tab.appendChild(img);
     tab.addEventListener('click', function(){ selectRegion(i); });
     ovTabs.appendChild(tab);
@@ -1786,8 +1853,7 @@ window.TIB.onReveal = function(fn){
   var hint = document.getElementById('adapterHint');
   var reduceMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   clearTimeout(card._foldTimer);
-  toggle.addEventListener('click', function(){
-    var opening = card.hidden;             // 지금 접혀 있으면 펼친다
+  function setOpen(opening){
     clearTimeout(card._foldTimer);
     if (opening) {
       card.classList.add('folded');        // 접힌 모양으로 미리 맞춰 두고
@@ -1804,7 +1870,10 @@ window.TIB.onReveal = function(fn){
     }
     toggle.setAttribute('aria-expanded', opening ? 'true' : 'false');
     hint.textContent = opening ? '접기' : '눌러서 자세히 보기';
-  });
+  }
+  toggle.addEventListener('click', function(){ setOpen(card.hidden); }); // 지금 접혀 있으면 펼치고, 펼쳐져 있으면 접는다
+  // 지역 탭을 옮기면 펼쳐 둔 안내 메시지 창은 접는다(새로고침하면 처음부터 접힌 상태다).
+  document.addEventListener('tib:regionChange', function(){ if (!card.hidden) setOpen(false); });
 
   render();
 })();
@@ -1828,9 +1897,10 @@ window.TIB.onReveal = function(fn){
   if (!canvas || !canvas.getContext) return;
   var ctx = canvas.getContext('2d');
   var reduceMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-  var SKY_IMG = { sun: '../assets/weather/background/sun.png', rain: '../assets/weather/background/rain.png', fog: '../assets/weather/background/fog.png', night: '../assets/weather/background/night.png',
-    snow: '../assets/weather/background/snow.png', wind: '../assets/weather/background/wind.png',
-    cloud: '../assets/weather/background/cloud.png' };
+  // 배경 그림은 원본 PNG(assets/weather/background/)와 픽셀이 똑같은 무손실 WebP 복사본(assets/optimized/background/)을 쓴다(용량만 약 20% 작다).
+  var SKY_IMG = { sun: '../assets/optimized/background/sun.webp', rain: '../assets/optimized/background/rain.webp', fog: '../assets/optimized/background/fog.webp', night: '../assets/optimized/background/night.webp',
+    snow: '../assets/optimized/background/snow.webp', wind: '../assets/optimized/background/wind.webp',
+    cloud: '../assets/optimized/background/cloud.webp' };
   var SUN_IMG_W = 1672, SUN_IMG_H = 941, SUN_IMG_X = 460, SUN_IMG_Y = 145; // sun.png 안에서 해의 위치(픽셀)
   var NIGHT_IMG_W = 1671, NIGHT_IMG_H = 941, NIGHT_MOON_X = 510, NIGHT_MOON_Y = 187; // night.png 안에서 달의 위치(픽셀)
   var dpr = 1, w = 0, h = 0, t = 0;
@@ -2377,6 +2447,230 @@ window.TIB.onReveal = function(fn){
     var d = e.detail || {};
     onWeather(pickEffect(d.label, d.isDay));
   });
+  // 지역 탭 배경도 같은 규칙·같은 그림을 쓰도록 공개한다
+  window.TIB.pickBackground = pickEffect;
+  window.TIB.SKY_IMG = SKY_IMG;
+})();
+</script>
+
+<script>
+// ============================================================================
+// 지역 탭 날씨 배경 (장식용, 채점과 무관): 각 지역 탭의 네모 칸 뒤에 그 지역의 현재 날씨 배경 그림을 깐다.
+//  - 어떤 그림을 쓸지는 화면 배경과 같은 규칙(window.TIB.pickBackground)과 같은 그림(window.TIB.SKY_IMG)을 쓴다.
+//  - 선택된 지역의 탭은 화면 배경과 항상 같아야 하므로, 실시간 조회가 알려주는 날씨(tib:weather)를 그대로 따른다.
+//  - 나머지 지역 탭은 네 지역을 한 번에 묻는 Open-Meteo 요청 1건으로 채우고, 1시간마다 다시 받는다.
+//    조회에 실패하면 그 탭은 이전 상태 그대로 둔다(처음이면 투명한 흰색 칸).
+// ============================================================================
+(function(){
+  var REGIONS = window.TIB.REGIONS;
+  var ovTabs = document.getElementById('ovTabs');
+  // 그림 안에서 해(맑음)·달(밤)이 왼쪽에 있어서, 세로로 긴 탭에서도 잘리지 않도록 가로 기준점을 그쪽으로 옮긴다
+  var POS = { sun: '13% 50%', night: '18% 50%' };
+  var HOUR_MS = 60 * 60 * 1000;
+
+  function tabOf(i){ return ovTabs.children[i]; }
+  function selectedIndex(){
+    for (var i = 0; i < ovTabs.children.length; i++) if (ovTabs.children[i].getAttribute('aria-selected') === 'true') return i;
+    return -1;
+  }
+  function paint(tab, kind){
+    // 탭 칸은 작아서(약 290px 이하) 화면 배경 그림 대신 같은 그림을 폭 640px로 줄인 복사본(assets/optimized/background-tab/)을 쓴다.
+    var url = kind && window.TIB.SKY_IMG[kind] && '../assets/optimized/background-tab/' + kind + '.webp';
+    if (!tab) return;
+    if (!url) { tab.classList.remove('has-sky'); return; }
+    tab.style.setProperty('--tab-bg', 'url("' + url + '")');
+    tab.style.setProperty('--tab-pos', POS[kind] || '50% 50%');
+    tab.classList.add('has-sky');
+  }
+
+  // 선택된 지역: 화면 배경과 같은 신호를 그대로 따른다(날씨를 모르면 배경도 기본으로 돌아가므로 탭도 기본 칸)
+  document.addEventListener('tib:weather', function(e){
+    var d = e.detail || {};
+    paint(tabOf(selectedIndex()), window.TIB.pickBackground(d.label, d.isDay));
+  });
+
+  // 나머지 지역: 네 지역을 한 번에 조회
+  function url(){
+    return 'https://api.open-meteo.com/v1/forecast?latitude=' + REGIONS.map(function(r){ return r.lat; }).join(',') +
+      '&longitude=' + REGIONS.map(function(r){ return r.lon; }).join(',') +
+      '&current=weather_code,wind_speed_10m,is_day&timezone=Asia%2FSeoul';
+  }
+  function refresh(){
+    fetch(url(), { cache: 'no-store' })
+      .then(function(res){ if (!res.ok) throw new Error('HTTP ' + res.status); return res.json(); })
+      .then(function(list){
+        if (!Array.isArray(list) || list.length !== REGIONS.length) throw new Error('unexpected shape');
+        var sel = selectedIndex();
+        list.forEach(function(item, i){
+          if (i === sel) return; // 선택된 탭은 위의 실시간 신호가 맡는다
+          var c = item && item.current;
+          if (!c || typeof c.weather_code !== 'number') return; // 값이 없으면 그 탭은 그대로 둔다
+          var icon = window.TIB.weatherIcon(c.weather_code, c.wind_speed_10m);
+          paint(tabOf(i), window.TIB.pickBackground(icon.label, c.is_day));
+        });
+      })
+      .catch(function(){ /* 조회 실패: 모든 탭을 그대로 둔다 */ });
+  }
+  refresh();
+  setInterval(refresh, HOUR_MS);
+})();
+</script>
+
+<script>
+// 너비 900px 이하(출처·기준 시간대가 화면 맨 아래에 고정되는 배치): 8시간 날씨 예보 그래프가 그 줄과 겹치지 않도록,
+// 한 화면에 들어올 만큼만 그래프 높이를 줄인다(--chart-max-h). 들어올 자리가 모자라면 최소 높이만 남기고 나머지는 스크롤한다.
+(function(){
+  var mq = window.matchMedia('(max-width:900px)');
+  var wrap = document.getElementById('trendChartWrap');
+  var card = wrap.closest('.card');
+  var bar = document.querySelector('.source-fields');
+  var GAP = 14, MIN_H = 96, last = '';
+  function fit(){
+    var v = '';
+    if (mq.matches && card.offsetParent !== null) {
+      var cs = getComputedStyle(card);
+      var chrome = parseFloat(cs.paddingTop) + parseFloat(cs.paddingBottom) + parseFloat(cs.borderTopWidth) + parseFloat(cs.borderBottomWidth);
+      var top = card.getBoundingClientRect().top + (window.pageYOffset || 0);
+      var avail = window.innerHeight - top - bar.offsetHeight - GAP - chrome;
+      v = Math.max(MIN_H, Math.floor(avail)) + 'px';
+    }
+    if (v !== last) { last = v; if (v) wrap.style.setProperty('--chart-max-h', v); else wrap.style.removeProperty('--chart-max-h'); }
+  }
+  window.addEventListener('resize', fit);
+  if (mq.addEventListener) mq.addEventListener('change', fit);
+  if (window.ResizeObserver) {
+    var ro = new ResizeObserver(fit);
+    ['.head-row', '#boardView', '#dayCompareView', '#ovTabs', '.source-fields'].forEach(function(q){ var e = document.querySelector(q); if (e) ro.observe(e); });
+  }
+  if (document.fonts && document.fonts.ready) document.fonts.ready.then(fit);
+  fit();
+})();
+</script>
+
+<script>
+// 서울 현재 기온 창과 전일 대비 창은 어떤 해상도에서도 크기가 같아야 한다. 너비는 항상 같지만, 세로로 쌓이거나 글이 줄바꿈되는
+// 좁은 화면에서는 두 창의 내용 높이가 달라서, 둘 중 더 큰 높이로 맞춘다(넓은 화면에서는 CSS의 고정 높이와 같아 달라지지 않는다).
+// 가로로 나란히 놓일 때는 제목 줄 높이(전일 대비 제목은 시각 문구 때문에 두 줄이 될 수 있다)가 다르면 한쪽 창이 더 늘어나므로 제목 줄 높이도 같이 맞춘다.
+(function(){
+  var c1 = document.querySelector('#boardView > .card');
+  var c2 = document.querySelector('#dayCompareView > .card');
+  var t1 = document.querySelector('#boardView > .title-row');
+  var t2 = document.querySelector('#dayCompareView > .title-row');
+  var raf = 0, lastW = -1, floorT = 0, floorH = 0;
+  function run(){
+    raf = 0;
+    if (window.innerWidth !== lastW) { lastW = window.innerWidth; floorT = floorH = 0; }   // 화면 너비가 바뀌면 다시 잰다
+    t1.style.minHeight = t2.style.minHeight = c1.style.minHeight = c2.style.minHeight = '';   // 원래(내용) 높이로 되돌려 잰다
+    // 같은 너비에서는 한 번 커진 높이를 줄이지 않는다: 정상 → 오류로 내용이 짧아져도 창 크기는 그대로 둔다.
+    floorT = Math.max(floorT, t1.offsetHeight, t2.offsetHeight);
+    t1.style.minHeight = t2.style.minHeight = floorT + 'px';
+    floorH = Math.max(floorH, c1.offsetHeight, c2.offsetHeight);
+    c1.style.minHeight = c2.style.minHeight = floorH + 'px';
+  }
+  function schedule(){ if (!raf) raf = requestAnimationFrame(run); }
+  window.addEventListener('resize', schedule);
+  if (window.ResizeObserver) { var ro = new ResizeObserver(schedule); ro.observe(c1); ro.observe(c2); ro.observe(t1); ro.observe(t2); }
+  if (document.fonts && document.fonts.ready) document.fonts.ready.then(schedule);
+  schedule();
+})();
+</script>
+
+<script>
+// 오류 말풍선은 어떤 화면 너비에서도 한 줄이어야 한다(실시간 기온·전일 대비·8시간 예보). 평소 글씨 크기로 한 줄이면 그대로 두고,
+// 좁은 창에서 두 줄로 넘어가면 한 줄에 들어갈 때까지 글씨를 0.5px씩 줄인다(최소 9px). 창이 넓어지면 다시 원래 크기로 돌아간다.
+(function(){
+  var MIN_PX = 9, STEP = 0.5;
+  var raf = 0;
+  function oneLine(el){
+    var text = el.querySelector('.bubble-text'), icon = el.querySelector('.bubble-icon');
+    if (!text) return true;
+    var range = document.createRange(); range.selectNodeContents(text);
+    var rects = Array.prototype.slice.call(range.getClientRects()).filter(function(r){ return r.width > 0; });
+    if (!rects.length) return true;
+    var tops = {}; rects.forEach(function(r){ tops[Math.round(r.top / 4)] = 1; });
+    if (Object.keys(tops).length > 1) return false;                                   // 글이 두 줄 이상
+    if (icon) { var ib = icon.getBoundingClientRect(); if (rects[0].top - ib.top > ib.height * 0.8) return false; } // 말풍선 아이콘만 윗줄에 남는 경우
+    return true;
+  }
+  function fit(el){
+    if (!el || el.hidden || !el.offsetParent && getComputedStyle(el).visibility !== 'hidden') return;
+    el.style.fontSize = '';
+    var fs = parseFloat(getComputedStyle(el).fontSize);
+    while (!oneLine(el) && fs > MIN_PX) { fs -= STEP; el.style.fontSize = fs + 'px'; }
+  }
+  function all(){
+    raf = 0;
+    ['#quizErrOut', '#dayCompareMerged', '#trendChartWrap .tip-line'].forEach(function(q){ fit(document.querySelector(q)); });
+  }
+  function schedule(){ if (!raf) raf = requestAnimationFrame(all); }
+  window.addEventListener('resize', schedule);
+  if (document.fonts && document.fonts.ready) document.fonts.ready.then(schedule);
+  var mo = new MutationObserver(schedule);
+  ['#quizBox', '#dayCompareView', '#trendChartWrap'].forEach(function(q){
+    var e = document.querySelector(q); if (e) mo.observe(e, { childList: true, subtree: true, attributes: true, attributeFilter: ['hidden'] });
+  });
+  if (window.ResizeObserver) {
+    var ro = new ResizeObserver(schedule);
+    ['#quizBox', '#dayCompareView', '#trendChartWrap'].forEach(function(q){ var e = document.querySelector(q); if (e) ro.observe(e); });
+  }
+  schedule();
+})();
+</script>
+
+<script>
+// 날씨 연결 안내 메시지 창의 하단을 지역 탭·8시간 날씨 예보 카드의 하단에 맞춘다(넓은 화면 배치에서만).
+(function(){
+  var panel = document.querySelector('.adapter-panel');
+  var fc = document.querySelector('#boardExtra > .card');
+  var wide = window.matchMedia('(min-width:1240px) and (min-height:620px)');
+  function align(){
+    panel.style.height = '';
+    panel.style.alignSelf = '';
+    if (!wide.matches || !fc || fc.offsetParent === null) return;
+    var h = Math.round(fc.getBoundingClientRect().bottom - panel.getBoundingClientRect().top);
+    if (h <= 0) return;
+    panel.style.alignSelf = 'start';
+    panel.style.height = h + 'px';
+  }
+  window.addEventListener('resize', align);
+  if (window.ResizeObserver) {
+    var ro = new ResizeObserver(align);
+    // 카드 크기는 그대로여도 위의 코멘트·제목 높이가 바뀌면 카드 위치가 움직이므로, 본문 쪽 요소를 모두 지켜본다.
+    ['#boardExtra > .card', '.main-col', '.head-row', '#boardView', '#dayCompareView', 'body'].forEach(function(sel){
+      var el = document.querySelector(sel); if (el) ro.observe(el);
+    });
+  }
+  new MutationObserver(align).observe(document.getElementById('boardExtra'), { attributes: true, attributeFilter: ['hidden'] });
+  // 예보 카드는 데이터가 들어온 뒤 자리 잡는 동안 크기 변화 알림 없이 움직이므로, 넓은 화면에서는 가볍게 주기적으로도 맞춘다.
+  setInterval(function(){ if (wide.matches) align(); }, 250);
+  if (document.fonts && document.fonts.ready) document.fonts.ready.then(align);
+  align();
+})();
+</script>
+
+<script>
+// 날씨 연결 안내 메시지 창: 내용 아래 남는 빈 공간의 가운데에 그림을 놓는다.
+// 그림 크기는 남는 공간에 비례해 바뀐다. 남는 높이가 넉넉하면(120px 이상) 일반 그림을 남는 높이의 62%(최대 170px),
+// 그보다 좁아도 바닥까지 다 차지 않았으면(30px 이상) 작은 그림을 남는 높이에서 12px를 뺀 높이(최대 56px)로 놓고, 30px 아래면 숨긴다.
+(function(){
+  var box = document.getElementById('adapterSpace');
+  var big = document.getElementById('spaceGeneral');
+  var small = document.getElementById('spaceSmall');
+  function layout(){
+    var h = box.clientHeight, w = box.clientWidth;
+    big.hidden = small.hidden = true;
+    if (h >= 120) {
+      big.style.height = Math.min(170, Math.round(h * 0.62)) + 'px';
+      big.hidden = false;
+    } else if (h >= 30) {
+      small.style.height = Math.min(56, h - 12) + 'px';
+      small.hidden = false;
+      if (small.getBoundingClientRect().width > w - 16) small.hidden = true; // 너비가 모자라면 숨김
+    }
+  }
+  if (window.ResizeObserver) new ResizeObserver(layout).observe(box);
+  window.addEventListener('resize', layout);
+  layout();
 })();
 </script>
 
@@ -2500,7 +2794,7 @@ window.TIB.onReveal = function(fn){
       failed = true;
       clearTimeout(autoTimer);
       rowEl.hidden = true;
-      window.TIB.renderBubble(errEl, e.detail.explain, e.detail.nextAction, { typing: true });
+      window.TIB.renderBubble(errEl, e.detail.explain, '', { typing: true });
     } else {
       failed = false;
       errEl.hidden = true;
