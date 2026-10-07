@@ -1,0 +1,39 @@
+{
+  "raw_response": {
+    "latitude": 37.55,
+    "longitude": 127.0,
+    "utc_offset_seconds": 32400,
+    "timezone": "Asia/Seoul",
+    "timezone_abbreviation": "GMT+9",
+    "elevation": 34.0,
+    "hourly_units": {
+      "time": "iso8601",
+      "temperature_2m": "°C"
+    },
+    "hourly": {
+      "time": [
+        "2026-10-07T01:00"
+      ],
+      "temperature_2m": [
+        14.4
+      ]
+    }
+  },
+  "stored": {
+    "value": 14.4,
+    "unit": "°C",
+    "source": "Open-Meteo (api.open-meteo.com)",
+    "source_url": "https://api.open-meteo.com/v1/forecast?latitude=37.5665&longitude=126.978&hourly=temperature_2m&timezone=Asia%2FSeoul&past_days=1&forecast_days=1",
+    "source_time": "2026-10-07T01:00:00+09:00",
+    "query_time_utc": "2026-10-07T16:27:44Z",
+    "reference_timezone": "Asia/Seoul"
+  },
+  "daily_meta": {
+    "date_key": "2026-10-07",
+    "first_seen_query_time_utc": "2026-10-07T16:27:44Z",
+    "last_seen_query_time_utc": "2026-10-07T16:27:44Z",
+    "revision_count": 1,
+    "test_backfill": true,
+    "backfill_note": "테스트용 소급 값: 10-07에 실시간으로 조회한 기록이 아니라 10-08에 Open-Meteo 시간별 과거 값(past_days=1)에서 가져왔다. 실제 날짜 2건 증거(C22~C24)로 쓰지 않는다."
+  }
+}
