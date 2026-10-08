@@ -1427,15 +1427,17 @@ window.TIB.onReveal = function(fn){
         unit: '°C',
         source: 'Open-Meteo (api.open-meteo.com)',
         source_url: 'https://api.open-meteo.com/v1/forecast?latitude=37.5665&longitude=126.978&hourly=temperature_2m&timezone=Asia%2FSeoul&past_days=1&forecast_days=1',
-        source_time: '2026-10-07T01:00:00+09:00'
+        source_time: '2026-10-07T01:00:00+09:00',
+        display_time: '2026-10-07T01:00'
       },
       {
         date: '2026-10-08',
-        value: 13.8,
+        value: 15.5,
         unit: '°C',
         source: 'Open-Meteo (api.open-meteo.com)',
         source_url: 'https://api.open-meteo.com/v1/forecast?latitude=37.5665&longitude=126.978&current=temperature_2m,relative_humidity_2m,weather_code&timezone=Asia%2FSeoul',
-        source_time: '2026-10-08T01:15:00+09:00'
+        source_time: '2026-10-08T09:45:00+09:00',
+        display_time: '2026-10-08T09:45'
       }
     ],
     gumi: [
@@ -1445,15 +1447,17 @@ window.TIB.onReveal = function(fn){
         unit: '°C',
         source: 'Open-Meteo (api.open-meteo.com)',
         source_url: 'https://api.open-meteo.com/v1/forecast?latitude=36.1195&longitude=128.3446&hourly=temperature_2m&timezone=Asia%2FSeoul&past_days=1&forecast_days=1',
-        source_time: '2026-10-07T01:00:00+09:00'
+        source_time: '2026-10-07T01:00:00+09:00',
+        display_time: '2026-10-07T01:00'
       },
       {
         date: '2026-10-08',
-        value: 13.6,
+        value: 16.7,
         unit: '°C',
         source: 'Open-Meteo (api.open-meteo.com)',
         source_url: 'https://api.open-meteo.com/v1/forecast?latitude=36.1195&longitude=128.3446&current=temperature_2m,relative_humidity_2m,weather_code&timezone=Asia%2FSeoul',
-        source_time: '2026-10-08T01:15:00+09:00'
+        source_time: '2026-10-08T09:45:00+09:00',
+        display_time: '2026-10-08T09:45'
       }
     ],
     daegu: [
@@ -1463,15 +1467,17 @@ window.TIB.onReveal = function(fn){
         unit: '°C',
         source: 'Open-Meteo (api.open-meteo.com)',
         source_url: 'https://api.open-meteo.com/v1/forecast?latitude=35.8714&longitude=128.6014&hourly=temperature_2m&timezone=Asia%2FSeoul&past_days=1&forecast_days=1',
-        source_time: '2026-10-07T01:00:00+09:00'
+        source_time: '2026-10-07T01:00:00+09:00',
+        display_time: '2026-10-07T01:00'
       },
       {
         date: '2026-10-08',
-        value: 14.3,
+        value: 18.5,
         unit: '°C',
         source: 'Open-Meteo (api.open-meteo.com)',
         source_url: 'https://api.open-meteo.com/v1/forecast?latitude=35.8714&longitude=128.6014&current=temperature_2m,relative_humidity_2m,weather_code&timezone=Asia%2FSeoul',
-        source_time: '2026-10-08T01:15:00+09:00'
+        source_time: '2026-10-08T10:00:00+09:00',
+        display_time: '2026-10-08T10:00'
       }
     ],
     'grace-cc': [
@@ -1481,15 +1487,17 @@ window.TIB.onReveal = function(fn){
         unit: '°C',
         source: 'Open-Meteo (api.open-meteo.com)',
         source_url: 'https://api.open-meteo.com/v1/forecast?latitude=35.661&longitude=128.6439&hourly=temperature_2m&timezone=Asia%2FSeoul&past_days=1&forecast_days=1',
-        source_time: '2026-10-07T01:00:00+09:00'
+        source_time: '2026-10-07T01:00:00+09:00',
+        display_time: '2026-10-07T01:00'
       },
       {
         date: '2026-10-08',
-        value: 14.4,
+        value: 19.2,
         unit: '°C',
         source: 'Open-Meteo (api.open-meteo.com)',
         source_url: 'https://api.open-meteo.com/v1/forecast?latitude=35.661&longitude=128.6439&current=temperature_2m,relative_humidity_2m,weather_code&timezone=Asia%2FSeoul',
-        source_time: '2026-10-08T01:15:00+09:00'
+        source_time: '2026-10-08T10:00:00+09:00',
+        display_time: '2026-10-08T10:00'
       }
     ]
   };
@@ -1509,8 +1517,10 @@ window.TIB.onReveal = function(fn){
       return fetch('../data/weather/' + region.id + '/' + d + '.json', { cache: 'no-store' })
         .then(function(res){ if (!res.ok) throw new Error('HTTP ' + res.status); return res.json(); })
         .then(function(j){
-          var s = j.stored;
-          return { date: d, value: s.value, unit: s.unit, source: s.source, source_url: s.source_url, source_time: s.source_time };
+          var s = j.stored, raw = j.raw_response || {};
+          // 제목 옆 시각은 파일의 원자료 시각(current.time, 소급 기록은 hourly.time[0])을 쓴다. 없으면 stored.source_time.
+          var rawTime = (raw.current && raw.current.time) || (raw.hourly && raw.hourly.time && raw.hourly.time[0]) || s.source_time;
+          return { date: d, value: s.value, unit: s.unit, source: s.source, source_url: s.source_url, source_time: s.source_time, display_time: rawTime };
         });
     })).catch(function(){ return null; });
   }
@@ -1564,7 +1574,7 @@ window.TIB.onReveal = function(fn){
       window.TIB.typeSegments(todayOut, [{ text: later.value.toFixed(1) + ' ' }, { text: later.unit, cls: 'unit' }]);
       pairEl.hidden = false;
       mergedEl.hidden = true;
-      window.TIB.typeSegments(titleTimeOut, [{ text: '- 어제 ' + formatKoreanTime(earlier.source_time) + ' · 오늘 ' + formatKoreanTime(later.source_time) }]);
+      window.TIB.typeSegments(titleTimeOut, [{ text: '- 어제 ' + formatKoreanTime(earlier.display_time || earlier.source_time) + ' · 오늘 ' + formatKoreanTime(later.display_time || later.source_time) }]);
     } else {
       dot.className = 'dot err';
       document.querySelector('#dayCompareView .card').classList.add('is-error'); // 오른쪽 날씨 칸도 기온차처럼 '—'
@@ -1572,7 +1582,7 @@ window.TIB.onReveal = function(fn){
       pairEl.hidden = true;
       var msg = window.TIB.FAILURE_MESSAGES.schema_error; // 어제·오늘 기록(값)이 없으면 값을 해석할 수 없으므로 공용 문구를 그대로 쓴다
       renderBubble(mergedEl, msg.explain, '', { typing: true });
-      window.TIB.typeSegments(titleTimeOut, [{ text: sorted.length === 1 ? '- ' + formatKoreanTime(sorted[0].source_time) : '' }]);
+      window.TIB.typeSegments(titleTimeOut, [{ text: sorted.length === 1 ? '- ' + formatKoreanTime(sorted[0].display_time || sorted[0].source_time) : '' }]);
     }
   }
 
