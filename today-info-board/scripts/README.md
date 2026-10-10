@@ -2,13 +2,13 @@
 
 | 파일 | 역할 | 관련 기준 |
 |---|---|---|
-| `fetch_weather.py` | 실제 운영 코드. Open-Meteo에서 지정한 지역의 기온을 조회해 `data/weather/<지역id>/<날짜>.json`에 upsert 저장(같은 날 갱신, 다른 날 새 파일). 지역ID를 인자로 받음(`python3 fetch_weather.py gumi`), 생략 시 `seoul`. 지원 지역: `seoul`, `gumi`, `daegu`, `grace-cc`(REGIONS 상수, `web/index.html`의 REGIONS와 좌표 동일하게 유지). | C03~C10, C20, C21 |
+| `fetch_weather.py` | 실제 운영 코드. Open-Meteo에서 지정한 지역의 기온을 조회해 `data/weather/<지역id>/<날짜>.json`에 upsert 저장(같은 날 갱신, 다른 날 새 파일, 저장 성공 뒤 어제보다 오래된 날짜 파일은 자동 삭제). 지역ID를 인자로 받음(`python3 fetch_weather.py gumi`), 생략 시 `seoul`. 지원 지역: `seoul`, `gumi`, `daegu`, `grace-cc`(REGIONS 상수, `web/index.html`의 REGIONS와 좌표 동일하게 유지). | C03~C10, C20, C21 |
 | `test_daily_dedup.py` | `fetch_weather`의 저장 로직을 임시 폴더에서 합성 시계(같은 날 3회+다음 날 1회)로 시험(지역과 무관, 로직만 검증). | C20, C21 |
 | `test_failure_replays.mjs` | `web/index.html` 실시간 카드의 실패 처리(`showError`) 분기를 합성 시나리오로 재생. | C26 (실시간 카드) |
 | `replay_t04_fixtures.mjs` | 사용자가 전달한 실제 T04 패키지(`assets/studio-task-assets/.../adapter-reset.example.js` + fixtures)를 그대로 재생. | C12~C21, C26 |
 | `verify_asset_manifest.mjs` | 그 패키지 파일들의 SHA-256·바이트 수가 `asset-manifest.json`과 일치하는지 재계산 대조. | 패키지 무결성 |
 | `verify_fixture_sync.mjs` | `web/index.html`에 옮겨 넣은 adapter·fixture 사본이 원본 패키지와 데이터·동작 모두 일치하는지 대조. | 합성 콘솔 신뢰성 |
-| `verify_daily_records_sync.mjs` | `web/index.html`의 지역별 "전일 대비" 임베드 값(`DAILY_RECORDS_BY_REGION`)이 `data/weather/<지역id>/*.json` 전부와 일치하는지, 재계산 델타가 맞는지 지역마다 대조. C22(서로 다른 실제 날짜 기록 정확히 2건)는 공식 채점 대상인 `seoul`에만 적용. | C22~C24 |
+| `verify_daily_records_sync.mjs` | `data/weather/<지역id>/*.json` 각 파일의 저장값이 원자료와 일치하는지, 최근 두 날짜로 전일 대비 재계산이 되는지 지역마다 대조(화면은 이 파일들을 직접 읽으므로 화면 쪽 복사본은 없다). C22(서로 다른 실제 날짜 기록 정확히 2건)는 공식 채점 대상인 `seoul`에만 적용. | C22~C24 |
 
 ## 지역 추가/조회
 ```
@@ -17,7 +17,7 @@ python3 scripts/fetch_weather.py gumi
 python3 scripts/fetch_weather.py daegu
 python3 scripts/fetch_weather.py grace-cc
 ```
-각 지역은 실제 날짜가 하루 지날 때마다 위 명령을 다시 실행해 두 번째 날짜 기록을 쌓아야 `verify_daily_records_sync.mjs`의 전일 대비 재계산(C24류) 대상이 된다. 새로 기록이 쌓이면 `web/index.html`의 `DAILY_RECORDS_BY_REGION`(`--- DAILY-RECORDS-SYNC-START/END ---` 구간)에도 같은 값을 손으로 추가해야 한다(자동 동기화 아님, `verify_daily_records_sync.mjs`가 어긋나면 잡아냄).
+각 지역은 실제 날짜가 하루 지날 때마다 위 명령을 다시 실행해 두 번째 날짜 기록을 쌓아야 `verify_daily_records_sync.mjs`의 전일 대비 재계산(C24류) 대상이 된다. 새 날짜 파일이 생기면 화면은 코드 수정 없이 어제·오늘 두 파일을 자동으로 읽는다. `fetch_weather.py`가 저장할 때 어제보다 오래된 날짜 파일을 지워 어제·오늘 두 개만 남긴다(C22). 조회한 지역 폴더만 정리한다.
 
 ## 한 번에 전부 확인
 ```
