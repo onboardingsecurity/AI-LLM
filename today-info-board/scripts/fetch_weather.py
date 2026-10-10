@@ -14,9 +14,10 @@ stored 블록으로 정규화해서 함께 저장한다. (T04-C10: 원자료·�
 """
 import json
 import os
+import re
 import sys
 import urllib.request
-from datetime import datetime, timezone
+from datetime import date, datetime, timedelta, timezone
 
 SOURCE_NAME = "Open-Meteo (api.open-meteo.com)"
 
@@ -113,6 +114,26 @@ def save_record(out_dir: str, record: dict) -> tuple[str, str, dict]:
     return out_path, action, merged
 
 
+DATE_FILE_RE = re.compile(r"^(\d{4}-\d{2}-\d{2})\.json$")
+
+
+def prune_old_records(out_dir: str, date_key: str) -> list[str]:
+    """저장한 날짜(date_key)와 그 전날, 두 날짜의 파일만 남기고 더 오래된 날짜 파일을 지운다.
+
+    전일 대비는 어제·오늘 두 기록만 쓰고 T04-C22도 두 건만 보존하라고 하므로 그보다 오래된 파일은 둘 필요가 없다.
+    'YYYY-MM-DD.json' 모양이 아닌 파일은 건드리지 않는다. 저장이 성공한 뒤에만 호출한다.
+    지운 파일 이름 목록을 돌려준다.
+    """
+    cutoff = (date.fromisoformat(date_key) - timedelta(days=1)).isoformat()
+    removed = []
+    for name in sorted(os.listdir(out_dir)):
+        m = DATE_FILE_RE.match(name)
+        if m and m.group(1) < cutoff:
+            os.remove(os.path.join(out_dir, name))
+            removed.append(name)
+    return removed
+
+
 def main():
     region_id = sys.argv[1] if len(sys.argv) > 1 else "seoul"
     if region_id not in REGIONS:
@@ -127,6 +148,9 @@ def main():
 
     out_dir = os.path.join(os.path.dirname(__file__), "..", "data", "weather", region_id)
     out_path, action, merged = save_record(out_dir, record)
+    removed = prune_old_records(out_dir, merged["daily_meta"]["date_key"])
+    if removed:
+        print(f"[pruned] 어제보다 오래된 기록 삭제: {', '.join(removed)}", file=sys.stderr)
 
     print(f"[{action}] {region['name']}({region_id}) {out_path} (revision_count={merged['daily_meta']['revision_count']})", file=sys.stderr)
     print(json.dumps(merged, ensure_ascii=False, indent=2))

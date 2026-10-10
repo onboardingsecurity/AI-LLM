@@ -14,7 +14,7 @@ import tempfile
 import os
 
 sys.path.insert(0, os.path.dirname(__file__))
-from fetch_weather import build_record, save_record  # noqa: E402
+from fetch_weather import build_record, prune_old_records, save_record  # noqa: E402
 
 fail_count = 0
 
@@ -85,7 +85,41 @@ with tempfile.TemporaryDirectory(prefix="t04-c20-c21-") as tmp_dir:
     check("day1 파일 값은 여전히 11.0 (day2 저장이 day1을 건드리지 않음)",
           day1_final["stored"]["value"] == 11.0, f"실제: {day1_final['stored']['value']}")
 
+    print("\n=== 어제·오늘만 남기기 (오래된 날짜 삭제) ===")
+    open(os.path.join(tmp_dir, "notes.json"), "w").write("{}")  # 날짜 형식이 아닌 파일은 지우면 안 된다
+    removed_now = prune_old_records(tmp_dir, "2099-02-02")
+    check("어제·오늘만 있을 때는 아무것도 지우지 않음", removed_now == [], f"삭제: {removed_now}")
+
+    raw_third = make_raw("2099-02-03T09:00", 13.0)
+    record_third = build_record(raw_third, "2099-02-03T00:00:00Z", "https://fixtures.invalid/synthetic")
+    save_record(tmp_dir, record_third)
+    removed = prune_old_records(tmp_dir, "2099-02-03")
+    files_after_prune = sorted(os.listdir(tmp_dir))
+    check("3번째 날짜 저장 후 가장 오래된 2099-02-01.json만 삭제", removed == ["2099-02-01.json"], f"삭제: {removed}")
+    check("어제(02-02)·오늘(02-03) 파일은 남음",
+          "2099-02-02.json" in files_after_prune and "2099-02-03.json" in files_after_prune, f"목록: {files_after_prune}")
+    check("날짜 형식이 아닌 notes.json은 건드리지 않음", "notes.json" in files_after_prune)
+
     print(f"\n같은 날 재실행 전후 행 수: 세 번 재실행 후 1건 → 다음 날짜 1번 후 2건")
-    print(f"총 실패 {fail_count}건")
+
+# 자정 경계: 일별 키는 조회 시각(UTC)이 아니라 출처 시각의 Asia/Seoul 날짜여야 한다.
+with tempfile.TemporaryDirectory(prefix="t04-midnight-") as tmp_dir:
+    print("\n=== 자정 근처 날짜 키 (UTC 날짜와 Asia/Seoul 날짜가 어긋나는 시각) ===")
+    midnight_calls = [
+        # (출처 시각 KST, 조회 시각 UTC, 기대 파일)
+        ("2099-03-01T23:50", "2099-03-01T14:50:00Z", "2099-03-01.json"),  # KST 3/1 23:50 = UTC 3/1
+        ("2099-03-02T00:05", "2099-03-01T15:05:00Z", "2099-03-02.json"),  # KST 3/2 00:05 = UTC 3/1 (UTC 날짜는 그대로 3/1)
+        ("2099-03-02T08:30", "2099-03-01T23:30:00Z", "2099-03-02.json"),  # 같은 KST 3/2, UTC는 3/1 → 새 파일이 아니라 3/2에 합쳐져야 함
+    ]
+    for time_str, query_time, expected_file in midnight_calls:
+        record = build_record(make_raw(time_str, 10.0), query_time, "https://fixtures.invalid/synthetic")
+        out_path, _, _ = save_record(tmp_dir, record)
+        check(f"출처 {time_str}(KST) / 조회 {query_time}(UTC) → {expected_file}",
+              os.path.basename(out_path) == expected_file, f"실제: {os.path.basename(out_path)}")
+    files_midnight = sorted(os.listdir(tmp_dir))
+    check("자정 경계 3회 후 파일 정확히 2개(KST 3/1, 3/2)", files_midnight == ["2099-03-01.json", "2099-03-02.json"],
+          f"목록: {files_midnight}")
+
+print(f"총 실패 {fail_count}건")
 
 sys.exit(0 if fail_count == 0 else 1)
