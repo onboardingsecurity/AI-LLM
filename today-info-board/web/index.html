@@ -1115,12 +1115,11 @@ window.TIB.onReveal = function(fn){
     el.tz.textContent = isMobileWidth() ? raw.timezone : raw.timezone + ' (UTC' + offsetStr + ')';
     // 조회 시각은 출처와 같은 기준 시간대(응답의 utc_offset_seconds)로 바꿔 표시한다.
     const queriedLocal = new Date(queriedAtMs + raw.utc_offset_seconds * 1000).toISOString().slice(0, 16) + ':00' + offsetStr;
-    // 기준 = 출처 시각(출처가 알려준 값의 기준 시각), 현재 = 조회 시각(API를 조회한 시각). 전일 대비 제목의 '어제 · 오늘'과 같은 모양이다.
-    // 두 시각이 같은 날이면 '현재' 쪽 날짜(월·일)는 생략해 한 줄에 들어가게 한다(예: 기준 10월 8일 2시 30분 · 현재 2시 42분).
-    const sameDay = sourceTime.slice(0, 10) === queriedLocal.slice(0, 10);
-    const nowText = sameDay ? formatKoreanTime(queriedLocal).replace(/^\d+월 \d+일 /, '') : formatKoreanTime(queriedLocal);
-    window.TIB.typeSegments(el.titleTime, [{ text: '- 기준 ' + formatKoreanTime(sourceTime) + ' · 현재 ' + nowText }]);
-    el.titleTime.setAttribute('aria-label', '기준(출처 시각) ' + formatKoreanTime(sourceTime) + ', 현재(조회 시각) ' + formatKoreanTime(queriedLocal));
+    // 기준 시간 = 출처 시각(출처가 알려준 값의 기준 시각), 현재 시간 = 조회 시각(API를 조회한 시각).
+    // 오늘 날짜는 당연히 아는 정보라 월·일은 빼고 시·분만 보여준다(예: 기준 시간 10시 00분 · 현재 시간 10시 12분).
+    const timeOnly = function(iso){ return formatKoreanTime(iso).replace(/^\d+월 \d+일 /, ''); };
+    window.TIB.typeSegments(el.titleTime, [{ text: '- 기준 시간 ' + timeOnly(sourceTime) + ' · 현재 시간 ' + timeOnly(queriedLocal) }]);
+    el.titleTime.setAttribute('aria-label', '기준 시간(출처 시각) ' + timeOnly(sourceTime) + ', 현재 시간(조회 시각) ' + timeOnly(queriedLocal));
 
     // 날씨 코드가 없거나 숫자가 아니면 아이콘·날씨별 코멘트는 생략하고 기온 구간만의 코멘트를 쓴다
     const icon = typeof raw.current.weather_code === 'number'
@@ -1409,108 +1408,18 @@ window.TIB.onReveal = function(fn){
 <script>
 // ============================================================================
 // T04-C22~C24: 서로 다른 실제 날짜 기록 2건 + 전일 대비 재계산
-// 아래 레코드들은 data/weather/<지역id>/<날짜>.json의 stored 블록을 그대로 옮긴 것이다
-// (scripts/verify_daily_records_sync.mjs로 원본과 대조). data/ 폴더를 읽을 수 없는 환경(file:// 등)에서 쓰는 대체 값이다.
-// 현재(2026-10-08) 각 지역에 2026-10-07, 2026-10-08 두 건이 있다. 10-08은 그날 실제로 조회한 기록이고,
-// 10-07은 전일 대비 화면 시험용으로 10-08에 Open-Meteo 시간별 과거 값(past_days=1)을 소급해 만든 테스트 기록이다
-// (파일의 daily_meta.test_backfill 참고). 실제 날짜 두 건의 증거(C22~C24)로 쓰지 않는다 — docs/T04-evidence.md 참고.
+// 화면을 열 때마다 data/weather/<지역id>/ 에서 어제·오늘(Asia/Seoul) 파일 두 개만 직접 읽는다.
+// 그 밖의 날짜 파일이 더 있어도 읽지 않고, 새 날짜 파일이 생기면 코드 수정 없이 바로 반영된다.
 // ============================================================================
 (function(){
   window.TIB = window.TIB || {};
-
-  // --- DAILY-RECORDS-SYNC-START ---
-  var DAILY_RECORDS_BY_REGION = {
-    seoul: [
-      {
-        date: '2026-10-07',
-        value: 14.4,
-        unit: '°C',
-        source: 'Open-Meteo (api.open-meteo.com)',
-        source_url: 'https://api.open-meteo.com/v1/forecast?latitude=37.5665&longitude=126.978&hourly=temperature_2m&timezone=Asia%2FSeoul&past_days=1&forecast_days=1',
-        source_time: '2026-10-07T01:00:00+09:00',
-        display_time: '2026-10-07T01:00'
-      },
-      {
-        date: '2026-10-08',
-        value: 15.5,
-        unit: '°C',
-        source: 'Open-Meteo (api.open-meteo.com)',
-        source_url: 'https://api.open-meteo.com/v1/forecast?latitude=37.5665&longitude=126.978&current=temperature_2m,relative_humidity_2m,weather_code&timezone=Asia%2FSeoul',
-        source_time: '2026-10-08T09:45:00+09:00',
-        display_time: '2026-10-08T09:45'
-      }
-    ],
-    gumi: [
-      {
-        date: '2026-10-07',
-        value: 11.6,
-        unit: '°C',
-        source: 'Open-Meteo (api.open-meteo.com)',
-        source_url: 'https://api.open-meteo.com/v1/forecast?latitude=36.1195&longitude=128.3446&hourly=temperature_2m&timezone=Asia%2FSeoul&past_days=1&forecast_days=1',
-        source_time: '2026-10-07T01:00:00+09:00',
-        display_time: '2026-10-07T01:00'
-      },
-      {
-        date: '2026-10-08',
-        value: 16.7,
-        unit: '°C',
-        source: 'Open-Meteo (api.open-meteo.com)',
-        source_url: 'https://api.open-meteo.com/v1/forecast?latitude=36.1195&longitude=128.3446&current=temperature_2m,relative_humidity_2m,weather_code&timezone=Asia%2FSeoul',
-        source_time: '2026-10-08T09:45:00+09:00',
-        display_time: '2026-10-08T09:45'
-      }
-    ],
-    daegu: [
-      {
-        date: '2026-10-07',
-        value: 13.3,
-        unit: '°C',
-        source: 'Open-Meteo (api.open-meteo.com)',
-        source_url: 'https://api.open-meteo.com/v1/forecast?latitude=35.8714&longitude=128.6014&hourly=temperature_2m&timezone=Asia%2FSeoul&past_days=1&forecast_days=1',
-        source_time: '2026-10-07T01:00:00+09:00',
-        display_time: '2026-10-07T01:00'
-      },
-      {
-        date: '2026-10-08',
-        value: 18.5,
-        unit: '°C',
-        source: 'Open-Meteo (api.open-meteo.com)',
-        source_url: 'https://api.open-meteo.com/v1/forecast?latitude=35.8714&longitude=128.6014&current=temperature_2m,relative_humidity_2m,weather_code&timezone=Asia%2FSeoul',
-        source_time: '2026-10-08T10:00:00+09:00',
-        display_time: '2026-10-08T10:00'
-      }
-    ],
-    'grace-cc': [
-      {
-        date: '2026-10-07',
-        value: 12.9,
-        unit: '°C',
-        source: 'Open-Meteo (api.open-meteo.com)',
-        source_url: 'https://api.open-meteo.com/v1/forecast?latitude=35.661&longitude=128.6439&hourly=temperature_2m&timezone=Asia%2FSeoul&past_days=1&forecast_days=1',
-        source_time: '2026-10-07T01:00:00+09:00',
-        display_time: '2026-10-07T01:00'
-      },
-      {
-        date: '2026-10-08',
-        value: 19.2,
-        unit: '°C',
-        source: 'Open-Meteo (api.open-meteo.com)',
-        source_url: 'https://api.open-meteo.com/v1/forecast?latitude=35.661&longitude=128.6439&current=temperature_2m,relative_humidity_2m,weather_code&timezone=Asia%2FSeoul',
-        source_time: '2026-10-08T10:00:00+09:00',
-        display_time: '2026-10-08T10:00'
-      }
-    ]
-  };
-  // --- DAILY-RECORDS-SYNC-END ---
-  window.TIB.DAILY_RECORDS_BY_REGION = DAILY_RECORDS_BY_REGION;
 
   // 화면이 열린 시점의 한국 날짜(YYYY-MM-DD). offsetDays=-1이면 어제.
   function kstDate(offsetDays){
     return new Date(Date.now() + 9 * 3600 * 1000 + offsetDays * 86400 * 1000).toISOString().slice(0, 10);
   }
 
-  // data/weather/<지역id>/<어제·오늘>.json을 직접 읽는다. 둘 다 읽히지 않으면 null(→ 임베드 값으로 대체).
-  // file:// 로 열었거나 Artifact처럼 data/ 폴더가 없는 환경에서도 임베드 값으로 계속 동작하게 하려는 안전장치.
+  // data/weather/<지역id>/<어제·오늘>.json을 직접 읽는다. 하나라도 읽히지 않으면 null(→ 전일 대비 오류 말풍선).
   function loadRecordsFromFiles(region){
     var dates = [kstDate(-1), kstDate(0)];
     return Promise.all(dates.map(function(d){
@@ -1542,7 +1451,7 @@ window.TIB.onReveal = function(fn){
     window.TIB.typeSegments(document.getElementById('dayCompareTitle'), [{ text: '전일 대비' }]); // 제목도 바로 옆 시각과 같은 한 줄이라 같이 비웠다 타이핑한다
     loadRecordsFromFiles(region).then(function(files){
       if (seq !== renderSeq) return; // 그 사이 다른 지역 탭이 선택됨
-      paint(region, files || DAILY_RECORDS_BY_REGION[region.id] || []);
+      paint(region, files || []);
     });
   }
 
@@ -1557,7 +1466,7 @@ window.TIB.onReveal = function(fn){
     var formatKoreanTime = window.TIB.formatKoreanTime;
     var renderBubble = window.TIB.renderBubble;
 
-    // 어제·오늘(KST) 기록이 둘 다 있어야 한다. 임베드 값이 옛 날짜뿐이어도 정상처럼 보이지 않게 날짜로 거른다.
+    // 어제·오늘(KST) 기록이 둘 다 있어야 한다. 어제·오늘이 아닌 날짜는 걸러서 정상처럼 보이지 않게 한다.
     var yDate = kstDate(-1), tDate = kstDate(0);
     // 값이 비어 있거나 숫자가 아닌 기록도 '없는 기록'으로 본다(화면에 쓰기 전에 걸러야 계산·표시에서 예외가 나지 않는다).
     var sorted = records.filter(function(r){ return (r.date === yDate || r.date === tDate) && typeof r.value === 'number' && isFinite(r.value); })
