@@ -1,0 +1,208 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>두 AI 이어받기 비교</title>
+  <meta name="description" content="한 AI가 멈춘 지점에서 다른 AI가 인수인계 문서만으로 이어서 완성했는지 시험한 비교 결과입니다.">
+  <style>
+    :root {
+      --bg: #f6f5f1; --card: #ffffff; --text: #1c1c1a; --muted: #62625b; --line: #e0ded6;
+      --ok: #0b6b52; --ok-bg: #e2f2ec; --no: #a1370f; --no-bg: #fcebe0; --accent: #0b6b52;
+    }
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg: #131618; --card: #1b1f22; --text: #ececea; --muted: #a2a29a; --line: #32383d;
+        --ok: #62d0a8; --ok-bg: #16302a; --no: #f4a374; --no-bg: #392519; --accent: #62d0a8;
+      }
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0; background: var(--bg); color: var(--text);
+      font: 16px/1.7 -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", "Malgun Gothic", "Noto Sans KR", sans-serif;
+    }
+    main { max-width: 1160px; margin: 0 auto; padding: 40px 16px 72px; }
+    .g { color: var(--ok); }
+    header { margin-bottom: 24px; }
+    .kicker { font-size: .85rem; font-weight: 700; color: var(--accent); letter-spacing: .02em; margin: 0 0 8px; }
+    h1 { font-size: 1.6rem; line-height: 1.35; margin: 0 0 14px; }
+    .lead { color: var(--muted); margin: 0; }
+    .verdict { margin: 20px 0 0; padding: 14px 18px; border-radius: 12px; background: var(--ok-bg); border: 1px solid var(--ok); }
+
+    details { margin-top: 18px; background: var(--card); border: 1px solid var(--line); border-radius: 12px; }
+    summary {
+      cursor: pointer; list-style: none; display: flex; align-items: center; gap: 10px;
+      padding: 14px 18px; border-radius: 12px;
+    }
+    summary::-webkit-details-marker { display: none; }
+    summary::before {
+      content: ""; width: 8px; height: 8px; flex: none;
+      border-right: 2px solid var(--muted); border-bottom: 2px solid var(--muted);
+      transform: rotate(-45deg); transition: transform .15s;
+    }
+    details[open] > summary::before { transform: rotate(45deg); }
+    summary:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+    summary h2 { font-size: 1.1rem; margin: 0; }
+    .body { padding: 2px 18px 18px; }
+    .body p { margin: 0 0 12px; }
+    .body p:last-child { margin-bottom: 0; }
+    .muted { color: var(--muted); }
+
+    .flow { list-style: none; padding: 0; margin: 14px 0 0; display: grid; gap: 8px; counter-reset: s; }
+    .flow li { counter-increment: s; display: flex; align-items: baseline; gap: 10px; padding: 10px 14px; background: var(--bg); border-radius: 10px; }
+    .flow li::before { content: counter(s); flex: none; font-weight: 800; color: var(--accent); min-width: 1.1rem; }
+
+    .tbl { overflow-x: auto; border: 1px solid var(--line); border-radius: 10px; }
+    table { width: 100%; border-collapse: collapse; }
+    th, td { padding: 11px 14px; text-align: left; border-bottom: 1px solid var(--line); vertical-align: middle; }
+    tr:last-child td { border-bottom: 0; }
+    thead th { font-size: .82rem; font-weight: 700; color: var(--muted); background: var(--bg); white-space: nowrap; }
+    .num { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+    td.who { font-weight: 800; white-space: nowrap; }
+    .checks { font-size: .9rem; }
+    .checks td.k { font-weight: 700; white-space: nowrap; }
+    .checks .res { white-space: nowrap; }
+    .tag { display: inline-block; min-width: 3.4rem; text-align: center; padding: 2px 10px; border-radius: 99px; font-size: .82rem; font-weight: 800; }
+    .tag.ok { background: var(--ok-bg); color: var(--ok); }
+    .tag.no { background: var(--no-bg); color: var(--no); }
+
+    ol.steps { margin: 0; padding-left: 1.3rem; }
+    ol.steps li { margin-bottom: 8px; }
+    .result { display: grid; gap: 8px; margin-top: 14px; }
+    .result div { padding: 10px 16px; border-radius: 10px; }
+    .result .p { background: var(--ok-bg); border: 1px solid var(--ok); }
+    .result .f { background: var(--no-bg); border: 1px solid var(--no); }
+    .result .lbl { margin-right: 10px; }
+
+    a { color: var(--accent); text-underline-offset: 3px; }
+    a:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; border-radius: 3px; }
+    code { background: var(--ok-bg); padding: 1px 6px; border-radius: 4px; font-size: .9em; white-space: nowrap; }
+    .docs { list-style: none; padding: 0; margin: 0; }
+    .docs li { padding: 9px 0; border-bottom: 1px solid var(--line); }
+    .docs li:first-child { padding-top: 0; }
+    .docs li:last-child { border-bottom: 0; padding-bottom: 0; }
+
+    /* 넓은 화면에서는 한 줄로 둔 항목의 줄바꿈을 막고, 좁은 화면에서는 자연스럽게 줄바꿈합니다. */
+    @media (min-width: 1200px) {
+      .flow li, .ln, .steps li, .result div, .docs li, .checks td.what { white-space: nowrap; }
+    }
+    @media (max-width: 640px) {
+      h1 { font-size: 1.35rem; }
+      summary, .body { padding-left: 14px; padding-right: 14px; }
+      th, td { padding: 10px 10px; }
+    }
+  </style>
+</head>
+<body>
+<main>
+  <header>
+    <p class="kicker">대화가 끊겨도 이어지는 프로젝트</p>
+    <h1>한 AI가 멈춘 작업을, 다른 AI가 문서만 보고 이어서 끝냈습니다.</h1>
+    <p class="lead">앞 대화 없이 저장소와 인수인계 문서만 받은 AI가 템플릿 이름 중복 정리 기능을 완성하는지 시험했습니다.<br>서비스·모델 이름과 작업 순서는 가리고 AI 가, AI 나로만 표시합니다.</p>
+    <p class="verdict ln">같은 검사 10개에서 <span class="g">AI 가는 10개 모두 통과</span>, <span class="g">AI 나는 8개 통과</span>(K09, K10 실패)했습니다.</p>
+  </header>
+
+  <details open>
+    <summary><h2>무엇을 시험했나요?</h2></summary>
+    <div class="body">
+      <p>밈 카드 스튜디오에서 템플릿 이름이 겹치면 <code>(2)</code>, <code>(3)</code>처럼 가장 작은 빈 번호를 붙이는 기능을 만들게 했습니다.<br>두 AI는 같은 최초 요청, 같은 검사 10개, 같은 상한(15분, 5회)으로 일했고, 검사는 사람이 브라우저에서 직접 실행했습니다.</p>
+      <ol class="flow">
+        <li><span>한 AI가 새 템플릿 저장 기능까지 만들고, 수정 저장과 JSON 가져오기는 남긴 채 멈췄습니다.</span></li>
+        <li><span>멈추면서 목표, 현재 상태, 실행 명령 등 일곱 칸의 인수인계 문서를 남겼습니다.</span></li>
+        <li><span>다른 AI가 앞 대화 없이 js/app.js와 인수인계 문서만 받아 남은 기능을 이어서 만들었습니다.</span></li>
+        <li><span>고정한 검사 K01~K10을 사람이 브라우저에서 직접 실행해 PASS/FAIL을 기록했습니다.</span></li>
+      </ol>
+    </div>
+  </details>
+
+  <details open>
+    <summary><h2>비교</h2></summary>
+    <div class="body">
+      <div class="tbl">
+        <table>
+          <thead>
+            <tr><th></th><th class="num">작업시간</th><th class="num">요청 수</th><th class="num">오류 수</th><th class="num">검사 통과</th></tr>
+          </thead>
+          <tbody>
+            <tr><td class="who">AI 가</td><td class="num">1분</td><td class="num">1회</td><td class="num">0</td><td class="num"><span class="tag ok">10 / 10</span></td></tr>
+            <tr><td class="who">AI 나</td><td class="num">2분</td><td class="num">1회</td><td class="num">1</td><td class="num"><span class="tag no">8 / 10</span></td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p class="ln muted" style="margin-top:12px;font-size:.9rem">오류 수는 FAIL이 하나라도 나온 실행 회차의 수이며, 두 AI 모두 한 회차씩 실행했습니다.</p>
+    </div>
+  </details>
+
+  <details open>
+    <summary><h2>검사 10개 결과</h2></summary>
+    <div class="body">
+      <div class="tbl">
+        <table class="checks">
+          <thead><tr><th>검사</th><th>확인한 내용</th><th>AI 가</th><th>AI 나</th></tr></thead>
+          <tbody>
+            <tr><td class="k">K01</td><td class="what"><code>고양이</code>를 저장하면 이름 그대로 저장됩니다.</td><td class="res"><span class="tag ok">PASS</span></td><td class="res"><span class="tag ok">PASS</span></td></tr>
+            <tr><td class="k">K02</td><td class="what">같은 이름을 한 번 더 저장하면 <code>고양이 (2)</code>가 됩니다.</td><td class="res"><span class="tag ok">PASS</span></td><td class="res"><span class="tag ok">PASS</span></td></tr>
+            <tr><td class="k">K03</td><td class="what">세 번째로 저장하면 <code>고양이 (3)</code>이 되며, 직접 만든 템플릿 3개 한도의 경계 상황입니다.</td><td class="res"><span class="tag ok">PASS</span></td><td class="res"><span class="tag ok">PASS</span></td></tr>
+            <tr><td class="k">K04</td><td class="what"><code>고양이 (2)</code>를 삭제하고 저장하면 비어 있는 가장 작은 번호 (2)가 다시 쓰입니다.</td><td class="res"><span class="tag ok">PASS</span></td><td class="res"><span class="tag ok">PASS</span></td></tr>
+            <tr><td class="k">K05</td><td class="what">이름을 비우고 저장하면 <code>템플릿 1</code>이 됩니다.</td><td class="res"><span class="tag ok">PASS</span></td><td class="res"><span class="tag ok">PASS</span></td></tr>
+            <tr><td class="k">K06</td><td class="what">15자 이름을 두 번 저장하면 두 번째는 뒤에 (2)가 붙은 19자로 잘리지 않고 저장됩니다.</td><td class="res"><span class="tag ok">PASS</span></td><td class="res"><span class="tag ok">PASS</span></td></tr>
+            <tr><td class="k">K07</td><td class="what">끝에 공백이 있는 같은 이름도 같은 이름으로 보고 <code>고양이 (2)</code>가 됩니다.</td><td class="res"><span class="tag ok">PASS</span></td><td class="res"><span class="tag ok">PASS</span></td></tr>
+            <tr><td class="k">K08</td><td class="what">기본 템플릿과 같은 이름을 쓰면 <code>기본 템플릿 1 (2)</code>가 됩니다.</td><td class="res"><span class="tag ok">PASS</span></td><td class="res"><span class="tag ok">PASS</span></td></tr>
+            <tr><td class="k">K09</td><td class="what">수정 저장에서 다른 템플릿과 이름이 겹치면 <code>B (2)</code>가 되고 자기 이름은 유지됩니다.</td><td class="res"><span class="tag ok">PASS</span></td><td class="res"><span class="tag no">FAIL</span></td></tr>
+            <tr><td class="k">K10</td><td class="what">JSON 가져오기에서 겹친 이름은 <code>고양이 (2)</code>로 추가되고 3개 한도 초과는 거부됩니다.</td><td class="res"><span class="tag ok">PASS</span></td><td class="res"><span class="tag no">FAIL</span></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </details>
+
+  <details open>
+    <summary><h2>이 결과를 확인하는 방법</h2></summary>
+    <div class="body">
+      <ol class="steps">
+        <li>소스 버전 표의 종료 버전 두 개를 각각 열면 <code>js/app.js</code> 한 파일의 변경만 보입니다.</li>
+        <li>검사 결과 문서 두 개의 K01~K10 표가 위의 검사 10개 결과와 같은지 비교합니다.</li>
+        <li>인수인계 문서에 일곱 제목(목표·현재 상태·실행 명령 등)이 모두 있는지 확인합니다.</li>
+      </ol>
+      <div class="result">
+        <div class="p"><span class="lbl">통과</span>변경은 <code>js/app.js</code> 한 파일이고, PASS 수와 일곱 제목이 이 페이지와 같습니다.</div>
+        <div class="f"><span class="lbl">안 될 때</span>새 시크릿 창에 주소를 다시 붙여 넣어도 안 열리면 저장소가 비공개이거나 삭제된 것입니다.</div>
+      </div>
+    </div>
+  </details>
+
+  <details open>
+    <summary><h2>소스 버전</h2></summary>
+    <div class="body">
+      <p class="ln">재작업량은 제출 뒤 채점기가 <code>js/app.js</code> 한 파일을 기준으로 이 버전 쌍으로 계산합니다.</p>
+      <div class="tbl">
+        <table>
+          <thead><tr><th></th><th>시작</th><th>종료</th></tr></thead>
+          <tbody>
+            <tr><td class="who">AI 가</td>
+              <td><a href="https://github.com/onboardingsecurity/AI-LLM/commit/0ad488e8841590a88cf544d34dd3e37c8d325e17">0ad488e</a></td>
+              <td><a href="https://github.com/onboardingsecurity/AI-LLM/commit/54e76d52e87983e4ff4438109d88e7211487cbb5">54e76d5</a></td></tr>
+            <tr><td class="who">AI 나</td>
+              <td><a href="https://github.com/onboardingsecurity/AI-LLM/commit/1603d0ba6731d01891e901aca0f841a4cb3b64b4">1603d0b</a></td>
+              <td><a href="https://github.com/onboardingsecurity/AI-LLM/commit/0ad488e8841590a88cf544d34dd3e37c8d325e17">0ad488e</a></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </details>
+
+  <details open>
+    <summary><h2>관련 문서</h2></summary>
+    <div class="body">
+      <ul class="docs">
+        <li><a href="https://github.com/onboardingsecurity/AI-LLM/blob/a2c5e4584fade4f7a4d7d8ef352f60870d7d781d/docs/HANDOVER.md">인수인계 문서</a>: 앞 작업자가 남긴 일곱 칸 문서이며 실행 방법 1~4단계도 들어 있습니다.</li>
+        <li><a href="https://github.com/onboardingsecurity/AI-LLM/blob/a2c5e4584fade4f7a4d7d8ef352f60870d7d781d/records/results_a.md">AI 나 검사 결과</a>, <a href="https://github.com/onboardingsecurity/AI-LLM/blob/a2c5e4584fade4f7a4d7d8ef352f60870d7d781d/records/results_b.md">AI 가 검사 결과</a>: K01~K10 각각의 PASS/FAIL을 적은 원본 기록입니다.</li>
+        <li><a href="https://github.com/onboardingsecurity/AI-LLM/blob/a2c5e4584fade4f7a4d7d8ef352f60870d7d781d/records/handover_gaps.md">인수인계 누락 기록</a>: 받은 쪽이 확인하지 못한 세 가지와 문서를 고친 전후 내용을 적었습니다.</li>
+        <li><a href="https://github.com/onboardingsecurity/AI-LLM/blob/a2c5e4584fade4f7a4d7d8ef352f60870d7d781d/records/repro.md">새 폴더 재현 기록</a>: 새 폴더에서 실행 방법 1~4단계를 따라 해 화면이 열리고 K01이 통과한 결과를 적었습니다.</li>
+        <li><a href="https://github.com/onboardingsecurity/AI-LLM/blob/a2c5e4584fade4f7a4d7d8ef352f60870d7d781d/records/submission.md">다음 작업 도구 선택 기준</a>: 이 비교 결과를 보고 정한 기준을 한 문장으로 적었습니다.</li>
+      </ul>
+    </div>
+  </details>
+</main>
+</body>
+</html>
