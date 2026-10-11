@@ -940,12 +940,14 @@
   }
 
   // 같은 이름이 있으면 가장 작은 빈 번호를 붙인다. 기본 템플릿도 records에 포함된다.
-  function uniqueTemplateName(name, records) {
+  // ownId: 수정 저장할 때 자기 자신은 중복으로 세지 않는다.
+  function uniqueTemplateName(name, records, ownId) {
     var used = {};
-    records.forEach(function (r) { used[r.name] = true; });
+    records.forEach(function (r) { if (r.id !== ownId) used[r.name] = true; });
     if (!used[name]) return name;
     for (var n = 2; ; n++) {
-      var candidate = name + " (" + n + ")";
+      var suffix = " (" + n + ")";
+      var candidate = name.slice(0, Math.max(1, NAME_MAX - suffix.length)) + suffix;
       if (!used[candidate]) return candidate;
     }
   }
@@ -990,12 +992,16 @@
           selectedGone();
           return refreshList();
         }
-        var name = cleanName(tplNameInput.value) || existing.name;
-        return buildRecord(existing, name).then(function (rec) {
-          // 저장 시점에 대상이 여전히 있는지 다시 확인한다. 없으면 새로 만들지 않는다.
-          return dbReplace(rec).then(function (saved) {
-            if (!saved) selectedGone();
-            return refreshList();
+        return dbGetAll().then(function (all) {
+          var typed = cleanName(tplNameInput.value) || existing.name;
+          var name = uniqueTemplateName(typed, all, existing.id); // 자기 이름 그대로면 바뀌지 않는다
+          return buildRecord(existing, name).then(function (rec) {
+            // 저장 시점에 대상이 여전히 있는지 다시 확인한다. 없으면 새로 만들지 않는다.
+            return dbReplace(rec).then(function (saved) {
+              if (!saved) selectedGone();
+              else tplNameInput.value = rec.name; // 번호가 붙었으면 입력칸에도 반영한다
+              return refreshList();
+            });
           });
         });
       });
@@ -1241,7 +1247,18 @@
             // 가져온 것은 모두 사용자 템플릿으로 센다(기본 템플릿과 id가 같으면 새 id로 추가된다). 넘으면 아무것도 저장하지 않는다.
             var over = dbGetAll().then(function (all) {
               var have = userCount(all);
-              if (have + res.records.length <= USER_TEMPLATE_MAX) return null;
+              if (have + res.records.length <= USER_TEMPLATE_MAX) {
+                // 한도 안이면 이름이 겹치는 항목에 가장 작은 빈 번호를 붙인다.
+                var taken = all.map(function (r) { return { id: r.id, name: r.name }; });
+                var nameRenamed = 0;
+                res.records.forEach(function (r) {
+                  var u = uniqueTemplateName(r.name, taken);
+                  if (u !== r.name) { r.name = u; nameRenamed++; }
+                  taken.push({ id: r.id, name: r.name });
+                });
+                res.nameRenamed = nameRenamed;
+                return null;
+              }
               return { ok: false, kind: "limit", headline: "저장한 템플릿은 최대 " + USER_TEMPLATE_MAX + "개라서 아무것도 가져오지 않았습니다(지금 " + have + "개, 파일 " + res.records.length + "개).", problems: [] };
             });
             return over.then(function (o) { return o ? o : res; }).then(function (r2) { res = r2; return go(); });
@@ -1256,6 +1273,7 @@
                 text = res.kind === "limit" ? LIMIT_ALERT : "JSON 가져오기에 실패했습니다.";
               } else {
                 text = "\"" + file.name + "\"에서 템플릿 " + done.added + "건을 가져왔습니다." +
+                  (res.nameRenamed ? " 그중 " + res.nameRenamed + "건은 이름이 겹쳐 번호를 붙였습니다." : "") +
                   (done.renamed ? " 그중 " + done.renamed + "건은 id가 이미 있어 새 id로 추가했습니다." : "");
               }
               renderList(after);
