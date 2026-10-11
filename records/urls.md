@@ -2,17 +2,26 @@
 
 제출하는 URL이 계정 생성, 로그인, 인증, 초대, 비밀번호, OAuth, CAPTCHA 없이 열리는지 확인한 기록이다.
 
-## 확인한 URL
+## 제출하는 URL
 
-| 구분 | URL | 로그인 없이 열림 | 확인 방법 |
-|------|-----|-------------------|-----------|
-| 소스 (브랜치) | https://github.com/onboardingsecurity/AI-LLM/tree/ai-conversations-continue-project | 열림 (docs, js, records, README.md 표시) | 로그인 없는 상태의 페이지 조회 |
-| 결과물 (비교표) | https://github.com/onboardingsecurity/AI-LLM/blob/ai-conversations-continue-project/records/comparison.md | 열림 (표 내용 표시) | 로그인 없는 상태의 페이지 조회 |
-| 인수인계 문서 | https://github.com/onboardingsecurity/AI-LLM/blob/ai-conversations-continue-project/docs/HANDOVER.md | 열림 (일곱 제목 표시) | 로그인 없는 상태의 페이지 조회 |
+| 구분 | URL |
+|------|-----|
+| 결과물 URL | https://ai-conversations-continue-project.vercel.app/ |
+| 소스 저장소 URL | https://github.com/onboardingsecurity/AI-LLM/commit/daca0a43c444db5aee2c034eae9e398b782be551 |
 
-- 확인한 날: 2026-10-12, push 커밋 90f4b8a81bcfa742fcb5eb3380d5f1efb7965d38 시점
-- 세 페이지 모두 머리글에 "Sign in", "Sign up" 링크는 보이지만 내용을 가리는 로그인 창은 없었다.
+소스 저장소 URL은 브랜치나 저장소 첫 화면이 아니라 40자리 full commit이 들어간 고정 주소다. 이 커밋(daca0a4)에 문서, 기록, js/app.js, site/index.html이 모두 들어 있다.
+
+## 확인한 결과 (2026-10-12)
+
+| URL | 결과 | 확인 방법 |
+|-----|------|-----------|
+| 결과물 URL | 상태 200, 이동 없음, 로그인 화면 없음. 받은 내용이 이 저장소의 site/index.html과 바이트 단위로 같음 | 로그인 없는 상태에서 직접 요청해 응답과 내용을 비교 |
+| 소스 저장소 URL | 상태 200 | 로그인 없는 상태에서 직접 요청 |
+
+- 결과물 URL은 사용자가 Vercel에 site 폴더를 배포했다고 알려 준 주소다.
+- 결과물 페이지의 제목은 "두 AI 이어받기 비교"이고 접고 펼치는 영역 6개가 있다.
 
 ## 새 시크릿 창 확인
 
-- 사용자가 새 시크릿 창에서 위 세 URL을 열어 본 결과: 세 URL 모두 로그인 등 없이 열림 (2026-10-12, 사용자 보고)
+- 이전에 사용자가 새 시크릿 창에서 열어 본 GitHub 주소 3개(브랜치, 비교표 문서, 인수인계 문서): 모두 로그인 등 없이 열림 (2026-10-12, 사용자 보고)
+- 위 제출 URL 2개를 새 시크릿 창에서 열어 본 결과: (사용자가 확인한 뒤 기록)

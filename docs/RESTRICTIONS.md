@@ -20,7 +20,7 @@
 ## 외부 연결 금지 (승인한 것만 예외)
 
 - 사용자가 승인하지 않은 외부 주소로 연결하지 않는다. 승인한 주소는 아래에 적는다.
-- 승인한 외부 주소: github.com/onboardingsecurity/AI-LLM (과제 3·4 소스 위치)
+- 승인한 외부 주소: github.com/onboardingsecurity/AI-LLM (과제 3·4 소스 위치), ai-conversations-continue-project.vercel.app (결과물 배포 주소)
 
 ## 작업 방식 제한
 
