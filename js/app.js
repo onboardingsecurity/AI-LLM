@@ -939,6 +939,17 @@
     return job().then(function () { tplBusy = false; }, function (e) { tplBusy = false; throw e; });
   }
 
+  // 같은 이름이 있으면 가장 작은 빈 번호를 붙인다. 기본 템플릿도 records에 포함된다.
+  function uniqueTemplateName(name, records) {
+    var used = {};
+    records.forEach(function (r) { used[r.name] = true; });
+    if (!used[name]) return name;
+    for (var n = 2; ; n++) {
+      var candidate = name + " (" + n + ")";
+      if (!used[candidate]) return candidate;
+    }
+  }
+
   function saveNewTemplate() {
     var addedName = "";
     return runTpl(function () {
@@ -946,7 +957,8 @@
       var typed = cleanName(tplNameInput.value);
       return dbGetAll().then(function (all) {
         if (userCount(all) >= USER_TEMPLATE_MAX) { var e = new Error("limit"); e.limit = true; throw e; } // 알림창으로만 알리고 템플릿 창에는 문구를 남기지 않는다
-        return typed || autoName(all);
+        var name = typed || autoName(all);
+        return uniqueTemplateName(name, all);
       }).then(function (name) {
         return buildRecord(null, name).then(function (rec) {
           return dbAdd(rec).then(function () {
@@ -956,7 +968,7 @@
           });
         });
       }).then(refreshList).then(function () {
-        notifyTpl("\"" + addedName + "\" 템플릿이 추가되었습니다."); // 목록이 새로 그려진 뒤에 알린다
+        notifyTpl("\\\"" + addedName + "\\\" 템플릿이 추가되었습니다."); // 목록이 새로 그려진 뒤에 알린다
       });
     }).catch(function (e) {
       if (e && e.limit) { notifyTpl(LIMIT_ALERT); return; }
