@@ -21,6 +21,13 @@ python3 -m http.server 8765
 
 브라우저에서 http://localhost:8765/에 접속한다.
 
+이 저장소에는 js/app.js만 들어 있어서 위 명령만으로는 화면이 열리지 않는다. 앱 전체(index.html, css, 이미지)는 GitHub의 ai-meme-card-studio 브랜치 6908a03에 있다. 아래처럼 새 폴더에 받고 이 저장소의 js/app.js로 덮어쓴 뒤 실행한다.
+
+1. git clone --branch ai-meme-card-studio --single-branch https://github.com/onboardingsecurity/AI-LLM.git meme-card-studio
+2. cd meme-card-studio
+3. js/app.js를 이 저장소의 js/app.js로 덮어쓴다.
+4. python3 -m http.server 8765 를 실행하고 http://localhost:8765/ 에 접속한다.
+
 검사 준비 (AI B가 확인하지 못해 보강한 내용)
 
 - 이름 입력칸은 index.html에서 최대 15자(maxlength 15)로 막혀 있다. 저장 데이터는 이름 40자까지 허용한다.
