@@ -1,0 +1,139 @@
+{
+  "schema_version": "pds-schema-v2",
+  "description": "플랜두씨 다이어리 최종 데이터베이스 계약. 정의 원본은 supabase/schema.sql 이다.",
+  "database": "Supabase (Postgres)",
+  "date_rules": {
+    "timestamps": "timestamptz. UTC 로 저장하고 화면에서 Asia/Seoul 로 보여 준다.",
+    "dates": "date (YYYY-MM-DD). 서울 기준 날짜. 마감일·기간에 쓴다.",
+    "today": "서버가 now() at time zone 'Asia/Seoul' 로 계산한다. 지연 판단 = 완료 아님 and 마감일 < 서울 오늘.",
+    "input_timestamps": "화면의 시작·끝난 시각 입력은 서울 시간(+09:00)으로 해석해 저장한다."
+  },
+  "units": {
+    "time": "분(minutes), 정수. 저장할 때와 보여 줄 때 같은 단위를 쓴다.",
+    "priority": "1=높음, 2=보통, 3=낮음 (작을수록 먼저)"
+  },
+  "tables": {
+    "plans": {
+      "purpose": "계획. 항상 지금 값만 가진다. ID 는 바뀌지 않는다.",
+      "primary_key": "id",
+      "columns": {
+        "id": "bigint identity",
+        "title": "text, 1~100자",
+        "start_date": "date",
+        "end_date": "date, start_date 이상",
+        "priority": "smallint, 1~3",
+        "success_criteria": "text, 1~500자",
+        "estimated_minutes": "integer, 0 이상",
+        "created_at": "timestamptz",
+        "updated_at": "timestamptz"
+      },
+      "relations": [],
+      "rules": ["고치면 plan_revisions 에 그 시점 값이 자동으로 쌓인다.", "브라우저에서 지울 수 없다."]
+    },
+    "plan_revisions": {
+      "purpose": "계획 수정 이력. 만들어질 때(버전 1)와 고쳐질 때마다 한 건씩 쌓는다.",
+      "primary_key": "id",
+      "columns": {
+        "id": "bigint identity",
+        "plan_id": "bigint",
+        "version": "integer, (plan_id, version) 유일",
+        "title": "text",
+        "start_date": "date",
+        "end_date": "date",
+        "priority": "smallint",
+        "success_criteria": "text",
+        "estimated_minutes": "integer",
+        "recorded_at": "timestamptz"
+      },
+      "relations": [{ "column": "plan_id", "references": "plans.id" }],
+      "rules": ["트리거로만 쌓인다. 브라우저는 읽기만 가능(고치기·지우기 불가)."]
+    },
+    "tasks": {
+      "purpose": "계획에 딸린 할 일.",
+      "primary_key": "id",
+      "columns": {
+        "id": "bigint identity",
+        "plan_id": "bigint",
+        "title": "text, 1~100자",
+        "due_date": "date, 없을 수 있음",
+        "priority": "smallint, 1~3",
+        "tags": "text[], 최대 10개",
+        "estimated_minutes": "integer, 0 이상",
+        "status": "text, todo | done",
+        "completed_at": "timestamptz, 없을 수 있음",
+        "deleted_at": "timestamptz, 있으면 지운 할 일",
+        "created_at": "timestamptz",
+        "updated_at": "timestamptz"
+      },
+      "relations": [{ "column": "plan_id", "references": "plans.id" }],
+      "rules": [
+        "지우기는 deleted_at 만 채운다(소프트 삭제). 집계에서 제외된다.",
+        "status 는 complete_task / reopen_task 함수로만 바뀐다.",
+        "done 이면 유효한 실행 기록이 있어야 하고, todo 이면 없어야 한다(트리거)."
+      ]
+    },
+    "executions": {
+      "purpose": "실행 기록. 계획과 별개 표. 완료할 때 한 건이 만들어진다.",
+      "primary_key": "id",
+      "columns": {
+        "id": "bigint identity",
+        "task_id": "bigint",
+        "started_at": "timestamptz",
+        "ended_at": "timestamptz, started_at 이상",
+        "actual_minutes": "integer, 0 이상, 시작~끝 사이 분(올림) 이하",
+        "blocked_reason": "text, 최대 300자, 없을 수 있음",
+        "request_key": "uuid, 유일. 같은 요청을 알아보는 키",
+        "status": "text, active | canceled",
+        "created_at": "timestamptz",
+        "canceled_at": "timestamptz, status=canceled 일 때만"
+      },
+      "relations": [{ "column": "task_id", "references": "tasks.id" }],
+      "rules": [
+        "한 할 일에 status=active 인 기록은 한 건만(부분 유일 인덱스).",
+        "되돌리면 지우지 않고 canceled 로 남긴다. 집계에서 제외된다.",
+        "계획(plans) 값을 바꾸지 않는다."
+      ]
+    },
+    "retrospectives": {
+      "purpose": "돌아보기에서 정한 고칠 점 한 줄과 그로 인해 만들어진 다음 계획.",
+      "primary_key": "id",
+      "columns": {
+        "id": "bigint identity",
+        "plan_id": "bigint",
+        "period_start": "date",
+        "period_end": "date, period_start 이상",
+        "improvement": "text, 1~200자",
+        "next_plan_id": "bigint",
+        "created_at": "timestamptz"
+      },
+      "relations": [
+        { "column": "plan_id", "references": "plans.id" },
+        { "column": "next_plan_id", "references": "plans.id" }
+      ],
+      "rules": ["(plan_id, period_start, period_end) 유일: 같은 기간은 한 번만 넘긴다."]
+    }
+  },
+  "functions": {
+    "complete_task": "완료 + 실행 기록 저장. 같은 request_key 는 기존 기록을 돌려준다(중복 없음).",
+    "reopen_task": "되돌리기. 유효한 실행 기록을 canceled 로 바꾸고 할 일을 todo 로 돌린다.",
+    "review_tasks": "돌아보기 숫자의 근거 목록. metric = all | done | overdue | blocked.",
+    "review_summary": "돌아보기 집계. 숫자는 review_tasks 에서 나오므로 근거 목록과 항상 같다.",
+    "hand_over_improvement": "고칠 점 한 줄을 다음 계획으로 넘긴다. 같은 기간은 한 번만."
+  },
+  "review_definitions": {
+    "plan_count": "그 계획에 딸린, 지우지 않은 할 일 수",
+    "done_count": "그중 지금 완료 상태인 할 일 수",
+    "overdue_count": "완료되지 않았고 마감일이 서울 오늘보다 앞선 할 일 수 (완료는 지연으로 세지 않음)",
+    "blocked_count": "유효한 실행 기록에 막힌 이유가 적힌 할 일 수",
+    "estimated_minutes": "대상 할 일의 예상 시간 합계",
+    "actual_minutes": "대상 할 일의 유효한 실행 기록 걸린 시간 합계",
+    "diff_minutes": "actual_minutes - estimated_minutes. 대상이 없으면 0"
+  },
+  "access": {
+    "login": "없음. 링크를 아는 누구나 읽고 쓸 수 있다. 남이 봐도 괜찮은 내용만 넣는다.",
+    "read": "5개 표 모두 공개",
+    "write_direct": ["plans(만들기·고치기)", "tasks(만들기·고치기·소프트 삭제)"],
+    "write_via_function_only": ["plan_revisions(트리거)", "executions(complete_task, reopen_task)", "retrospectives(hand_over_improvement)"],
+    "delete": "어느 표에서도 불가"
+  }
+}
