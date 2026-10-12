@@ -20,8 +20,14 @@
     지금은 로그인이 없어 링크를 아는 사람은 누구나 볼 수 있습니다. 남이 봐도 괜찮은 내용만 넣으세요
   </p>
 
+  <nav class="tabs" role="tablist" aria-label="큰 분류">
+    <button type="button" role="tab" id="tab-plan" class="tab" aria-controls="plan-col" aria-selected="true">계획</button>
+    <button type="button" role="tab" id="tab-do" class="tab" aria-controls="tasks-area" aria-selected="false" tabindex="-1">할 일</button>
+    <button type="button" role="tab" id="tab-see" class="tab" aria-controls="review-area" aria-selected="false" tabindex="-1">돌아보기</button>
+  </nav>
+
   <main class="board">
-    <div class="col" id="plan-col">
+    <div class="col" id="plan-col" role="tabpanel" aria-labelledby="tab-plan">
       <section class="card" aria-labelledby="form-title">
         <h2 id="form-title">계획 세우기</h2>
         <p class="mode" id="form-mode" hidden></p>
@@ -74,7 +80,7 @@
       </section>
     </div>
 
-    <div class="col" id="tasks-area">
+    <div class="col" id="tasks-area" role="tabpanel" aria-labelledby="tab-do" hidden>
       <section class="card" aria-labelledby="t-form-title">
         <h2 id="t-form-title">할 일 만들기</h2>
 
@@ -161,7 +167,7 @@
       </section>
     </div>
 
-    <div class="col" id="review-area">
+    <div class="col" id="review-area" role="tabpanel" aria-labelledby="tab-see" hidden>
       <section class="card" aria-labelledby="r-title">
         <h2 id="r-title">돌아보기</h2>
 
@@ -280,5 +286,6 @@
   <script src="js/tasks.js"></script>
   <script src="js/review.js"></script>
   <script src="js/export.js"></script>
+  <script src="js/tabs.js"></script>
 </body>
 </html>

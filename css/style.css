@@ -23,7 +23,7 @@
   --pixel-ink: #3b2a1e;                /* 픽셀 테두리 색(짙은 갈색) */
   --tint: #ffe9d2;                     /* 눌림·강조 바탕(연한 주황) */
   --changed: #ffe9a3;
-  --layout-w: 1320px;
+  --layout-w: 1120px;
   color-scheme: light;                 /* 맥이 어두운 모드여도 항상 밝은 화면 */
 }
 
@@ -81,18 +81,34 @@ body::before {
 
 /* ---------- 구역과 카드 ---------- */
 
-.board {
+.board { margin-bottom: 24px; }
+.col {                                   /* 탭 하나의 내용: 입력 창 | 목록 창 */
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));   /* 계획 · 실제로 한 일 · 돌아보기를 가로로 나란히 */
+  grid-template-columns: minmax(0, 340px) minmax(0, 1fr);
   gap: 12px;
   align-items: start;
-  margin-bottom: 24px;
 }
-.col { display: grid; gap: 12px; min-width: 0; align-content: start; }   /* 한 칸 안의 관련 창은 위 창 아래에 이어 붙는다 */
-@media (max-width: 960px) {
-  .board { grid-template-columns: minmax(0, 1fr); }   /* 좁은 화면에서는 세로로 */
+@media (max-width: 760px) {
+  .col { grid-template-columns: minmax(0, 1fr); }   /* 좁은 화면에서는 세로로 */
   .top h1 { font-size: 26px; }
   .mascot { width: 44px; height: 44px; }
+}
+
+/* 큰 분류 탭: 보조 버튼 모양, 선택된 탭은 주황 */
+.tabs {
+  max-width: var(--layout-w); margin: 6px auto 12px; padding: 4px 16px;
+  display: flex; gap: 10px; flex-wrap: wrap;
+}
+button.tab {
+  flex: 1 1 0; max-width: 200px; margin: 3px; padding: 6px 14px; font-size: 20px;
+  color: var(--pixel-ink); background: var(--panel);
+  box-shadow: 0 -2px 0 var(--pixel-ink), 0 2px 0 var(--pixel-ink), -2px 0 0 var(--pixel-ink), 2px 0 0 var(--pixel-ink);
+}
+button.tab:hover { background: var(--tint); filter: none; }
+button.tab[aria-selected="true"] {
+  color: var(--on-accent); background: var(--accent);
+  box-shadow: 0 -3px 0 var(--pixel-ink), 0 3px 0 var(--pixel-ink), -3px 0 0 var(--pixel-ink), 3px 0 0 var(--pixel-ink),
+              inset -3px -3px 0 rgba(0, 0, 0, 0.25), inset 3px 3px 0 rgba(255, 255, 255, 0.3);
 }
 
 .card {
