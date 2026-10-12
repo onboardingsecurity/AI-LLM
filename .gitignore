@@ -1,0 +1,15 @@
+# 비밀 값
+.env
+.env.*
+!.env.example
+
+# 시스템·편집기 파일
+.DS_Store
+.vscode/
+.idea/
+
+# 데이터 덤프·로컬 DB
+*.db
+*.sqlite
+*.dump
+node_modules/
