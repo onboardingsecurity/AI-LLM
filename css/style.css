@@ -1,0 +1,189 @@
+:root {
+  --bg: #f6f7f9;
+  --card: #ffffff;
+  --text: #1c2330;
+  --muted: #5b6577;
+  --line: #d9dee7;
+  --accent: #2455d6;
+  --accent-text: #ffffff;
+  --warn-bg: #fff4d6;
+  --warn-text: #5c4300;
+  --danger: #b3261e;
+  --changed: #fff0b8;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #12151b;
+    --card: #1b2029;
+    --text: #e8ecf3;
+    --muted: #9aa5b8;
+    --line: #2d3442;
+    --accent: #7aa2ff;
+    --accent-text: #0b1020;
+    --warn-bg: #3a2f10;
+    --warn-text: #ffe9a8;
+    --danger: #ff8a80;
+    --changed: #4a3d12;
+  }
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font-family: -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", "Noto Sans KR", sans-serif;
+  line-height: 1.5;
+}
+
+.top, .notice, .layout, .foot {
+  max-width: 1040px;
+  margin-left: auto;
+  margin-right: auto;
+  padding-left: 16px;
+  padding-right: 16px;
+}
+
+.top { padding-top: 24px; }
+.top h1 { margin: 0; font-size: 1.6rem; }
+.sub { margin: 4px 0 0; color: var(--muted); }
+
+.notice {
+  display: block;
+  margin-top: 16px;
+  margin-bottom: 16px;
+  padding: 12px 16px;
+  background: var(--warn-bg);
+  color: var(--warn-text);
+  border-radius: 8px;
+  font-weight: 600;
+  max-width: calc(1040px - 32px);
+}
+
+.layout {
+  display: grid;
+  grid-template-columns: minmax(0, 380px) minmax(0, 1fr);
+  gap: 16px;
+  align-items: start;
+}
+
+@media (max-width: 760px) {
+  .layout { grid-template-columns: minmax(0, 1fr); }
+}
+
+.card {
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 16px;
+}
+
+.card h2 { margin: 0 0 12px; font-size: 1.15rem; }
+
+label {
+  display: block;
+  margin-bottom: 12px;
+  font-size: 0.9rem;
+  color: var(--muted);
+}
+
+input, select, textarea {
+  display: block;
+  width: 100%;
+  margin-top: 4px;
+  padding: 8px 10px;
+  font: inherit;
+  color: var(--text);
+  background: var(--bg);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+}
+
+input:focus, select:focus, textarea:focus, button:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
+.row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+
+button {
+  font: inherit;
+  padding: 8px 14px;
+  border-radius: 8px;
+  border: 1px solid var(--accent);
+  background: var(--accent);
+  color: var(--accent-text);
+  cursor: pointer;
+}
+button.ghost { background: transparent; color: var(--accent); }
+button:disabled { opacity: 0.6; cursor: default; }
+
+.actions { display: flex; gap: 8px; flex-wrap: wrap; }
+
+.mode {
+  margin: 0 0 12px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: var(--changed);
+  font-size: 0.9rem;
+}
+
+.error { color: var(--danger); margin: 0 0 12px; font-size: 0.9rem; }
+.hint, .status { color: var(--muted); font-size: 0.9rem; margin: 0 0 12px; }
+
+.plans { list-style: none; margin: 0; padding: 0; display: grid; gap: 12px; }
+
+.plan {
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 12px;
+}
+.plan h3 { margin: 0 0 8px; font-size: 1.05rem; }
+.plan .id { color: var(--muted); font-weight: 400; font-size: 0.85rem; margin-right: 6px; }
+
+.facts { margin: 0; display: grid; grid-template-columns: 7em 1fr; gap: 4px 8px; font-size: 0.92rem; }
+.facts dt { color: var(--muted); }
+.facts dd { margin: 0; overflow-wrap: anywhere; white-space: pre-wrap; }
+
+.plan .actions { margin-top: 10px; }
+
+.history {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px dashed var(--line);
+}
+.history h4 { margin: 0 0 8px; font-size: 0.95rem; }
+.rev { margin: 0 0 10px; padding: 8px 10px; border: 1px solid var(--line); border-radius: 8px; }
+.rev .rev-head { font-weight: 600; margin-bottom: 4px; font-size: 0.9rem; }
+.rev .facts dd.changed { background: var(--changed); border-radius: 4px; padding: 0 4px; }
+
+.foot { padding-top: 16px; padding-bottom: 32px; color: var(--muted); font-size: 0.85rem; }
+
+/* ---- 할 일 (카드 2) · 스타일은 마지막 단계에서 다시 입힌다 ---- */
+#tasks-area { margin-top: 16px; }
+
+.toolbar { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 8px 12px; }
+.criteria { margin: 12px 0 8px; padding: 8px 10px; border-radius: 8px; background: var(--bg); font-size: 0.9rem; }
+.badge { display: inline-block; margin-left: 8px; padding: 0 8px; border-radius: 999px; font-size: 0.78rem; font-weight: 600; border: 1px solid var(--line); color: var(--muted); }
+.badge.done { border-color: var(--accent); color: var(--accent); }
+.exec { margin-top: 10px; padding: 8px 10px; border: 1px dashed var(--line); border-radius: 8px; }
+.exec h4 { margin: 0 0 6px; font-size: 0.9rem; }
+
+dialog { width: min(480px, calc(100vw - 32px)); padding: 16px; border: 1px solid var(--line); border-radius: 12px; background: var(--card); color: var(--text); }
+dialog::backdrop { background: rgba(0, 0, 0, 0.5); }
+dialog h2 { margin: 0 0 8px; font-size: 1.1rem; }
+
+/* ---- 돌아보기 (카드 4) · 스타일은 마지막 단계에서 다시 입힌다 ---- */
+#review-area { margin-top: 16px; }
+.stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 8px; margin-bottom: 12px; }
+.stat { text-align: left; padding: 10px; border: 1px solid var(--line); border-radius: 10px; background: var(--bg); color: var(--text); }
+.stat .num { display: block; font-size: 1.5rem; font-weight: 700; }
+.stat .lbl { color: var(--muted); font-size: 0.85rem; }
+.stat.on { border-color: var(--accent); outline: 2px solid var(--accent); }
+.stat.plain { cursor: default; }
+.sub-h { margin: 12px 0 8px; font-size: 1rem; }
+
+.export-bar { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 16px; }
+.export-bar .status { margin: 0; }
