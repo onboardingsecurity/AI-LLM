@@ -5,6 +5,8 @@
   const PRIORITY_LABEL = window.PDS_UTIL.PRIORITY_LABEL;
   const formatSeoul = window.PDS_UTIL.formatSeoul;
   const el = window.PDS_UTIL.el;
+  const notify = window.PDS_UTIL.notify;
+  const warn = window.PDS_UTIL.warn;
   const FIELDS = [
     ["title", "계획 이름", function (v) { return v; }],
     ["start_date", "시작일", function (v) { return v; }],
@@ -189,12 +191,15 @@
     showError("");
     submitBtn.disabled = true;
     try {
-      if (editingId === null) await api.createPlan(plan);
-      else await api.updatePlan(editingId, plan);
+      const wasEdit = editingId !== null;
+      const saved = wasEdit ? await api.updatePlan(editingId, plan) : await api.createPlan(plan);
       setMode(null);
       await load();
+      notify(wasEdit
+        ? "계획 " + saved.id + "번을 고쳤습니다. 이전 내용은 수정 이력에 그대로 남았습니다."
+        : "계획 " + saved.id + "번을 저장했습니다.");
     } catch (e) {
-      showError(e.message);
+      warn(e.message);
     } finally {
       submitBtn.disabled = false;
     }

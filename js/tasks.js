@@ -3,6 +3,9 @@
   const api = window.PDS_API;
   const el = window.PDS_UTIL.el;
   const formatSeoul = window.PDS_UTIL.formatSeoul;
+  const notify = window.PDS_UTIL.notify;
+  const warn = window.PDS_UTIL.warn;
+  const confirmBox = window.PDS_UTIL.confirmBox;
   const PRIORITY_LABEL = window.PDS_UTIL.PRIORITY_LABEL;
 
   // 정렬 기준. 화면에 그대로 밝히고, 같은 값일 때의 순서도 끝까지 정해 둔다(마지막은 항상 ID).
@@ -120,12 +123,13 @@
     showError(formError, "");
     submitBtn.disabled = true;
     try {
-      if (editingId === null) await api.createTask(task);
-      else await api.updateTask(editingId, task);
+      const wasEdit = editingId !== null;
+      const saved = wasEdit ? await api.updateTask(editingId, task) : await api.createTask(task);
       setMode(null);
       await loadTasks();
+      notify(wasEdit ? "할 일 " + saved.id + "번을 고쳤습니다." : "할 일 " + saved.id + "번을 저장했습니다.");
     } catch (e) {
-      showError(formError, e.message);
+      warn(e.message);
     } finally {
       submitBtn.disabled = false;
     }
@@ -265,26 +269,29 @@
   // ---------- 지우기·되돌리기 ----------
 
   async function remove(task, btn) {
-    if (!window.confirm("할 일 " + task.id + "번 \"" + task.title + "\"을(를) 지울까요?")) return;
+    if (!(await confirmBox("할 일 " + task.id + "번 \"" + task.title + "\"을(를) 지울까요?\n지운 할 일은 목록과 돌아보기 집계에서 빠집니다."))) return;
     btn.disabled = true;
     try {
       await api.deleteTask(task.id);
       if (editingId === task.id) setMode(null);
       await loadTasks();
+      notify("할 일 " + task.id + "번을 지웠습니다.");
     } catch (e) {
-      statusMsg.textContent = e.message;
       btn.disabled = false;
+      warn(e.message);
     }
   }
 
   async function reopen(task, btn) {
+    if (!(await confirmBox("할 일 " + task.id + "번을 진행 중으로 되돌릴까요?\n완료 기록은 지우지 않고 \"취소됨\"으로 남고, 돌아보기 완료 수에서는 빠집니다."))) return;
     btn.disabled = true;
     try {
       await api.reopenTask(task.id);
       await loadTasks();
+      notify("할 일 " + task.id + "번을 진행 중으로 되돌렸습니다.");
     } catch (e) {
-      statusMsg.textContent = e.message;
       btn.disabled = false;
+      warn(e.message);
     }
   }
 
@@ -357,8 +364,10 @@
         actualMinutes: minutes,
         blockedReason: $("c-blocked").value.trim() || null
       });
+      const doneId = completingId;
       dialog.close();
       await loadTasks();
+      notify("할 일 " + doneId + "번을 완료로 기록했습니다.");
     } catch (e) {
       showError(cError, e.message);
     } finally {

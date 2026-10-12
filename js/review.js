@@ -3,6 +3,8 @@
   const api = window.PDS_API;
   const el = window.PDS_UTIL.el;
   const formatSeoul = window.PDS_UTIL.formatSeoul;
+  const notify = window.PDS_UTIL.notify;
+  const warn = window.PDS_UTIL.warn;
   const PRIORITY_LABEL = window.PDS_UTIL.PRIORITY_LABEL;
 
   const $ = function (id) { return document.getElementById(id); };
@@ -232,8 +234,8 @@
     try {
       const retro = await api.handOver(a);
       const already = retro.improvement !== a.improvement;
-      hResult.textContent = already
-        ? "이 기간은 이미 넘긴 기록이 있어 기존 기록을 그대로 두었습니다. (고칠 점: " + retro.improvement + " → 계획 " + retro.next_plan_id + "번)"
+      const message = already
+        ? "이 기간은 이미 넘긴 기록이 있어 기존 기록을 그대로 두었습니다.\n(고칠 점: " + retro.improvement + " → 계획 " + retro.next_plan_id + "번)"
         : "\"" + retro.improvement + "\" 한 줄이 다음 계획 " + retro.next_plan_id + "번으로 넘어갔습니다.";
       hForm.reset();
       $("h-priority").value = "2";
@@ -241,8 +243,9 @@
       successTouched = false;
       document.dispatchEvent(new CustomEvent("plans-reload"));
       await loadRetros();
+      notify(message);
     } catch (e) {
-      showHError(e.message);
+      warn(e.message);
     } finally {
       hSubmit.disabled = false;
     }

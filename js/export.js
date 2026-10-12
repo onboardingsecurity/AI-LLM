@@ -1,6 +1,8 @@
 // 내 자료 전체를 파일 하나(JSON)로 내려받는다. 서버 DB의 값을 그대로 담는다.
 (function () {
   const api = window.PDS_API;
+  const notify = window.PDS_UTIL.notify;
+  const warn = window.PDS_UTIL.warn;
   const btn = document.getElementById("export-btn");
   const msg = document.getElementById("export-msg");
 
@@ -46,10 +48,12 @@
       a.remove();
       URL.revokeObjectURL(url);
 
-      msg.textContent = "내려받았습니다. 계획 " + counts.plans + ", 할 일 " + counts.tasks +
-        ", 실행 기록 " + counts.executions + ", 돌아보기 " + counts.retrospectives + "건";
+      msg.textContent = "";
+      notify("내려받았습니다.\n계획 " + counts.plans + ", 할 일 " + counts.tasks +
+        ", 실행 기록 " + counts.executions + ", 돌아보기 " + counts.retrospectives + "건");
     } catch (e) {
-      msg.textContent = e.message;
+      msg.textContent = "";
+      warn(e.message);
     } finally {
       btn.disabled = false;
     }
