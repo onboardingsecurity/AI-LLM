@@ -32,6 +32,10 @@
 * { cursor: url("../assets/mouse-cursor.png") 4 0, auto; }
 [hidden] { display: none !important; }
 html, body { margin: 0; }
+/* 스크롤바를 보이지 않게 한다. 마우스 휠·터치·키보드로는 그대로 스크롤된다.
+   스크롤바가 없으니 탭마다 화면이 밀리지도, 오른쪽에 띠가 생기지도 않는다. */
+html { scrollbar-width: none; }
+html::-webkit-scrollbar { display: none; }
 
 body {
   background: var(--bg);
@@ -45,7 +49,7 @@ body {
 body::before {
   content: "";
   position: fixed;
-  inset: 0;
+  inset: -5% -10%;                       /* 화면보다 크게 깔아(세로 5%, 가로 10%), 그림 가장자리의 밝은·어두운 띠가 화면 밖으로 잘려 나가게 한다 */
   z-index: -1;
   background: url("../assets/background.png") center / cover no-repeat;
 }
@@ -88,6 +92,9 @@ body::before {
   gap: 12px;
   align-items: start;
 }
+.col-one { grid-template-columns: minmax(0, 1fr); }   /* 카드 하나만 있는 탭(계획): 가로 전체를 쓴다 */
+.card-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.card-head h2 { margin: 0; }
 @media (max-width: 760px) {
   .col { grid-template-columns: minmax(0, 1fr); }   /* 좁은 화면에서는 세로로 */
   .top h1 { font-size: 26px; }
@@ -97,12 +104,20 @@ body::before {
 /* 큰 분류 탭: 보조 버튼 모양, 선택된 탭은 주황 */
 .tabs {
   max-width: var(--layout-w); margin: 6px auto 12px; padding: 4px 16px;
-  display: flex; gap: 10px; flex-wrap: wrap;
+  display: flex; gap: 10px; flex-wrap: wrap; justify-content: space-between;
+}
+.tab-line {                               /* 탭과 탭 사이를 잇는 선: 남는 자리를 채운다 */
+  flex: 1 1 0; min-width: 0; align-self: center; height: 4px; margin: 0 -4px;
+  background: var(--pixel-ink); opacity: 0.3;
 }
 button.tab {
-  flex: 1 1 0; max-width: 200px; margin: 3px; padding: 6px 14px; font-size: 20px;
+  flex: 0 1 200px; margin: 3px; padding: 6px 14px; font-size: 20px;
   color: var(--pixel-ink); background: var(--panel);
   box-shadow: 0 -2px 0 var(--pixel-ink), 0 2px 0 var(--pixel-ink), -2px 0 0 var(--pixel-ink), 2px 0 0 var(--pixel-ink);
+}
+@media (max-width: 760px) {
+  .tab-line { display: none; }            /* 좁은 화면에서는 선 없이 탭만 */
+  button.tab { flex: 1 1 0; max-width: 200px; }
 }
 button.tab:hover { background: var(--tint); filter: none; }
 button.tab[aria-selected="true"] {
@@ -138,6 +153,19 @@ input, select, textarea {
   border-radius: 6px;
 }
 textarea { resize: vertical; }
+
+/* 분 단위 숫자 칸: 입력 칸 안 오른쪽에 [−][+] 가 붙어 있다. 기본 위아래 화살표는 숨긴다. (키보드 ↑↓ 는 그대로 동작) */
+.stepper {
+  display: flex; align-items: center; margin-top: 3px; padding-right: 7px;
+  background: var(--bg); border: 1px solid var(--line); border-radius: 6px;
+}
+.stepper:focus-within { outline: 3px solid var(--accent); outline-offset: 2px; }
+.stepper input {
+  flex: 1 1 auto; width: auto; min-width: 0; margin-top: 0;
+  background: transparent; border: 0; outline: 0; -moz-appearance: textfield; appearance: textfield;
+}
+.stepper input::-webkit-inner-spin-button, .stepper input::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+.stepper .step-btn { flex: none; width: 26px; height: 24px; margin: 0; padding: 0; font-size: 18px; line-height: 1; }
 input:focus-visible, select:focus-visible, textarea:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
 
 .row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
@@ -282,6 +310,49 @@ button.ghost:active { transform: translateY(2px); }
 .dlg-body .row { grid-template-columns: 1fr; gap: 0; }  /* 시각 입력칸이 넓어서 창 안에서는 세로로 쌓는다 */
 .dlg-body input, .dlg-body textarea { min-width: 0; }
 .dlg-body .hint { margin-bottom: 10px; }
+.dlg-body h4 { margin: 0 0 8px; font-size: 17px; font-weight: 400; color: var(--pixel-ink); }
+/* 입력 칸이 많은 창(계획): 더 넓게, 칸은 두 줄로 나란히. 화면보다 길면 안쪽만 스크롤한다. */
+.dlg-wide { width: min(480px, calc(100vw - 48px)); }
+.dlg-wide .dlg-body { max-height: calc(100vh - 200px); overflow-y: auto; padding-bottom: 4px; }
+.dlg-wide .dlg-body .row { grid-template-columns: 1fr 1fr; gap: 12px; }
+@media (max-width: 420px) { .dlg-wide .dlg-body .row { grid-template-columns: 1fr; gap: 0; } }
+
+/* 수정 이력 타임라인: 세로 카드가 위(처음)에서 아래(최근)로, 살짝 오른쪽으로 밀리며 내려온다(완만한 대각선).
+   가로 스크롤 없이 한 화면에 읽히도록 카드 폭은 모두 같고, 밀리는 폭(--step)은 개수에 맞춰 JS 가 정한다. */
+.dlg-timeline { width: min(840px, calc(100vw - 48px)); }
+.dlg-timeline .dlg-body { overflow: auto; max-height: calc(100vh - 170px); }
+.timeline { padding: 10px 4px 6px; }
+.tl-item {
+  position: relative; padding: 0 0 16px 34px;
+  margin-left: calc(var(--i) * var(--step));
+  width: max(280px, calc(100% - (var(--n) - 1) * var(--step)));
+}
+.tl-item:not(:first-child)::before {      /* 앞 카드에서 이 카드의 점으로 이어지는 가로선 */
+  content: ""; position: absolute; top: 9px; left: calc(11px - var(--step)); width: calc(var(--step) - 11px); height: 4px;
+  background: var(--pixel-ink); opacity: 0.4;
+}
+.tl-item:not(:last-child)::after {        /* 이 카드의 점에서 아래로 내려가는 세로선 */
+  content: ""; position: absolute; top: 22px; left: 9px; width: 4px; bottom: -13px;
+  background: var(--pixel-ink); opacity: 0.4;
+}
+.tl-dot {
+  position: absolute; top: 0; left: 0; z-index: 1; width: 22px; height: 22px; background: #fff;
+  box-shadow: 0 -2px 0 var(--pixel-ink), 0 2px 0 var(--pixel-ink), -2px 0 0 var(--pixel-ink), 2px 0 0 var(--pixel-ink);
+}
+.tl-item:last-child .tl-dot { background: var(--accent); }
+.tl-card {
+  padding: 8px 14px 10px; background: #fff;
+  box-shadow: 0 -2px 0 var(--pixel-ink), 0 2px 0 var(--pixel-ink), -2px 0 0 var(--pixel-ink), 2px 0 0 var(--pixel-ink), 5px 6px 0 rgba(59, 42, 30, 0.18);
+}
+.tl-item:last-child .tl-card { background: #fff7ea; }
+.tl-time { margin-bottom: 8px; padding-bottom: 6px; border-bottom: 2px dotted #cdbfae; font-size: 17px; color: var(--pixel-ink); }
+.tl-chg { display: grid; grid-template-columns: 6.5em minmax(0, 1fr); gap: 2px 10px; margin-bottom: 8px; }
+.tl-chg:last-child { margin-bottom: 0; }
+.tl-key { padding-top: 2px; font-size: 15px; color: var(--muted); }
+.tl-val { display: grid; gap: 2px; justify-items: start; }
+.tl-val.tl-inline { display: flex; flex-wrap: wrap; align-items: center; gap: 2px 12px; }
+.tl-old { color: var(--muted); text-decoration: line-through; overflow-wrap: anywhere; white-space: pre-wrap; }
+.tl-new { max-width: 100%; padding: 0 6px; border-radius: 4px; background: var(--changed); font-size: 18px; color: var(--pixel-ink); overflow-wrap: anywhere; white-space: pre-wrap; }
 .dlg-actions { display: flex; justify-content: flex-end; gap: 10px; padding: 10px 14px 14px; }
 .dlg-btn { min-width: 68px; }
 .dlg-actions button { font-size: 16px; padding: 3px 12px; margin: 3px; }

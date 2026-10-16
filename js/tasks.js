@@ -110,6 +110,7 @@
       cancelBtn.hidden = true;
       form.reset();
       $("t-priority").value = "2";
+      $("t-minutes").value = "0"; // 기본값: 예상 시간 0분
     }
     showError(formError, "");
   }
@@ -311,6 +312,10 @@
     completingId = task.id;
     requestKey = newKey(); // 이 창을 연 동안은 같은 키로 보낸다 → 두 번 눌러도 같은 요청
     cForm.reset();
+    // 기본값: 시작·끝난 시각은 지금(서울), 걸린 시간은 0분. 시각을 고치면 걸린 시간이 자동으로 채워진다.
+    $("c-start").value = window.PDS_UTIL.nowKST();
+    $("c-end").value = $("c-start").value;
+    $("c-minutes").value = "0";
     minutesTouched = false;
     showError(cError, "");
     $("c-title").textContent = "할 일 " + task.id + "번 완료하기";
@@ -393,5 +398,6 @@
     loadTasks();
   });
 
+  $("t-minutes").value = "0"; // 처음 화면의 기본값: 예상 시간 0분
   describeCriteria(readFilters());
 })();

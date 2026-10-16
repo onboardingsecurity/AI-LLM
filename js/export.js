@@ -30,7 +30,7 @@
           timestamps: "UTC ISO 8601 (화면에서는 Asia/Seoul 로 보여 줌)",
           dates: "YYYY-MM-DD, 서울 기준 날짜",
           minutes: "모든 시간 값은 분 단위 정수",
-          priority: "1=높음, 2=보통, 3=낮음",
+          priority: "1=높음, 2=중간, 3=낮음",
           deleted_tasks: "deleted_at 이 있는 할 일은 지운 것 (집계에서 제외)",
           canceled_executions: "status=canceled 인 실행 기록은 되돌린 것 (집계에서 제외)"
         },

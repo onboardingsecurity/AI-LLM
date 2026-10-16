@@ -22,58 +22,19 @@
 
   <nav class="tabs" role="tablist" aria-label="큰 분류">
     <button type="button" role="tab" id="tab-plan" class="tab" aria-controls="plan-col" aria-selected="true">계획</button>
+    <span class="tab-line" aria-hidden="true"></span>
     <button type="button" role="tab" id="tab-do" class="tab" aria-controls="tasks-area" aria-selected="false" tabindex="-1">할 일</button>
+    <span class="tab-line" aria-hidden="true"></span>
     <button type="button" role="tab" id="tab-see" class="tab" aria-controls="review-area" aria-selected="false" tabindex="-1">돌아보기</button>
   </nav>
 
   <main class="board">
-    <div class="col" id="plan-col" role="tabpanel" aria-labelledby="tab-plan">
-      <section class="card" aria-labelledby="form-title">
-        <h2 id="form-title">계획 세우기</h2>
-        <p class="mode" id="form-mode" hidden></p>
-
-        <form id="plan-form" novalidate>
-          <label>계획 이름
-            <input id="f-title" name="title" type="text" maxlength="100" required>
-          </label>
-
-          <div class="row">
-            <label>시작일
-              <input id="f-start" name="start_date" type="date" required>
-            </label>
-            <label>끝나는 날
-              <input id="f-end" name="end_date" type="date" required>
-            </label>
-          </div>
-
-          <div class="row">
-            <label>우선순위
-              <select id="f-priority" name="priority" required>
-                <option value="1">1 · 높음</option>
-                <option value="2" selected>2 · 보통</option>
-                <option value="3">3 · 낮음</option>
-              </select>
-            </label>
-            <label>예상 시간 (분)
-              <input id="f-minutes" name="estimated_minutes" type="number" min="0" step="1" inputmode="numeric" required>
-            </label>
-          </div>
-
-          <label>성공 기준
-            <textarea id="f-success" name="success_criteria" rows="3" maxlength="500" required></textarea>
-          </label>
-
-          <p class="error" id="form-error" role="alert" hidden></p>
-
-          <div class="actions">
-            <button type="submit" id="f-submit">계획 저장</button>
-            <button type="button" id="f-cancel" class="ghost" hidden>고치기 취소</button>
-          </div>
-        </form>
-      </section>
-
+    <div class="col col-one" id="plan-col" role="tabpanel" aria-labelledby="tab-plan">
       <section class="card" aria-labelledby="list-title">
-        <h2 id="list-title">내 계획</h2>
+        <div class="card-head">
+          <h2 id="list-title">내 계획</h2>
+          <button type="button" id="p-new">계획 만들기</button>
+        </div>
         <p class="hint">계획을 고쳐도 처음 계획과 이전 내용은 "수정 이력"에 그대로 남습니다.</p>
         <p class="status" id="list-status">불러오는 중…</p>
         <ul class="plans" id="plan-list"></ul>
@@ -101,16 +62,16 @@
             </label>
             <label>우선순위
               <select id="t-priority">
-                <option value="1">1 · 높음</option>
-                <option value="2" selected>2 · 보통</option>
-                <option value="3">3 · 낮음</option>
+                <option value="1">높음</option>
+                <option value="2" selected>중간</option>
+                <option value="3">낮음</option>
               </select>
             </label>
           </div>
 
           <div class="row">
             <label>예상 시간 (분)
-              <input id="t-minutes" type="number" min="0" step="1" inputmode="numeric" required>
+              <input id="t-minutes" type="number" data-stepper min="0" step="1" inputmode="numeric" required>
             </label>
             <label>태그 (쉼표로 구분)
               <input id="t-tags" type="text" placeholder="예: 과제, 공부">
@@ -143,9 +104,9 @@
           <label>우선순위
             <select id="t-priority-filter">
               <option value="">전체</option>
-              <option value="1">1 · 높음</option>
-              <option value="2">2 · 보통</option>
-              <option value="3">3 · 낮음</option>
+              <option value="1">높음</option>
+              <option value="2">중간</option>
+              <option value="3">낮음</option>
             </select>
           </label>
           <label>태그
@@ -213,13 +174,13 @@
           <div class="row">
             <label>우선순위
               <select id="h-priority">
-                <option value="1">1 · 높음</option>
-                <option value="2" selected>2 · 보통</option>
-                <option value="3">3 · 낮음</option>
+                <option value="1">높음</option>
+                <option value="2" selected>중간</option>
+                <option value="3">낮음</option>
               </select>
             </label>
             <label>예상 시간 (분)
-              <input id="h-minutes" type="number" min="0" step="1" inputmode="numeric" required>
+              <input id="h-minutes" type="number" data-stepper min="0" step="1" inputmode="numeric" required>
             </label>
           </div>
           <label>성공 기준
@@ -238,6 +199,61 @@
     </div>
   </main>
 
+  <dialog id="p-dialog" class="dlg dlg-ask dlg-wide" aria-labelledby="form-title">
+    <form id="plan-form" class="dlg-box" novalidate>
+      <div class="dlg-bar"><span class="dlg-icon" aria-hidden="true">✎</span><h2 id="form-title" class="dlg-title">계획 만들기</h2></div>
+      <div class="dlg-body">
+        <p class="mode" id="form-mode" hidden></p>
+
+        <label>계획 이름
+          <input id="f-title" name="title" type="text" maxlength="100" required>
+        </label>
+
+        <div class="row">
+          <label>시작일
+            <input id="f-start" name="start_date" type="date" required>
+          </label>
+          <label>끝나는 날
+            <input id="f-end" name="end_date" type="date" required>
+          </label>
+        </div>
+
+        <div class="row">
+          <label>우선순위
+            <select id="f-priority" name="priority" required>
+              <option value="1">높음</option>
+              <option value="2" selected>중간</option>
+              <option value="3">낮음</option>
+            </select>
+          </label>
+          <label>예상 시간 (분)
+            <input id="f-minutes" name="estimated_minutes" type="number" data-stepper min="0" step="1" inputmode="numeric" required>
+          </label>
+        </div>
+
+        <label>성공 기준
+          <textarea id="f-success" name="success_criteria" rows="3" maxlength="500" required></textarea>
+        </label>
+
+        <p class="error" id="form-error" role="alert" hidden></p>
+      </div>
+      <div class="dlg-actions">
+        <button type="button" id="f-cancel" class="ghost dlg-btn">닫기</button>
+        <button type="submit" id="f-submit" class="dlg-btn">계획 저장</button>
+      </div>
+    </form>
+  </dialog>
+
+  <dialog id="hist-dialog" class="dlg dlg-ask dlg-wide dlg-timeline"aria-labelledby="hist-title">
+    <div class="dlg-box">
+      <div class="dlg-bar"><span class="dlg-icon" aria-hidden="true">≡</span><h2 id="hist-title" class="dlg-title">수정 이력</h2></div>
+      <div class="dlg-body" id="hist-body"></div>
+      <div class="dlg-actions">
+        <button type="button" id="hist-close" class="dlg-btn">닫기</button>
+      </div>
+    </div>
+  </dialog>
+
   <dialog id="c-dialog" class="dlg dlg-ask" aria-labelledby="c-title">
     <form id="c-form" class="dlg-box" novalidate>
       <div class="dlg-bar"><span class="dlg-icon" aria-hidden="true">✎</span><h2 id="c-title" class="dlg-title">완료하기</h2></div>
@@ -252,7 +268,7 @@
           </label>
         </div>
         <label>실제로 걸린 시간 (분)
-          <input id="c-minutes" type="number" min="0" step="1" inputmode="numeric" required>
+          <input id="c-minutes" type="number" data-stepper min="0" step="1" inputmode="numeric" required>
         </label>
         <p class="hint">시작·끝 시각을 넣으면 자동으로 채워집니다. 중간에 쉰 시간을 빼려면 직접 고치세요.</p>
         <label>막혔던 이유 (없으면 비워 두세요)

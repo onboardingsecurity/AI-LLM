@@ -21,12 +21,17 @@
   const formError = document.getElementById("form-error");
   const submitBtn = document.getElementById("f-submit");
   const cancelBtn = document.getElementById("f-cancel");
+  const dialog = document.getElementById("p-dialog");
+  const formTitle = document.getElementById("form-title");
+  const newBtn = document.getElementById("p-new");
+  const histDialog = document.getElementById("hist-dialog");
+  const histTitle = document.getElementById("hist-title");
+  const histBody = document.getElementById("hist-body");
   const listEl = document.getElementById("plan-list");
   const statusEl = document.getElementById("list-status");
 
   let editingId = null;
   let plans = [];
-  const openHistory = new Set();
 
   function showError(msg) {
     formError.textContent = msg || "";
@@ -64,23 +69,29 @@
     form.estimated_minutes.value = String(plan.estimated_minutes);
   }
 
-  function setMode(plan) {
+  // 입력 창(모달)을 연다. plan 이 있으면 고치기, 없으면 새 계획 만들기.
+  function openForm(plan) {
     editingId = plan ? plan.id : null;
     if (plan) {
+      formTitle.textContent = "계획 고치기";
       formMode.textContent = "계획 " + plan.id + "번을 고치는 중입니다. 저장하면 이전 내용은 수정 이력에 남습니다.";
       formMode.hidden = false;
       submitBtn.textContent = "고친 내용 저장";
-      cancelBtn.hidden = false;
       fillForm(plan);
-      form.title.focus();
     } else {
+      formTitle.textContent = "계획 만들기";
       formMode.hidden = true;
       submitBtn.textContent = "계획 저장";
-      cancelBtn.hidden = true;
       form.reset();
       form.priority.value = "2";
+      // 기본값: 시작일·끝나는 날은 오늘(서울), 예상 시간은 0분
+      form.start_date.value = window.PDS_UTIL.todayKST();
+      form.end_date.value = form.start_date.value;
+      form.estimated_minutes.value = "0";
     }
     showError("");
+    dialog.showModal();
+    form.title.focus();
   }
 
   function factsList(values, changed) {
@@ -94,42 +105,63 @@
     return dl;
   }
 
+  // 수정 이력을 세로 카드 타임라인으로 그린다. 위(처음)에서 아래(최근)로 내려오며, 카드가 조금씩 오른쪽으로 밀린다.
+  // 맨 처음 기록은 전체 값을, 그다음부터는 바로 앞 기록에서 바뀐 항목만 "이전 → 지금"으로 보여 준다.
   function renderRevisions(container, revisions) {
     container.textContent = "";
-    container.appendChild(el("h4", { text: "수정 이력 (" + revisions.length + "개 버전)" }));
+
+    // 카드가 밀리는 폭: 기록이 적으면 36px, 많으면 줄여서 전체가 창 폭 안에 들어가게 한다.
+    const n = revisions.length;
+    const step = n > 1 ? Math.max(14, Math.min(36, Math.floor(240 / (n - 1)))) : 0;
+    const line = el("div", { class: "timeline", style: "--n:" + n + ";--step:" + step + "px" });
     revisions.forEach(function (r, i) {
       const prev = i > 0 ? revisions[i - 1] : null;
-      const changed = new Set();
-      if (prev) FIELDS.forEach(function (f) { if (prev[f[0]] !== r[f[0]]) changed.add(f[0]); });
-      const head = (i === 0 ? "버전 1 · 처음 세운 계획" : "버전 " + r.version + " · 고친 내용") +
-        " · " + formatSeoul(r.recorded_at);
-      container.appendChild(el("div", { class: "rev" }, [
-        el("div", { class: "rev-head", text: head }),
-        factsList(r, changed)
+
+      const body = el("div", { class: "tl-body" });
+      if (!prev) {
+        body.appendChild(factsList(r));
+      } else {
+        let any = false;
+        FIELDS.forEach(function (f) {
+          if (prev[f[0]] === r[f[0]]) return;
+          any = true;
+          const oldText = f[2](prev[f[0]]);
+          const newText = f[2](r[f[0]]);
+          // 이전·새 값이 둘 다 짧으면(예상 시간·우선순위·날짜 등) 한 줄로, 길면 두 줄로 보여 준다.
+          const short = oldText.length <= 16 && newText.length <= 16 && oldText.indexOf("\n") < 0 && newText.indexOf("\n") < 0;
+          body.appendChild(el("div", { class: "tl-chg" }, [
+            el("div", { class: "tl-key", text: f[1] }),
+            el("div", { class: short ? "tl-val tl-inline" : "tl-val" }, [
+              el("div", { class: "tl-old", text: oldText }),
+              el("div", { class: "tl-new", text: "→ " + newText })
+            ])
+          ]));
+        });
+        if (!any) body.appendChild(el("p", { class: "hint", text: "바뀐 항목이 없습니다." }));
+      }
+
+      line.appendChild(el("div", { class: "tl-item", style: "--i:" + i }, [
+        el("span", { class: "tl-dot", "aria-hidden": "true" }),
+        el("div", { class: "tl-card" }, [
+          el("div", { class: "tl-time", text: formatSeoul(r.recorded_at) }),
+          body
+        ])
       ]));
     });
-    if (revisions.length > 1) {
-      container.appendChild(el("p", { class: "hint", text: "노란 칸은 바로 앞 버전에서 바뀐 값입니다." }));
-    }
+    container.appendChild(line);
+
   }
 
-  async function toggleHistory(plan, container, button) {
-    if (openHistory.has(plan.id)) {
-      openHistory.delete(plan.id);
-      container.hidden = true;
-      button.textContent = "수정 이력 보기";
-      return;
-    }
+  // 수정 이력은 화면 가운데 창(모달)으로 띄운다. 열 때마다 서버에서 새로 읽는다.
+  async function showHistory(plan, button) {
     button.disabled = true;
     try {
       const revisions = await api.listRevisions(plan.id);
-      renderRevisions(container, revisions);
-      container.hidden = false;
-      openHistory.add(plan.id);
-      button.textContent = "수정 이력 닫기";
+      histTitle.textContent = "계획 " + plan.id + "번 수정 이력";
+      renderRevisions(histBody, revisions);
+      histDialog.showModal();
     } catch (e) {
-      container.textContent = e.message;
-      container.hidden = false;
+      warn(e.message);
     } finally {
       button.disabled = false;
     }
@@ -141,32 +173,20 @@
     if (!plans.length) statusEl.textContent = "아직 계획이 없습니다. 왼쪽에서 첫 계획을 세워 보세요.";
 
     plans.forEach(function (plan) {
-      const history = el("div", { class: "history" });
-      history.hidden = true;
-
       const editBtn = el("button", { type: "button", text: "고치기" });
-      editBtn.addEventListener("click", function () { setMode(plan); });
+      editBtn.addEventListener("click", function () { openForm(plan); });
 
       const histBtn = el("button", { type: "button", class: "ghost", text: "수정 이력 보기" });
-      histBtn.addEventListener("click", function () { toggleHistory(plan, history, histBtn); });
+      histBtn.addEventListener("click", function () { showHistory(plan, histBtn); });
 
       const title = el("h3", {}, [el("span", { class: "id", text: "계획 " + plan.id }), document.createTextNode(plan.title)]);
 
       const li = el("li", { class: "plan" }, [
         title,
         factsList(plan),
-        el("div", { class: "actions" }, [editBtn, histBtn]),
-        history
+        el("div", { class: "actions" }, [editBtn, histBtn])
       ]);
       listEl.appendChild(li);
-
-      if (openHistory.has(plan.id)) {
-        api.listRevisions(plan.id).then(function (revs) {
-          renderRevisions(history, revs);
-          history.hidden = false;
-          histBtn.textContent = "수정 이력 닫기";
-        }).catch(function () { openHistory.delete(plan.id); });
-      }
     });
   }
 
@@ -193,7 +213,8 @@
     try {
       const wasEdit = editingId !== null;
       const saved = wasEdit ? await api.updatePlan(editingId, plan) : await api.createPlan(plan);
-      setMode(null);
+      dialog.close();
+      editingId = null;
       await load();
       notify(wasEdit
         ? "계획 " + saved.id + "번을 고쳤습니다. 이전 내용은 수정 이력에 그대로 남았습니다."
@@ -205,7 +226,10 @@
     }
   });
 
-  cancelBtn.addEventListener("click", function () { setMode(null); });
+  cancelBtn.addEventListener("click", function () { dialog.close(); });
+  window.PDS_UTIL.keepEndAfterStart(form.start_date, form.end_date);
+  newBtn.addEventListener("click", function () { openForm(null); });
+  document.getElementById("hist-close").addEventListener("click", function () { histDialog.close(); });
 
   // 다른 화면(돌아보기)이 새 계획을 만들면 목록을 다시 불러온다.
   document.addEventListener("plans-reload", load);

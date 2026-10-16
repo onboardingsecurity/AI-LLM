@@ -162,6 +162,15 @@
 
   function showHError(msg) { hError.textContent = msg || ""; hError.hidden = !msg; }
 
+  // 기본값: 다음 계획의 시작일·끝나는 날은 오늘(서울), 예상 시간은 0분
+  function handoverDefaults() {
+    $("h-start").value = window.PDS_UTIL.todayKST();
+    $("h-end").value = $("h-start").value;
+    $("h-minutes").value = "0";
+  }
+  handoverDefaults();
+  window.PDS_UTIL.keepEndAfterStart($("h-start"), $("h-end"));
+
   $("h-improve").addEventListener("input", function () {
     const v = $("h-improve").value;
     if (!titleTouched) $("h-title-in").value = v.slice(0, 100);
@@ -239,6 +248,7 @@
         : "\"" + retro.improvement + "\" 한 줄이 다음 계획 " + retro.next_plan_id + "번으로 넘어갔습니다.";
       hForm.reset();
       $("h-priority").value = "2";
+      handoverDefaults();
       titleTouched = false;
       successTouched = false;
       document.dispatchEvent(new CustomEvent("plans-reload"));
