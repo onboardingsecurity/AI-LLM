@@ -162,7 +162,7 @@
 
   function showHError(msg) { hError.textContent = msg || ""; hError.hidden = !msg; }
 
-  // 기본값: 다음 계획의 시작일·끝나는 날은 오늘(서울), 예상 시간은 0분
+  // 기본값: 다음 계획의 시작일·종료일은 오늘(서울), 예상 시간은 0분
   function handoverDefaults() {
     $("h-start").value = window.PDS_UTIL.todayKST();
     $("h-end").value = $("h-start").value;
@@ -173,10 +173,18 @@
 
   $("h-improve").addEventListener("input", function () {
     const v = $("h-improve").value;
-    if (!titleTouched) $("h-title-in").value = v.slice(0, 100);
+    if (!titleTouched) $("h-title-in").value = v.slice(0, nameLimit());
     if (!successTouched) $("h-success").value = v.slice(0, 500);
   });
   $("h-title-in").addEventListener("input", function () { titleTouched = true; });
+  // 다음 계획 이름도 계획 이름 길이 규칙(5자 단위, 목록에서 한 줄로 보이는 길이)을 따른다. 계획 탭에서 잰 값을 쓴다.
+  function nameLimit() {
+    const n = window.PDS_PLAN_NAME ? window.PDS_PLAN_NAME.cached() : 20;
+    $("h-title-in").maxLength = n;
+    return n;
+  }
+  nameLimit();
+  $("h-title-in").addEventListener("focus", nameLimit);
   $("h-success").addEventListener("input", function () { successTouched = true; });
 
   function currentPlan() {
@@ -229,8 +237,8 @@
     if (a.periodEnd < a.periodStart) { showHError("돌아본 기간이 올바르지 않습니다."); return; }
     if (!a.improvement) { showHError("고칠 점을 한 줄 적어 주세요."); return; }
     if (!a.nextTitle) { showHError("다음 계획 이름을 적어 주세요."); return; }
-    if (!a.nextStart || !a.nextEnd) { showHError("다음 계획의 시작일과 끝나는 날을 정해 주세요."); return; }
-    if (a.nextEnd < a.nextStart) { showHError("끝나는 날은 시작일보다 빠를 수 없습니다."); return; }
+    if (!a.nextStart || !a.nextEnd) { showHError("다음 계획의 시작일과 종료일을 정해 주세요."); return; }
+    if (a.nextEnd < a.nextStart) { showHError("종료일은 시작일보다 빠를 수 없습니다."); return; }
     if (!a.nextSuccess) { showHError("다음 계획의 성공 기준을 적어 주세요."); return; }
     if (!Number.isInteger(a.nextMinutes) || a.nextMinutes < 0) {
       showHError("예상 시간은 0 이상의 정수(분)로 적어 주세요.");

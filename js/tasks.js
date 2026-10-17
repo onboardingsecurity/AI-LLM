@@ -11,15 +11,15 @@
   // 정렬 기준. 화면에 그대로 밝히고, 같은 값일 때의 순서도 끝까지 정해 둔다(마지막은 항상 ID).
   const SORTS = {
     default: {
-      label: "마감일 빠른 순(마감일 없는 것은 맨 뒤) → 우선순위 높은 순 → 만든 시각 빠른 순 → ID 작은 순",
+      label: "빠른 마감, 높은 우선순위, 빠른 생성, 작은 아이디",
       order: "due_date.asc.nullslast,priority.asc,created_at.asc,id.asc"
     },
     priority: {
-      label: "우선순위 높은 순 → 마감일 빠른 순(마감일 없는 것은 맨 뒤) → 만든 시각 빠른 순 → ID 작은 순",
+      label: "높은 우선순위, 빠른 마감, 빠른 생성, 작은 아이디",
       order: "priority.asc,due_date.asc.nullslast,created_at.asc,id.asc"
     },
     minutes: {
-      label: "예상 시간 긴 순 → 마감일 빠른 순(마감일 없는 것은 맨 뒤) → 우선순위 높은 순 → ID 작은 순",
+      label: "긴 예상 시간, 빠른 마감, 높은 우선순위, 작은 아이디",
       order: "estimated_minutes.desc,due_date.asc.nullslast,priority.asc,id.asc"
     }
   };
@@ -31,8 +31,14 @@
   const formError = $("t-form-error");
   const submitBtn = $("t-submit");
   const cancelBtn = $("t-cancel");
+  const taskDialog = $("t-dialog");
+  const formTitle = $("t-form-title");
+  const newBtn = $("t-new");
   const listEl = $("t-list");
   const statusMsg = $("t-status-msg");
+  const emptyEl = $("t-empty");   // 할 일이 없을 때 리스트 창 가운데에 보이는 그림
+  const countEl = $("t-count");   // 할 일 리스트 제목 옆에 개수만
+  function setStatus(text) { statusMsg.textContent = text; statusMsg.hidden = !text; }
   const criteriaEl = $("t-criteria");
 
   const dialog = $("c-dialog");
@@ -41,12 +47,15 @@
   const cSubmit = $("c-submit");
 
   let planId = null;
+  let planTitles = {};   // 계획 id → 계획 이름 (입력 창에 어느 계획의 할 일인지 보여 줄 때 쓴다)
   let editingId = null;
   let completingId = null;
+  let completingTitle = "";   // 완료 창을 연 할 일의 이름(알림 창 제목에 쓴다)
   let requestKey = null;
   let minutesTouched = false;
   let debounce = null;
   let loadSeq = 0;
+  let shownTasks = [];   // 지금 리스트에 보이는 할 일(달력도 같은 것을 그린다)
 
   // ---------- 입력 읽기·검사 ----------
 
@@ -91,28 +100,32 @@
 
   // ---------- 만들기·고치기 ----------
 
-  function setMode(task) {
+  // 입력 창(모달)을 연다. task 가 있으면 고치기, 없으면 새 할 일 만들기.
+  function openForm(task) {
+    if (!task && planId === null) { warn("먼저 계획을 하나 세워 주세요."); return; }
+    if (task && task.status === "done") { warn("완료한 할 일은 고칠 수 없습니다. 진행 중으로 되돌리면 고칠 수 있습니다.", task.title); return; }
     editingId = task ? task.id : null;
+    formMode.hidden = true;   // "(계획 이름)에 담을 할 일입니다." 같은 안내는 두지 않는다
     if (task) {
-      formMode.textContent = "할 일 " + task.id + "번을 고치는 중입니다.";
-      formMode.hidden = false;
+      formTitle.textContent = task.title;
       submitBtn.textContent = "고친 내용 저장";
-      cancelBtn.hidden = false;
       $("t-title").value = task.title;
       $("t-due").value = task.due_date || "";
       $("t-priority").value = String(task.priority);
       $("t-minutes").value = String(task.estimated_minutes);
       $("t-tags").value = (task.tags || []).join(", ");
-      $("t-title").focus();
     } else {
-      formMode.hidden = true;
+      formTitle.textContent = "할 일 만들기";
       submitBtn.textContent = "할 일 저장";
-      cancelBtn.hidden = true;
       form.reset();
+      // 기본값(계획 만들기와 같은 방식): 마감일은 오늘(서울), 우선순위는 중간, 예상 시간은 0분
+      $("t-due").value = window.PDS_UTIL.todayKST();
       $("t-priority").value = "2";
-      $("t-minutes").value = "0"; // 기본값: 예상 시간 0분
+      $("t-minutes").value = "0";
     }
     showError(formError, "");
+    taskDialog.showModal();
+    $("t-title").focus();
   }
 
   form.addEventListener("submit", async function (ev) {
@@ -126,17 +139,19 @@
     try {
       const wasEdit = editingId !== null;
       const saved = wasEdit ? await api.updateTask(editingId, task) : await api.createTask(task);
-      setMode(null);
+      taskDialog.close();
+      editingId = null;
       await loadTasks();
-      notify(wasEdit ? "할 일 " + saved.id + "번을 고쳤습니다." : "할 일 " + saved.id + "번을 저장했습니다.");
+      notify(wasEdit ? "할 일을 고쳤습니다." : "할 일을 저장했습니다.", task.title);
     } catch (e) {
-      warn(e.message);
+      warn(e.message, task.title);
     } finally {
       submitBtn.disabled = false;
     }
   });
 
-  cancelBtn.addEventListener("click", function () { setMode(null); });
+  cancelBtn.addEventListener("click", function () { taskDialog.close(); });
+  newBtn.addEventListener("click", function () { openForm(null); });
 
   // ---------- 검색·거르기·정렬 ----------
 
@@ -151,17 +166,10 @@
     };
   }
 
-  function describeCriteria(f) {
+  // 화면에 밝히는 정렬 기준(요구사항: 정렬은 화면에 적힌 기준대로). 거르기 조건은 입력 칸에 그대로 보이니 따로 적지 않는다.
+  function describeCriteria() {
     const sort = SORTS[$("t-sort").value] || SORTS.default;
-    const conds = [];
-    if (f.q) conds.push("제목에 \"" + f.q + "\" 포함");
-    if (f.status) conds.push("상태: " + (f.status === "done" ? "완료" : "진행 중"));
-    if (f.priority) conds.push("우선순위: " + PRIORITY_LABEL[f.priority]);
-    if (f.tag) conds.push("태그: " + f.tag);
-    criteriaEl.textContent =
-      "정렬 기준: " + sort.label + ". 같은 값이면 위 순서대로 다음 기준으로 정합니다. " +
-      "거르기·검색: " + (conds.length ? conds.join(", ") : "조건 없음") +
-      ". (검색·거르기·정렬은 서버 DB에서 처리합니다.)";
+    criteriaEl.textContent = "동일 정렬 기준\n: " + sort.label;   // 두 줄(줄바꿈은 CSS white-space: pre-line)
   }
 
   ["t-status", "t-priority-filter", "t-sort"].forEach(function (id) {
@@ -184,7 +192,6 @@
 
   planSelect.addEventListener("change", function () {
     planId = Number(planSelect.value);
-    setMode(null);
     loadTasks();
   });
 
@@ -195,29 +202,100 @@
     dl.appendChild(el("dd", { text: value }));
   }
 
-  function renderExecution(exec) {
+  function renderExecution(exec, task) {
     const dl = el("dl", { class: "facts" });
     addFact(dl, "시작 시각", formatSeoul(exec.started_at));
     addFact(dl, "끝난 시각", formatSeoul(exec.ended_at));
     addFact(dl, "걸린 시간", exec.actual_minutes + "분");
     addFact(dl, "막혔던 이유", exec.blocked_reason ? exec.blocked_reason : "없음");
-    return el("div", { class: "exec" }, [
-      el("h4", { text: "실행 기록 " + exec.id + " (할 일 " + exec.task_id + "번에 붙어 있음)" }),
-      dl
-    ]);
+    return el("div", { class: "exec" }, [dl]);
   }
 
-  function renderTask(task) {
+  // 할 일도 계획처럼 세로 타임라인. 이름이 대표이고, 이름을 누르면 그 자리에서 데이터와 버튼이 펼쳐진다.
+  // 위에서 아래 순서는 서버가 화면에 밝힌 정렬 기준대로 정해 준 목록 순서 그대로다.
+  const openIds = new Set();
+
+  // 기간 막대: 만든 날 ~ 마감일. 보이는 할 일 전체의 가장 이른 날 ~ 가장 늦은 마감일을 한 줄(축)로 보고, 각 할 일이 그 안에서 어디에 놓이는지 그린다.
+  // 완료 = 초록, 진행 중 = 주황(마감 전) / 회색(마감 지남). 마감일이 없으면 칸만 비워 둔다. 검은 세로선이 서울 오늘.
+  function createdDay(task) { return new Date(Date.parse(task.created_at) + 9 * 3600000).toISOString().slice(0, 10); }
+  function taskAxis(tasks) {
+    let s = null, e = null;
+    tasks.forEach(function (t) {
+      const a = createdDay(t);
+      const b = t.due_date && t.due_date > a ? t.due_date : a;
+      if (s === null || a < s) s = a;
+      if (e === null || b > e) e = b;
+    });
+    const today = window.PDS_UTIL.todayKST();
+    if (s === null) return null;
+    if (today < s) s = today;
+    if (today > e) e = today;
+    return { start: s, end: e };
+  }
+  function taskBar(task, axis, done, late) {
+    const dn = window.PDS_UTIL.dayNumber;
+    const base = dn(axis.start);
+    const total = Math.max(1, dn(axis.end) - base + 1);
+    const bar = el("div", { class: "pl-bar", "aria-hidden": "true" });
+    if (task.due_date) {
+      const a = createdDay(task);
+      const from = a < task.due_date ? a : task.due_date;
+      const left = (dn(from) - base) / total * 100;
+      const width = Math.max(2, (dn(task.due_date) - dn(from) + 1) / total * 100);
+      bar.appendChild(el("span", { class: "pl-bar-fill " + (done ? "done" : (late ? "over" : "ing")), style: "left:" + left + "%;width:" + width + "%" }));
+    }
+    const t = dn(window.PDS_UTIL.todayKST());
+    bar.appendChild(el("span", { class: "pl-bar-today", style: "left:" + ((t - base + 0.5) / total * 100) + "%" }));
+    return bar;
+  }
+
+  // ---------- 리스트 ↔ 달력 ----------
+  // 달력은 계획 탭의 달력과 같은 모양(js/cal.js)이다. 막대는 만든 날 ~ 마감일(마감일 없는 할 일은 그릴 자리가 없어 빠진다).
+  // 색: 진행 중 = 우선순위 색, 완료 = 초록, 진행 중인데 마감이 지남 = 회색. 막대를 눌러 이동하는 기능은 없다.
+  const taskCal = window.PDS_CAL.create($("t-cal"), function () {
+    const today = window.PDS_UTIL.todayKST();
+    return shownTasks.filter(function (t) { return !!t.due_date; }).map(function (t) {
+      const made = createdDay(t);
+      const start = made < t.due_date ? made : t.due_date;
+      const done = t.status === "done";
+      const late = !done && t.due_date < today;
+      return { id: t.id, title: t.title, start: start, end: t.due_date, priority: t.priority,
+               cls: done ? "done" : (late ? "late" : "pri-" + t.priority),
+               tip: t.title + " (" + start + " ~ " + t.due_date + ")" };
+    });
+  }, { noun: "할 일" });
+  const TASK_VIEW_KEY = "pds-task-view";
+  function setTaskView(view, save) {
+    const cal = view === "cal";
+    $("t-cal").hidden = !cal;
+    document.querySelector("#tasks-area .task-scroll").hidden = cal;
+    $("t-view-list").setAttribute("aria-pressed", String(!cal));
+    $("t-view-cal").setAttribute("aria-pressed", String(cal));
+    if (cal) taskCal.render();
+    if (save) { try { window.localStorage.setItem(TASK_VIEW_KEY, view); } catch (e) { /* 저장이 막혀 있어도 화면은 동작 */ } }
+  }
+  $("t-view-list").addEventListener("click", function () { setTaskView("list", true); });
+  $("t-view-cal").addEventListener("click", function () { setTaskView("cal", true); });
+  try { if (window.localStorage.getItem(TASK_VIEW_KEY) === "cal") setTaskView("cal", false); } catch (e) { /* 저장값을 못 읽으면 기본(리스트) */ }
+
+  function renderTask(task, axis) {
     const done = task.status === "done";
+    const panelId = "task-panel-" + task.id;
+    const isOpen = openIds.has(task.id);
 
     const dl = el("dl", { class: "facts" });
     addFact(dl, "마감일", task.due_date || "없음");
-    addFact(dl, "우선순위", PRIORITY_LABEL[task.priority]);
     addFact(dl, "예상 시간", task.estimated_minutes + "분");
     addFact(dl, "태그", task.tags && task.tags.length ? task.tags.join(", ") : "없음");
 
     const editBtn = el("button", { type: "button", text: "고치기" });
-    editBtn.addEventListener("click", function () { setMode(task); });
+    if (done) {
+      // 완료한 할 일은 고칠 수 없다. 고치려면 먼저 "진행 중으로 되돌리기".
+      editBtn.disabled = true;
+      editBtn.title = "완료한 할 일은 고칠 수 없습니다. 진행 중으로 되돌리면 고칠 수 있습니다.";
+    } else {
+      editBtn.addEventListener("click", function () { openForm(task); });
+    }
 
     const toggleBtn = el("button", { type: "button", class: "ghost", text: done ? "진행 중으로 되돌리기" : "완료하기" });
     toggleBtn.addEventListener("click", function () {
@@ -228,18 +306,41 @@
     const delBtn = el("button", { type: "button", class: "ghost", text: "지우기" });
     delBtn.addEventListener("click", function () { remove(task, delBtn); });
 
-    const badge = el("span", { class: done ? "badge done" : "badge", text: done ? "완료" : "진행 중" });
-    const heading = el("h3", {}, [
-      el("span", { class: "id", text: "할 일 " + task.id }),
-      document.createTextNode(task.title),
-      badge
-    ]);
-
-    const children = [heading, dl];
+    const panelChildren = [dl];
     const active = (task.executions || [])[0];
-    if (done && active) children.push(renderExecution(active));
-    children.push(el("div", { class: "actions" }, [editBtn, toggleBtn, delBtn]));
-    return el("li", { class: "plan" }, children);
+    if (done && active) panelChildren.push(renderExecution(active, task));
+    panelChildren.push(el("div", { class: "actions" }, [editBtn, toggleBtn, delBtn]));
+    const panel = el("div", { class: "pl-panel", id: panelId }, panelChildren);
+    panel.hidden = !isOpen;
+
+    const nameBtn = el("button", {
+      type: "button", class: "pl-name", text: task.title,
+      "aria-expanded": String(isOpen), "aria-controls": panelId
+    });
+    nameBtn.addEventListener("click", function () {
+      const open = panel.hidden;
+      panel.hidden = !open;
+      nameBtn.setAttribute("aria-expanded", String(open));
+      if (open) openIds.add(task.id); else openIds.delete(task.id);
+    });
+
+    const badge = el("span", { class: done ? "badge done" : "badge", text: done ? "완료" : "진행 중" });
+    // 네모칸: 완료 = 체크 표시, 진행 중 = 우선순위 색, 진행 중인데 마감일이 지났으면(서울 오늘 기준) 못한 표시(✕)
+    const late = !done && !!task.due_date && task.due_date < window.PDS_UTIL.todayKST();
+    const state = done ? "done" : (late ? "late" : "");
+    const dotTitle = done ? "완료" : (late ? "마감일이 지났는데 못 했어요" : "진행 중");
+    // 날짜 줄: 마감일 + (진행 중이고 마감일이 있으면) 남은 날 D-day. 완료한 할 일은 D-day 를 보여 주지 않는다.
+    const dateLine = [document.createTextNode(task.due_date ? "마감일 " + task.due_date : "마감일 없음")];
+    if (!done && task.due_date) {
+      dateLine.push(el("span", { class: "pl-dday", text: window.PDS_UTIL.ddayText(task.due_date, window.PDS_UTIL.todayKST()), title: "마감일까지 남은 날" }));
+    }
+    return el("li", { class: "pl-item" + (state ? " " + state : "") + " pri-" + task.priority }, [
+      el("span", { class: "pl-dot", title: dotTitle, "aria-hidden": "true" }),
+      el("div", { class: "pl-date" }, dateLine),
+      el("h3", {}, [nameBtn, badge]),
+      taskBar(task, axis, done, late),
+      panel
+    ]);
   }
 
   async function loadTasks() {
@@ -247,52 +348,65 @@
     if (planId === null) {
       criteriaEl.textContent = "";
       listEl.textContent = "";
-      statusMsg.textContent = "먼저 위쪽에서 계획을 하나 세워 주세요.";
+      countEl.textContent = "";
+      emptyEl.hidden = false;
+      setStatus("먼저 위쪽에서 계획을 하나 세워 주세요.");
       return;
     }
     const f = readFilters();
     describeCriteria(f);
-    statusMsg.textContent = "불러오는 중…";
+    countEl.textContent = "";
+    emptyEl.hidden = true;
+    setStatus("불러오는 중…");
     try {
       const tasks = await api.listTasks(planId, f);
       if (seq !== loadSeq) return; // 더 최근 요청이 있으면 이 결과는 버린다
       listEl.textContent = "";
-      tasks.forEach(function (t) { listEl.appendChild(renderTask(t)); });
-      statusMsg.textContent = tasks.length
-        ? "할 일 " + tasks.length + "개"
-        : "조건에 맞는 할 일이 없습니다.";
+      const axis = taskAxis(tasks);
+      tasks.forEach(function (t) { listEl.appendChild(renderTask(t, axis)); });
+      shownTasks = tasks;
+      taskCal.render();
+      countEl.textContent = tasks.length ? tasks.length + "개" : "";   // 없을 때는 안내 문구만
+      emptyEl.hidden = tasks.length > 0;
+      // 검색·거르기 조건이 걸려 있는데 결과가 없으면 "조건에 맞는", 계획에 할 일이 아예 없으면 "할 일이 없습니다."
+      const filtered = !!(f.q || f.status || f.priority || f.tag);
+      setStatus(tasks.length ? "" : (filtered ? "조건에 맞는 할 일이 없습니다." : "할 일이 없습니다."));
       document.dispatchEvent(new CustomEvent("tasks-changed"));
     } catch (e) {
-      if (seq === loadSeq) statusMsg.textContent = e.message;
+      if (seq === loadSeq) { countEl.textContent = ""; setStatus(e.message); }
     }
   }
 
   // ---------- 지우기·되돌리기 ----------
 
   async function remove(task, btn) {
-    if (!(await confirmBox("할 일 " + task.id + "번 \"" + task.title + "\"을(를) 지울까요?\n지운 할 일은 목록과 돌아보기 집계에서 빠집니다."))) return;
+    // 알림을 두 번에 나눈다: 먼저 집계 안내 → 확인하면 "지울까요?" → 확인하면 삭제. 어느 쪽에서든 취소하면 아무것도 하지 않는다.
+    if (!(await confirmBox("삭제 시 돌아보기 집계에서 빠집니다.", task.title))) return;
+    if (!(await confirmBox("해당 할 일을 지울까요?", task.title))) return;
     btn.disabled = true;
     try {
       await api.deleteTask(task.id);
-      if (editingId === task.id) setMode(null);
+      openIds.delete(task.id);
       await loadTasks();
-      notify("할 일 " + task.id + "번을 지웠습니다.");
+      notify("삭제가 완료되었습니다.", task.title);
     } catch (e) {
       btn.disabled = false;
-      warn(e.message);
+      warn(e.message, task.title);
     }
   }
 
   async function reopen(task, btn) {
-    if (!(await confirmBox("할 일 " + task.id + "번을 진행 중으로 되돌릴까요?\n완료 기록은 지우지 않고 \"취소됨\"으로 남고, 돌아보기 완료 수에서는 빠집니다."))) return;
+    // 삭제와 같이 알림을 두 번에 나눈다: 먼저 기록·집계 안내 → 확인하면 "되돌릴까요?" → 확인하면 되돌린다. 어느 쪽에서든 취소하면 아무것도 하지 않는다.
+    if (!(await confirmBox("완료 기록은 지우지 않고 취소로 남으며 돌아보기 집계에서 빠집니다.", task.title))) return;
+    if (!(await confirmBox("해당 할 일을 진행 중으로 되돌릴까요?", task.title))) return;
     btn.disabled = true;
     try {
       await api.reopenTask(task.id);
       await loadTasks();
-      notify("할 일 " + task.id + "번을 진행 중으로 되돌렸습니다.");
+      notify("진행 중으로 되돌렸습니다.", task.title);
     } catch (e) {
       btn.disabled = false;
-      warn(e.message);
+      warn(e.message, task.title);
     }
   }
 
@@ -310,6 +424,7 @@
 
   function openComplete(task) {
     completingId = task.id;
+    completingTitle = task.title;
     requestKey = newKey(); // 이 창을 연 동안은 같은 키로 보낸다 → 두 번 눌러도 같은 요청
     cForm.reset();
     // 기본값: 시작·끝난 시각은 지금(서울), 걸린 시간은 0분. 시각을 고치면 걸린 시간이 자동으로 채워진다.
@@ -318,7 +433,7 @@
     $("c-minutes").value = "0";
     minutesTouched = false;
     showError(cError, "");
-    $("c-title").textContent = "할 일 " + task.id + "번 완료하기";
+    $("c-title").textContent = task.title;
     dialog.showModal();
   }
 
@@ -369,10 +484,9 @@
         actualMinutes: minutes,
         blockedReason: $("c-blocked").value.trim() || null
       });
-      const doneId = completingId;
       dialog.close();
       await loadTasks();
-      notify("할 일 " + doneId + "번을 완료로 기록했습니다.");
+      notify("완료로 기록했습니다.", completingTitle);
     } catch (e) {
       showError(cError, e.message);
     } finally {
@@ -384,9 +498,11 @@
 
   document.addEventListener("plans-changed", function (ev) {
     const plans = ev.detail;
+    planTitles = {};
+    plans.forEach(function (p) { planTitles[p.id] = p.title; });
     planSelect.textContent = "";
     plans.forEach(function (p) {
-      planSelect.appendChild(el("option", { value: String(p.id), text: "계획 " + p.id + " · " + p.title }));
+      planSelect.appendChild(el("option", { value: String(p.id), text: p.title }));
     });
     if (!plans.length) {
       planId = null;
@@ -397,6 +513,31 @@
     }
     loadTasks();
   });
+
+  // ---------- 계획 선택 칸의 글자 크기 ----------
+  // 지금 있는 계획 이름 중 가장 넓은 것이 선택 칸(과 펼친 목록)에 한 줄로 다 들어가는 가장 큰 글자 크기(10~16px)로 맞춘다.
+  // 이름은 길이 규칙(app.js)을 넘지 않으니, 가장 긴 이름이 한 줄에 들어가고 칸이 필요 이상으로 비지 않는다.
+  // 계획이 바뀌거나 칸 너비가 바뀌면(창 크기) 다시 맞춘다.
+  const planPick = planSelect.previousElementSibling;   // util.js 가 select 앞에 끼워 넣은 ▼ 버튼
+  if (planPick) planPick.classList.add("plan-pick");
+  function fitPlanPick() {
+    if (!planPick || !planPick.getClientRects().length) return;   // 탭이 숨겨져 있으면 잴 수 없다(보이게 되면 다시 맞춘다)
+    const cs = window.getComputedStyle(planPick);
+    const room = planPick.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight);
+    const ctx = document.createElement("canvas").getContext("2d");
+    ctx.font = cs.fontWeight + " 100px " + cs.fontFamily;
+    let widest = 0;                                    // 글자 크기 1px 일 때 가장 넓은 이름의 너비
+    Object.keys(planTitles).forEach(function (id) { widest = Math.max(widest, ctx.measureText(planTitles[id]).width / 100); });
+    if (!(room > 0)) return;
+    const size = widest > 0 ? Math.max(10, Math.min(16, Math.floor(room / widest * 2) / 2)) : 16;
+    document.documentElement.style.setProperty("--plan-pick-fs", size + "px");
+  }
+  if (window.ResizeObserver && planPick) new ResizeObserver(function () { window.requestAnimationFrame(fitPlanPick); }).observe(planPick);   // 탭이 보이게 될 때·창 크기가 바뀔 때
+  let fitTimer = null;
+  window.addEventListener("resize", function () { clearTimeout(fitTimer); fitTimer = setTimeout(fitPlanPick, 350); });
+  $("tab-do").addEventListener("click", function () { setTimeout(fitPlanPick, 80); });
+  document.addEventListener("plans-changed", function () { setTimeout(fitPlanPick, 0); });
+  if (document.fonts && document.fonts.ready) document.fonts.ready.then(fitPlanPick);
 
   $("t-minutes").value = "0"; // 처음 화면의 기본값: 예상 시간 0분
   describeCriteria(readFilters());

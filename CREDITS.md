@@ -5,7 +5,8 @@
 ## 글꼴
 | 파일 | 출처 | 사용 허가 근거 |
 |---|---|---|
-| fonts/gamja-flower-400.woff2 | Gamja Flower (감자꽃) 400 굵기, 제작 YoonDesign Inc. Google Fonts(https://fonts.google.com/specimen/Gamja+Flower). 웹용 woff2로 형식만 바꾼 파일을 그대로 가져옴(글꼴은 이 폴더의 파일로 쓰며 외부에서 내려받지 않음) | SIL Open Font License 1.1 (전문과 저작권 표기는 fonts/OFL.txt) |
+| fonts/jua-regular.ttf | Jua (배민 주아체) Regular, 제작 우아한형제들(The Jua Project Authors). Google Fonts(https://fonts.google.com/specimen/Jua)의 공개 저장소(google/fonts, ofl/jua)에서 받은 파일을 그대로 사용(글꼴은 이 폴더의 파일로 쓰며 화면에서 외부로 내려받지 않음) | SIL Open Font License 1.1 (전문과 저작권 표기는 fonts/OFL-Jua.txt) |
+| fonts/gamja-flower-400.woff2 (현재 화면에서는 쓰지 않음) | Gamja Flower (감자꽃) 400 굵기, 제작 YoonDesign Inc. Google Fonts(https://fonts.google.com/specimen/Gamja+Flower). 웹용 woff2로 형식만 바꾼 파일을 그대로 가져옴(글꼴은 이 폴더의 파일로 쓰며 외부에서 내려받지 않음) | SIL Open Font License 1.1 (전문과 저작권 표기는 fonts/OFL.txt) |
 
 ## 서비스 페이지 배경, 마우스 커서, 장식 이미지 (assets/)
 | 파일 | 출처 | 사용 허가 근거 |

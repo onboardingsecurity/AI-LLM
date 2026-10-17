@@ -4,6 +4,13 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>프렌드씨 다이어리</title>
+  <link rel="icon" type="image/png" sizes="32x32" href="assets/favicon-32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="assets/favicon-16.png">
+  <link rel="apple-touch-icon" href="assets/apple-touch-icon.png">
+  <link rel="manifest" href="manifest.webmanifest">
+  <meta name="theme-color" content="#c2410c">
+  <meta name="apple-mobile-web-app-title" content="프렌드씨 다이어리">
+  <meta name="mobile-web-app-capable" content="yes">
   <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
@@ -31,100 +38,120 @@
   <main class="board">
     <div class="col col-one" id="plan-col" role="tabpanel" aria-labelledby="tab-plan">
       <section class="card" aria-labelledby="list-title">
-        <div class="card-head">
-          <h2 id="list-title">내 계획</h2>
-          <button type="button" id="p-new">계획 만들기</button>
+        <div class="card-head plan-head">
+          <div class="plan-head-left">
+            <h2 id="list-title">계획 리스트</h2>
+            <div class="pri-legend-wrap">
+              <span class="pri-legend-label">우선순위</span>
+              <div class="pri-legend" role="group" aria-label="우선순위 색 안내">
+                <span class="pri-1">높음</span><span class="pri-2">중간</span><span class="pri-3">낮음</span>
+              </div>
+            </div>
+            <div class="plan-sort">
+              <select id="plan-sort" aria-label="계획 정렬" title="계획 정렬">
+                <option value="date">날짜순</option>
+                <option value="dday">종료일순</option>
+                <option value="priority">우선순위순</option>
+              </select>
+            </div>
+          </div>
+          <div class="plan-head-right">
+            <div class="view-toggle" role="group" aria-label="오른쪽 화면 선택">
+              <button type="button" id="view-art" aria-pressed="true">그림</button>
+              <button type="button" id="view-cal" aria-pressed="false">달력</button>
+            </div>
+            <button type="button" id="p-new">계획 만들기</button>
+          </div>
         </div>
-        <p class="hint">계획을 고쳐도 처음 계획과 이전 내용은 "수정 이력"에 그대로 남습니다.</p>
-        <p class="status" id="list-status">불러오는 중…</p>
-        <ul class="plans" id="plan-list"></ul>
+        <div class="plan-body">
+          <div class="plan-scroll">
+            <p class="status" id="list-status">불러오는 중…</p>
+            <ul class="plans timeline-list" id="plan-list"></ul>
+          </div>
+          <div class="plan-side" id="plan-side" data-view="art">
+            <div class="plan-arts">
+              <img class="plan-art" data-fx="hearts" role="button" tabindex="0" src="assets/plandsee-basic-640.png" width="640" height="640"
+                   alt="프렌드씨 캐릭터가 노트북 앞에서 엄지를 들어 보이며 함께라서 좋아라고 말하는 그림">
+              <img class="plan-art" data-fx="laugh" role="button" tabindex="0" src="assets/plandsee-ready-640.png" width="640" height="640"
+                   alt="프렌드씨 캐릭터가 머그컵을 들고 오늘도 프렌드씨와 함께라고 적힌 칠판 앞에 앉아 있는 그림">
+              <img class="plan-art" data-fx="bomb" role="button" tabindex="0" src="assets/plandsee-work-640.png" width="640" height="640"
+                   alt="프렌드씨 캐릭터가 땀을 흘리며 열심히 노트북으로 일하는 그림">
+              <img class="plan-art" data-fx="firework" role="button" tabindex="0" src="assets/plandsee-window-640.png" width="640" height="873"
+                   alt="노을 지는 창가에서 프렌드씨 캐릭터가 뒷모습으로 그래, 오늘도 잘했어라고 생각하는 그림">
+            </div>
+            <div class="plan-cal" id="plan-cal" aria-label="계획 달력"></div>
+          </div>
+        </div>
       </section>
     </div>
 
     <div class="col" id="tasks-area" role="tabpanel" aria-labelledby="tab-do" hidden>
-      <section class="card" aria-labelledby="t-form-title">
-        <h2 id="t-form-title">할 일 만들기</h2>
+      <div class="col-side">
+        <section class="card" aria-labelledby="t-plan-title">
+          <h2 id="t-plan-title">계획 선택</h2>
+          <select id="t-plan" aria-label="계획 선택"></select>
+        </section>
 
-        <label>어느 계획의 할 일인가요
-          <select id="t-plan"></select>
-        </label>
-
-        <p class="mode" id="t-form-mode" hidden></p>
-
-        <form id="task-form" novalidate>
-          <label>할 일 이름
-            <input id="t-title" type="text" maxlength="100" required>
-          </label>
-
-          <div class="row">
-            <label>마감일 (없어도 됨)
-              <input id="t-due" type="date">
+        <section class="card" aria-labelledby="t-filter-title">
+          <h2 id="t-filter-title">검색 · 정렬</h2>
+          <div class="toolbar toolbar-side">
+            <label class="wide">제목 검색
+              <input id="t-search" type="search" placeholder="제목에 들어간 글자">
+            </label>
+            <label>상태
+              <select id="t-status">
+                <option value="">전체</option>
+                <option value="todo">진행 중</option>
+                <option value="done">완료</option>
+              </select>
             </label>
             <label>우선순위
-              <select id="t-priority">
+              <select id="t-priority-filter">
+                <option value="">전체</option>
                 <option value="1">높음</option>
-                <option value="2" selected>중간</option>
+                <option value="2">중간</option>
                 <option value="3">낮음</option>
               </select>
             </label>
-          </div>
-
-          <div class="row">
-            <label>예상 시간 (분)
-              <input id="t-minutes" type="number" data-stepper min="0" step="1" inputmode="numeric" required>
+            <label class="wide">태그
+              <input id="t-tag-filter" type="text" placeholder="태그 하나">
             </label>
-            <label>태그 (쉼표로 구분)
-              <input id="t-tags" type="text" placeholder="예: 과제, 공부">
+            <label class="wide">정렬
+              <select id="t-sort">
+                <option value="default">마감일 순 (기본)</option>
+                <option value="priority">우선순위 순</option>
+                <option value="minutes">예상 시간 긴 순</option>
+              </select>
             </label>
           </div>
-
-          <p class="error" id="t-form-error" role="alert" hidden></p>
-
-          <div class="actions">
-            <button type="submit" id="t-submit">할 일 저장</button>
-            <button type="button" id="t-cancel" class="ghost" hidden>고치기 취소</button>
+          <div class="actions"><button type="button" id="t-clear" class="ghost">조건 지우기</button></div>
+          <p class="criteria" id="t-criteria" aria-live="polite"></p>
+          <div class="side-pic">
+            <img src="assets/small-space-640.png" width="640" height="427" alt="" role="presentation">
           </div>
-        </form>
-      </section>
+        </section>
+      </div>
 
       <section class="card" aria-labelledby="t-list-title">
-        <h2 id="t-list-title">할 일 목록</h2>
-
-        <div class="toolbar">
-          <label>제목 검색
-            <input id="t-search" type="search" placeholder="제목에 들어간 글자">
-          </label>
-          <label>상태
-            <select id="t-status">
-              <option value="">전체</option>
-              <option value="todo">진행 중</option>
-              <option value="done">완료</option>
-            </select>
-          </label>
-          <label>우선순위
-            <select id="t-priority-filter">
-              <option value="">전체</option>
-              <option value="1">높음</option>
-              <option value="2">중간</option>
-              <option value="3">낮음</option>
-            </select>
-          </label>
-          <label>태그
-            <input id="t-tag-filter" type="text" placeholder="태그 하나">
-          </label>
-          <label>정렬
-            <select id="t-sort">
-              <option value="default">마감일 순 (기본)</option>
-              <option value="priority">우선순위 순</option>
-              <option value="minutes">예상 시간 긴 순</option>
-            </select>
-          </label>
+        <div class="card-head task-head">
+          <div class="head-title">
+            <h2 id="t-list-title">할 일 리스트</h2>
+            <span class="count" id="t-count" title="할 일 개수" aria-label="할 일 개수"></span>
+            <span class="status" id="t-status-msg" role="status" hidden></span>
+          </div>
+          <div class="view-toggle" role="group" aria-label="할 일 보기 방식">
+            <button type="button" id="t-view-list" aria-pressed="true">리스트</button>
+            <button type="button" id="t-view-cal" aria-pressed="false">달력</button>
+          </div>
+          <button type="button" id="t-new">할 일 만들기</button>
         </div>
-        <div class="actions"><button type="button" id="t-clear" class="ghost">조건 지우기</button></div>
-
-        <p class="criteria" id="t-criteria" aria-live="polite"></p>
-        <p class="status" id="t-status-msg"></p>
-        <ul class="plans" id="t-list"></ul>
+        <div class="plan-cal task-cal" id="t-cal" aria-label="할 일 달력" hidden></div>
+        <div class="task-scroll">
+          <div class="task-empty" id="t-empty" hidden>
+            <img src="assets/empty-image.png" width="1254" height="1254" alt="할 일이 없습니다">
+          </div>
+          <ul class="plans timeline-list" id="t-list"></ul>
+        </div>
       </section>
     </div>
 
@@ -167,7 +194,7 @@
             <label>시작일
               <input id="h-start" type="date" required>
             </label>
-            <label>끝나는 날
+            <label>종료일
               <input id="h-end" type="date" required>
             </label>
           </div>
@@ -213,7 +240,7 @@
           <label>시작일
             <input id="f-start" name="start_date" type="date" required>
           </label>
-          <label>끝나는 날
+          <label>종료일
             <input id="f-end" name="end_date" type="date" required>
           </label>
         </div>
@@ -244,6 +271,47 @@
     </form>
   </dialog>
 
+  <dialog id="t-dialog" class="dlg dlg-ask dlg-wide" aria-labelledby="t-form-title">
+    <form id="task-form" class="dlg-box" novalidate>
+      <div class="dlg-bar"><span class="dlg-icon" aria-hidden="true">✎</span><h2 id="t-form-title" class="dlg-title">할 일 만들기</h2></div>
+      <div class="dlg-body">
+        <p class="mode" id="t-form-mode" hidden></p>
+
+        <label>할 일 이름
+          <input id="t-title" type="text" maxlength="100" required>
+        </label>
+
+        <div class="row">
+          <label>마감일 (없어도 됨)
+            <input id="t-due" type="date">
+          </label>
+          <label>우선순위
+            <select id="t-priority">
+              <option value="1">높음</option>
+              <option value="2" selected>중간</option>
+              <option value="3">낮음</option>
+            </select>
+          </label>
+        </div>
+
+        <div class="row">
+          <label>예상 시간 (분)
+            <input id="t-minutes" type="number" data-stepper min="0" step="1" inputmode="numeric" required>
+          </label>
+          <label>태그 (쉼표로 구분)
+            <input id="t-tags" type="text" placeholder="예: 과제, 공부">
+          </label>
+        </div>
+
+        <p class="error" id="t-form-error" role="alert" hidden></p>
+      </div>
+      <div class="dlg-actions">
+        <button type="button" id="t-cancel" class="ghost dlg-btn">닫기</button>
+        <button type="submit" id="t-submit" class="dlg-btn">할 일 저장</button>
+      </div>
+    </form>
+  </dialog>
+
   <dialog id="hist-dialog" class="dlg dlg-ask dlg-wide dlg-timeline"aria-labelledby="hist-title">
     <div class="dlg-box">
       <div class="dlg-bar"><span class="dlg-icon" aria-hidden="true">≡</span><h2 id="hist-title" class="dlg-title">수정 이력</h2></div>
@@ -258,7 +326,6 @@
     <form id="c-form" class="dlg-box" novalidate>
       <div class="dlg-bar"><span class="dlg-icon" aria-hidden="true">✎</span><h2 id="c-title" class="dlg-title">완료하기</h2></div>
       <div class="dlg-body">
-        <p class="hint">실제로 한 일을 기록하고 완료로 바꿉니다. 시각은 서울 시간입니다.</p>
         <div class="row">
           <label>시작 시각
             <input id="c-start" type="datetime-local" required>
@@ -267,11 +334,10 @@
             <input id="c-end" type="datetime-local" required>
           </label>
         </div>
-        <label>실제로 걸린 시간 (분)
+        <label>걸린 시간 (분)
           <input id="c-minutes" type="number" data-stepper min="0" step="1" inputmode="numeric" required>
         </label>
-        <p class="hint">시작·끝 시각을 넣으면 자동으로 채워집니다. 중간에 쉰 시간을 빼려면 직접 고치세요.</p>
-        <label>막혔던 이유 (없으면 비워 두세요)
+        <label>못한 이유 (선택)
           <textarea id="c-blocked" rows="2" maxlength="300"></textarea>
         </label>
         <p class="error" id="c-error" role="alert" hidden></p>
@@ -298,10 +364,12 @@
   <script src="js/config.js"></script>
   <script src="js/util.js"></script>
   <script src="js/api.js"></script>
+  <script src="js/cal.js"></script>
   <script src="js/app.js"></script>
   <script src="js/tasks.js"></script>
   <script src="js/review.js"></script>
   <script src="js/export.js"></script>
   <script src="js/tabs.js"></script>
+  <script src="js/fx.js"></script>
 </body>
 </html>
