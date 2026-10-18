@@ -127,7 +127,7 @@
           <div class="actions"><button type="button" id="t-clear" class="ghost">조건 지우기</button></div>
           <p class="criteria" id="t-criteria" aria-live="polite"></p>
           <div class="side-pic">
-            <img src="assets/small-space-640.png" width="640" height="427" alt="" role="presentation">
+            <img src="assets/small-space-640.png" width="640" height="427" loading="lazy" decoding="async" alt="" role="presentation">
           </div>
         </section>
       </div>
@@ -148,7 +148,7 @@
         <div class="plan-cal task-cal" id="t-cal" aria-label="할 일 달력" hidden></div>
         <div class="task-scroll">
           <div class="task-empty" id="t-empty" hidden>
-            <img src="assets/empty-image.png" width="1254" height="1254" alt="할 일이 없습니다">
+            <img src="assets/empty-image.png" width="1254" height="1254" loading="lazy" decoding="async" alt="할 일이 없습니다">
           </div>
           <ul class="plans timeline-list" id="t-list"></ul>
         </div>
@@ -275,8 +275,6 @@
     <form id="task-form" class="dlg-box" novalidate>
       <div class="dlg-bar"><span class="dlg-icon" aria-hidden="true">✎</span><h2 id="t-form-title" class="dlg-title">할 일 만들기</h2></div>
       <div class="dlg-body">
-        <p class="mode" id="t-form-mode" hidden></p>
-
         <label>할 일 이름
           <input id="t-title" type="text" maxlength="100" required>
         </label>

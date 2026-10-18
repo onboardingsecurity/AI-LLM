@@ -23,6 +23,13 @@
   --pixel-ink: #3b2a1e;                /* 픽셀 테두리 색(짙은 갈색) */
   --tint: #ffe9d2;                     /* 눌림·강조 바탕(연한 주황) */
   --changed: #ffe9a3;
+  --pri-1: #d6453d;                    /* 우선순위 높음(빨강) */
+  --pri-2: #f0b429;                    /* 중간(노랑) */
+  --pri-3: #7cc4ee;                    /* 낮음(연한 파랑) */
+  --st-done: #4c9a5b;                  /* 완료(초록) */
+  --st-late: #b9ad9d;                  /* 마감이 지남·종료(회색) */
+  --px2: 0 -2px 0 var(--pixel-ink), 0 2px 0 var(--pixel-ink), -2px 0 0 var(--pixel-ink), 2px 0 0 var(--pixel-ink);   /* 2px 픽셀 테두리 */
+  --px3: 0 -3px 0 var(--pixel-ink), 0 3px 0 var(--pixel-ink), -3px 0 0 var(--pixel-ink), 3px 0 0 var(--pixel-ink);   /* 3px 픽셀 테두리 */
   --layout-w: clamp(1120px, calc(100vh + 300px), 1500px);   /* 화면이 높을수록 전체 너비도 넓혀서, 계획 탭의 그림 영역이 카드 높이를 꽉 채우게 한다 */
   color-scheme: light;                 /* 맥이 어두운 모드여도 항상 밝은 화면 */
 }
@@ -80,7 +87,7 @@ body::before {
   font-size: 17px;
   border-radius: 0;
   max-width: calc(var(--layout-w) - 32px);
-  box-shadow: 0 -3px 0 var(--pixel-ink), 0 3px 0 var(--pixel-ink), -3px 0 0 var(--pixel-ink), 3px 0 0 var(--pixel-ink);
+  box-shadow: var(--px3);
 }
 
 /* ---------- 구역과 카드 ---------- */
@@ -120,7 +127,7 @@ body { display: flex; flex-direction: column; min-height: 100vh; }
 .view-toggle { display: inline-flex; margin-left: 3px; }   /* 오른쪽 영역(그림·달력) 바로 위, 그 영역의 왼쪽 끝에 맞춘다 */
 .view-toggle button {
   margin: 0; padding: 1px 14px; font-size: 14px; line-height: 1.4; border-radius: 0; color: var(--pixel-ink); background: #fff;
-  box-shadow: 0 -2px 0 var(--pixel-ink), 0 2px 0 var(--pixel-ink), -2px 0 0 var(--pixel-ink), 2px 0 0 var(--pixel-ink);
+  box-shadow: var(--px2);
 }
 .view-toggle button:hover { background: var(--tint); filter: none; }
 .view-toggle button:active { transform: translateY(2px); }
@@ -130,7 +137,7 @@ body { display: flex; flex-direction: column; min-height: 100vh; }
 /* 달력: 그림과 같은 갈색 픽셀 테두리 틀. 한 주가 한 줄이고, 날짜 숫자 아래에 계획 막대가 최대 3줄 놓인다(우선순위 색). */
 .plan-cal {
   contain: size; align-self: stretch; display: flex; flex-direction: column; overflow: hidden; margin-bottom: 8px; padding: 8px 8px 6px; background: #fff;
-  box-shadow: 0 -3px 0 var(--pixel-ink), 0 3px 0 var(--pixel-ink), -3px 0 0 var(--pixel-ink), 3px 0 0 var(--pixel-ink), 6px 8px 0 rgba(59, 42, 30, 0.2);
+  box-shadow: var(--px3), 6px 8px 0 rgba(59, 42, 30, 0.2);
 }
 .pc-head { display: flex; align-items: center; gap: 6px; margin-bottom: 6px; min-height: 28px; }
 .pc-title { font-size: 17px; color: var(--pixel-ink); margin: 0 4px; white-space: nowrap; }
@@ -150,18 +157,18 @@ body { display: flex; flex-direction: column; min-height: 100vh; }
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis; border-radius: 0; box-shadow: none; color: #fff;
 }
 .plan-cal button.pc-seg:active { transform: translateY(1px); }
-.plan-cal button.pc-seg.pri-1 { background: #d6453d; }
-.plan-cal button.pc-seg.pri-2 { background: #f0b429; color: var(--pixel-ink); }
-.plan-cal button.pc-seg.pri-3 { background: #7cc4ee; color: var(--pixel-ink); }
+.plan-cal button.pc-seg.pri-1 { background: var(--pri-1); }
+.plan-cal button.pc-seg.pri-2 { background: var(--pri-2); color: var(--pixel-ink); }
+.plan-cal button.pc-seg.pri-3 { background: var(--pri-3); color: var(--pixel-ink); }
 .plan-cal button.pc-seg:focus-visible { outline: 2px dashed var(--pixel-ink); outline-offset: 1px; }
 /* 기간 막대: 갈색 픽셀 테두리 칸 안에 그 계획의 기간만큼 색을 칠한다. 진행 중=주황, 예정=연한 주황, 종료=회갈색. 검은 세로선이 오늘. */
 .pl-bar { position: relative; height: 10px; margin: 8px 6px 4px 2px; background: #fff;
-  box-shadow: 0 -2px 0 var(--pixel-ink), 0 2px 0 var(--pixel-ink), -2px 0 0 var(--pixel-ink), 2px 0 0 var(--pixel-ink); }
+  box-shadow: var(--px2); }
 .pl-bar-fill { position: absolute; top: 0; bottom: 0; }
 .pl-bar-fill.ing { background: var(--accent); }
 .pl-bar-fill.soon { background: #f2b98a; }
-.pl-bar-fill.over { background: #b9ad9d; }
-.pl-bar-fill.done { background: #4c9a5b; }   /* 할 일: 완료한 것은 초록 */
+.pl-bar-fill.over { background: var(--st-late); }
+.pl-bar-fill.done { background: var(--st-done); }   /* 할 일: 완료한 것은 초록 */
 .pl-bar-today { position: absolute; top: -5px; bottom: -5px; width: 3px; margin-left: -1px; background: var(--pixel-ink); }
 /* 흰 카드의 크기는 목록 길이와 상관없이 그대로다. 카드 높이는 오른쪽 그림 영역이 정하고,
    계획 리스트는 그 높이에 맞춰 늘어난 칸 안에서만 스크롤된다.
@@ -176,7 +183,7 @@ body { display: flex; flex-direction: column; min-height: 100vh; }
 .plan-art {
   display: block; width: 100%; height: auto; aspect-ratio: 1 / 1; object-fit: cover; object-position: center 35%;   /* 네 장 모두 같은 정사각형 */
   opacity: 0.85; background: #fff;
-  box-shadow: 0 -3px 0 var(--pixel-ink), 0 3px 0 var(--pixel-ink), -3px 0 0 var(--pixel-ink), 3px 0 0 var(--pixel-ink), 6px 8px 0 rgba(59, 42, 30, 0.2);
+  box-shadow: var(--px3), 6px 8px 0 rgba(59, 42, 30, 0.2);
 }
 @media (max-width: 800px) {
   .plan-body { grid-template-columns: minmax(0, 1fr); }
@@ -205,7 +212,7 @@ body { display: flex; flex-direction: column; min-height: 100vh; }
 button.tab {
   flex: 0 1 200px; margin: 3px; padding: 6px 14px; font-size: 20px;
   color: var(--pixel-ink); background: var(--panel);
-  box-shadow: 0 -2px 0 var(--pixel-ink), 0 2px 0 var(--pixel-ink), -2px 0 0 var(--pixel-ink), 2px 0 0 var(--pixel-ink);
+  box-shadow: var(--px2);
 }
 @media (max-width: 760px) {
   .tab-line { display: none; }            /* 좁은 화면에서는 선 없이 탭만 */
@@ -214,7 +221,7 @@ button.tab {
 button.tab:hover { background: var(--tint); filter: none; }
 button.tab[aria-selected="true"] {
   color: var(--on-accent); background: var(--accent);
-  box-shadow: 0 -3px 0 var(--pixel-ink), 0 3px 0 var(--pixel-ink), -3px 0 0 var(--pixel-ink), 3px 0 0 var(--pixel-ink),
+  box-shadow: var(--px3),
               inset -3px -3px 0 rgba(0, 0, 0, 0.25), inset 3px 3px 0 rgba(255, 255, 255, 0.3);
 }
 
@@ -306,7 +313,7 @@ button.dd-btn:disabled { opacity: .6; }
 .dd-list {
   position: fixed; z-index: 1000; margin: 0; padding: 4px; list-style: none; overflow: auto;
   background: #fff; color: var(--pixel-ink); font-size: 16px;
-  box-shadow: 0 -2px 0 var(--pixel-ink), 0 2px 0 var(--pixel-ink), -2px 0 0 var(--pixel-ink), 2px 0 0 var(--pixel-ink), 4px 6px 0 rgba(59, 42, 30, 0.25);
+  box-shadow: var(--px2), 4px 6px 0 rgba(59, 42, 30, 0.25);
 }
 .dd-list[hidden] { display: none; }
 .dd-opt { padding: 5px 10px; cursor: pointer; outline: 0; overflow-wrap: anywhere; }
@@ -327,7 +334,7 @@ button {
   background: var(--accent);
   display: inline-flex; align-items: center; justify-content: center; gap: 8px;
   padding: 4px 12px; margin: 3px; border: 0; border-radius: 0;
-  box-shadow: 0 -3px 0 var(--pixel-ink), 0 3px 0 var(--pixel-ink), -3px 0 0 var(--pixel-ink), 3px 0 0 var(--pixel-ink),
+  box-shadow: var(--px3),
               inset -3px -3px 0 rgba(0, 0, 0, 0.25), inset 3px 3px 0 rgba(255, 255, 255, 0.3);
 }
 button:hover { filter: brightness(1.1); }
@@ -339,7 +346,7 @@ button:focus-visible { outline: 4px dashed var(--pixel-ink); outline-offset: 8px
 button.ghost {
   color: var(--pixel-ink);
   background: var(--panel);
-  box-shadow: 0 -2px 0 var(--pixel-ink), 0 2px 0 var(--pixel-ink), -2px 0 0 var(--pixel-ink), 2px 0 0 var(--pixel-ink);
+  box-shadow: var(--px2);
 }
 button.ghost:hover { background: var(--tint); filter: none; }
 button.ghost:active { transform: translateY(2px); }
@@ -390,21 +397,19 @@ button.ghost:active { transform: translateY(2px); }
 #plan-list .pl-dot, #t-list .pl-dot { top: calc(var(--pt) + 2px); }
 .pl-dot {
   position: absolute; top: 2px; left: 0; width: 22px; height: 22px; background: #fff;
-  box-shadow: 0 -2px 0 var(--pixel-ink), 0 2px 0 var(--pixel-ink), -2px 0 0 var(--pixel-ink), 2px 0 0 var(--pixel-ink);
+  box-shadow: var(--px2);
 }
 /* 우선순위 색 안내 바: 계획 리스트 제목 옆. 빨강·노랑·초록 칸에 높음·중간·낮음 글자(노랑 칸만 갈색 글자). */
 /* 머리 줄: 왼쪽에 "계획 리스트 + 우선순위 색 바", 맨 오른쪽(그림 위)에 "계획 만들기" 버튼. 목록이 길어져도 버튼이 항상 보인다. */
-.plan-head { display: grid; grid-template-columns: minmax(0, 1fr) var(--art-w); gap: 8px 20px; margin-bottom: 10px; }
+.plan-head { display: grid; grid-template-columns: minmax(0, 1fr) var(--art-w); gap: 8px 20px; margin-bottom: 8px; height: 34px; align-items: center; }
 .plan-head-left { display: flex; align-items: center; flex-wrap: wrap; gap: 6px 16px; }
 .plan-head-right { display: flex; align-items: center; justify-content: space-between; gap: 12px; }   /* 오른쪽 영역 머리: [그림|달력] ··· [계획 만들기] */
 .card .plan-head h2 { margin: 0; }
 /* 머리 줄 한 선상 맞추기: 계획 만들기 버튼이 다른 요소보다 키가 커서 위아래로 튀어나오던 것을 줄이고(여백 0, 세로 안쪽 여백 축소),
    카드 위쪽 여백과 머리 줄 아래 여백도 조금 줄인다. 제목·우선순위·전환·만들기의 세로 중심이 모두 같다. */
 #plan-col .card { padding-top: 8px; }
-.plan-head { margin-bottom: 8px; }
 /* 머리 줄을 높이가 정해진 한 블록으로 보고, 그 안의 제목·우선순위·전환·만들기를 모두 블록의 세로 정중앙에 놓는다.
    (만들기 버튼이 크든 작든 줄 높이는 34px 로 고정이라 다른 요소를 밀어내지 않는다) */
-.plan-head { height: 34px; align-items: center; }
 .plan-head-left, .plan-head-right { height: 100%; align-items: center; }
 /* 글자(Jua)는 박스 중심보다 눈에 1px 정도 위에 앉아서, 제목·"우선순위" 글자만 1px 내려 테두리 있는 요소들과 시각 중심을 맞춘다. */
 .plan-head-left h2, .pri-legend-label { position: relative; top: 1px; }
@@ -413,27 +418,23 @@ button.ghost:active { transform: translateY(2px); }
 .pri-legend-wrap { display: inline-flex; align-items: center; gap: 10px; }
 .pri-legend-label { font-size: 15px; color: var(--muted); }   /* "우선순위" 글자: 제목(계획 리스트)보다 작고 연하게, 색 바 바로 왼쪽 */
 .pri-legend { display: inline-flex; font-size: 13px; line-height: 1.25;
-  box-shadow: 0 -2px 0 var(--pixel-ink), 0 2px 0 var(--pixel-ink), -2px 0 0 var(--pixel-ink), 2px 0 0 var(--pixel-ink); }
+  box-shadow: var(--px2); }
 .pri-legend span { padding: 0 8px; color: #fff; }
-.pri-legend .pri-1 { background: #d6453d; }
-.pri-legend .pri-2 { background: #f0b429; color: var(--pixel-ink); }
-.pri-legend .pri-3 { background: #7cc4ee; color: var(--pixel-ink); }
+.pri-legend .pri-1 { background: var(--pri-1); }
+.pri-legend .pri-2 { background: var(--pri-2); color: var(--pixel-ink); }
+.pri-legend .pri-3 { background: var(--pri-3); color: var(--pixel-ink); }
 
-/* 계획: 점(네모칸)을 우선순위 색으로 채운다. 높음=빨강, 중간=노랑, 낮음=초록 */
-#plan-list .pri-1 .pl-dot { background: #d6453d; }
-#plan-list .pri-2 .pl-dot { background: #f0b429; }
-#plan-list .pri-3 .pl-dot { background: #7cc4ee; }
-/* 할 일도 계획처럼: 점(네모칸)을 우선순위 색으로 채운다. 완료 여부는 이름 옆 "완료/진행 중" 표시로 본다. */
-#t-list .pri-1 .pl-dot { background: #d6453d; }
-#t-list .pri-2 .pl-dot { background: #f0b429; }
-#t-list .pri-3 .pl-dot { background: #7cc4ee; }
+/* 계획·할 일: 점(네모칸)을 우선순위 색으로 채운다. 높음=빨강, 중간=노랑, 낮음=연한 파랑. 할 일의 완료 여부는 이름 옆 "완료/진행 중" 표시와 아래 규칙으로 본다. */
+#plan-list .pri-1 .pl-dot, #t-list .pri-1 .pl-dot { background: var(--pri-1); }
+#plan-list .pri-2 .pl-dot, #t-list .pri-2 .pl-dot { background: var(--pri-2); }
+#plan-list .pri-3 .pl-dot, #t-list .pri-3 .pl-dot { background: var(--pri-3); }
 /* 할 일 네모칸: 완료 = 초록 칸에 흰 체크, 진행 중 = 우선순위 색(위), 진행 중인데 마감일이 지남 = 회색 칸에 ✕(못 했어요) */
 #t-list .pl-item.done .pl-dot {
-  background-color: #4c9a5b; background-repeat: no-repeat; background-position: center; background-size: 16px 12px;
+  background-color: var(--st-done); background-repeat: no-repeat; background-position: center; background-size: 16px 12px;
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 9' shape-rendering='crispEdges'%3E%3Cpath fill='%23ffffff' d='M9 1h1v1h-1zM10 1h1v1h-1zM8 2h1v1h-1zM9 2h1v1h-1zM7 3h1v1h-1zM8 3h1v1h-1zM1 4h1v1h-1zM2 4h1v1h-1zM6 4h1v1h-1zM7 4h1v1h-1zM2 5h1v1h-1zM3 5h1v1h-1zM5 5h1v1h-1zM6 5h1v1h-1zM3 6h1v1h-1zM4 6h1v1h-1zM5 6h1v1h-1zM4 7h1v1h-1z'/%3E%3C/svg%3E");
 }
 #t-list .pl-item.late .pl-dot {
-  background-color: #b9ad9d; background-repeat: no-repeat; background-position: center; background-size: 14px 14px;
+  background-color: var(--st-late); background-repeat: no-repeat; background-position: center; background-size: 14px 14px;
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 10 10' shape-rendering='crispEdges'%3E%3Cpath fill='%233b2a1e' d='M2 2h1v1h-1zM2 6h1v1h-1zM2 7h1v1h-1zM3 2h1v1h-1zM3 3h1v1h-1zM3 5h1v1h-1zM3 6h1v1h-1zM4 3h1v1h-1zM4 4h1v1h-1zM4 5h1v1h-1zM5 3h1v1h-1zM5 4h1v1h-1zM5 5h1v1h-1zM6 2h1v1h-1zM6 3h1v1h-1zM6 5h1v1h-1zM6 6h1v1h-1zM7 2h1v1h-1zM7 6h1v1h-1zM7 7h1v1h-1z'/%3E%3C/svg%3E");
 }
 .pl-item.done .pl-dot { background: var(--accent); }                   /* 할 일: 완료한 것의 점을 강조 */
@@ -463,7 +464,7 @@ button.pl-name:focus-visible { outline: 2px solid var(--accent); outline-offset:
 .pl-name[aria-expanded="true"]::before { content: "▾ "; }
 .pl-panel {
   margin-top: 8px; padding: 8px 12px 10px; background: var(--panel);
-  box-shadow: 0 -2px 0 var(--pixel-ink), 0 2px 0 var(--pixel-ink), -2px 0 0 var(--pixel-ink), 2px 0 0 var(--pixel-ink);
+  box-shadow: var(--px2);
 }
 .pl-panel[hidden] { display: none; }
 /* 계획: 펼친 상세의 양옆 끝을 기간 막대와 똑같이 맞춘다(막대 margin 2px/6px, 둘 다 테두리 2px). */
@@ -483,9 +484,9 @@ button.pl-name:focus-visible { outline: 2px solid var(--accent); outline-offset:
   background: #fff;
   color: var(--pixel-ink);
   vertical-align: middle;
-  box-shadow: 0 -2px 0 var(--pixel-ink), 0 2px 0 var(--pixel-ink), -2px 0 0 var(--pixel-ink), 2px 0 0 var(--pixel-ink);
+  box-shadow: var(--px2);
 }
-.badge.done { background: #4c9a5b; color: #fff; }   /* 완료: 네모칸의 완료 색(초록)과 같게 */
+.badge.done { background: var(--st-done); color: #fff; }   /* 완료: 네모칸의 완료 색(초록)과 같게 */
 
 /* ---------- 수정 이력 · 실행 기록 ---------- */
 
@@ -511,8 +512,8 @@ button.pl-name:focus-visible { outline: 2px solid var(--accent); outline-offset:
 .task-head .view-toggle { margin-left: 0; }
 .task-head .view-toggle button { padding-top: 0; padding-bottom: 0; }
 .task-cal { flex: 1 1 0; min-height: 0; margin-bottom: 0; }   /* 달력은 리스트 자리를 그대로 쓴다 */
-.plan-cal button.pc-seg.done { background: #4c9a5b; }                              /* 할 일 달력: 완료 = 초록 */
-.plan-cal button.pc-seg.late { background: #b9ad9d; color: var(--pixel-ink); }     /* 진행 중인데 마감이 지남 = 회색 */
+.plan-cal button.pc-seg.done { background: var(--st-done); }                              /* 할 일 달력: 완료 = 초록 */
+.plan-cal button.pc-seg.late { background: var(--st-late); color: var(--pixel-ink); }     /* 진행 중인데 마감이 지남 = 회색 */
 .head-title { display: flex; align-items: baseline; gap: 10px; min-width: 0; }
 .head-title .count, .head-title .status { margin: 0; font-size: 18px; line-height: 1.5; color: var(--muted); }   /* 개수와 안내 문구는 글자 크기·색·간격이 같다 */
 .head-title .count:not(:empty)::before, .head-title .status:not([hidden])::before { content: "-"; margin-right: 10px; color: var(--muted); }   /* 제목 - 5개 / 제목 - 안내 문구 */
@@ -547,7 +548,7 @@ button.dd-btn.plan-pick, .dd-list[data-for="t-plan"] { font-size: var(--plan-pic
 .stat {
   display: block; text-align: left; margin: 0; padding: 8px 12px;
   background: var(--panel); color: var(--pixel-ink);
-  box-shadow: 0 -2px 0 var(--pixel-ink), 0 2px 0 var(--pixel-ink), -2px 0 0 var(--pixel-ink), 2px 0 0 var(--pixel-ink);
+  box-shadow: var(--px2);
 }
 .stat:hover { background: var(--tint); filter: none; }
 .stat:active { transform: translateY(2px); }
@@ -583,7 +584,7 @@ button.dd-btn.plan-pick, .dd-list[data-for="t-plan"] { font-size: var(--plan-pic
 .dlg-icon {
   flex: none; display: grid; place-items: center; width: 24px; height: 24px; margin: 0 2px;
   background: var(--dlg-tone); color: #fff; font-size: 15px; line-height: 1;
-  box-shadow: 0 -2px 0 var(--pixel-ink), 0 2px 0 var(--pixel-ink), -2px 0 0 var(--pixel-ink), 2px 0 0 var(--pixel-ink),
+  box-shadow: var(--px2),
               inset -3px -3px 0 rgba(0, 0, 0, 0.25), inset 3px 3px 0 rgba(255, 255, 255, 0.3);
 }
 .dlg-title { margin: 0; font-size: 18px; font-weight: 400; color: var(--pixel-ink); }
@@ -619,12 +620,12 @@ button.dd-btn.plan-pick, .dd-list[data-for="t-plan"] { font-size: var(--plan-pic
 }
 .tl-dot {
   position: absolute; top: 0; left: 0; z-index: 1; width: 22px; height: 22px; background: #fff;
-  box-shadow: 0 -2px 0 var(--pixel-ink), 0 2px 0 var(--pixel-ink), -2px 0 0 var(--pixel-ink), 2px 0 0 var(--pixel-ink);
+  box-shadow: var(--px2);
 }
 .tl-item:last-child .tl-dot { background: var(--accent); }
 .tl-card {
   padding: 8px 14px 10px; background: #fff;
-  box-shadow: 0 -2px 0 var(--pixel-ink), 0 2px 0 var(--pixel-ink), -2px 0 0 var(--pixel-ink), 2px 0 0 var(--pixel-ink), 5px 6px 0 rgba(59, 42, 30, 0.18);
+  box-shadow: var(--px2), 5px 6px 0 rgba(59, 42, 30, 0.18);
 }
 .tl-item:last-child .tl-card { background: #fff7ea; }
 .tl-time { margin-bottom: 8px; padding-bottom: 6px; border-bottom: 2px dotted #cdbfae; font-size: 17px; color: var(--pixel-ink); }
@@ -645,7 +646,7 @@ button.dd-btn.plan-pick, .dd-list[data-for="t-plan"] { font-size: var(--plan-pic
    선택 목록(.dd-list)과 같은 흰 바탕 + 갈색 픽셀 테두리. 전체 버튼 규칙(button)을 이 안에서만 눌러 둔다. */
 .cal {
   position: fixed; z-index: 1000; padding: 8px; background: #fff; color: var(--pixel-ink); font-size: 15px;
-  box-shadow: 0 -2px 0 var(--pixel-ink), 0 2px 0 var(--pixel-ink), -2px 0 0 var(--pixel-ink), 2px 0 0 var(--pixel-ink), 4px 6px 0 rgba(59, 42, 30, 0.25);
+  box-shadow: var(--px2), 4px 6px 0 rgba(59, 42, 30, 0.25);
 }
 .cal-head { display: flex; align-items: center; gap: 0; margin-bottom: 6px; }
 .cal-title { flex: 1; text-align: center; font-size: 15px; white-space: nowrap; }

@@ -2,7 +2,8 @@
 //   hearts: 픽셀 하트(1번 그림)   laugh: "ㅋ" 글자(2번 그림)   bomb: 폭탄이 터짐(3번 그림)   firework: 폭죽이 올라가 터짐(4번 그림)
 // 효과마다 data-fx 이름을 하나씩 두고, 아래 EFFECTS 에 이름과 동작을 추가하면 다른 그림에도 다른 효과를 붙일 수 있다.
 (function () {
-  const reduceMotion = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  const reduceMotion = window.PDS_UTIL.reduceMotion();
+  const el = window.PDS_UTIL.el;
 
   // ---- 하트 그림(픽셀 도트)을 SVG 로 만들어 둔다. 갈색 테두리 + 색 채움. ----
   const SHAPE = [
@@ -17,25 +18,10 @@
   ];
   const COLORS = ["#d6453d", "#f06a8a", "#ff9a6b"];   // 빨강, 분홍, 연한 주황
   const INK = "#3b2a1e";
-  const GRID_W = SHAPE[0].length + 2;
-  const GRID_H = SHAPE.length + 2;
+  const HEART_W = SHAPE[0].length + 2;   // 테두리까지 포함한 칸 수
+  const HEART_H = SHAPE.length + 2;
 
-  function heartUrl(fill) {
-    const on = function (x, y) { return y >= 0 && y < SHAPE.length && x >= 0 && x < SHAPE[0].length && SHAPE[y][x] === "X"; };
-    let outline = "";
-    let body = "";
-    for (let y = -1; y <= SHAPE.length; y++) {
-      for (let x = -1; x <= SHAPE[0].length; x++) {
-        const cell = "M" + (x + 1) + " " + (y + 1) + "h1v1h-1z";
-        if (on(x, y)) body += cell;
-        else if (on(x - 1, y) || on(x + 1, y) || on(x, y - 1) || on(x, y + 1)) outline += cell;
-      }
-    }
-    const svg = "<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 " + GRID_W + " " + GRID_H + "' shape-rendering='crispEdges'>" +
-      "<path fill='" + INK + "' d='" + outline + "'/><path fill='" + fill + "' d='" + body + "'/></svg>";
-    return "url(\"data:image/svg+xml," + encodeURIComponent(svg) + "\")";
-  }
-  const heartImages = COLORS.map(heartUrl);
+  const heartImages = COLORS.map(function (c) { return spriteUrl(SHAPE, { X: c }, "X").url; });   // 아래 spriteUrl(함수 선언이라 먼저 쓸 수 있다)
 
   // 하트가 날아다니는 층: 화면 전체를 덮되 클릭은 통과시킨다.
   const layer = document.createElement("div");
@@ -45,11 +31,12 @@
 
   const MAX_ALIVE = 40;   // 한꺼번에 화면에 있을 수 있는 조각 수(연달아 눌러도 느려지지 않게)
   const rand = function (a, b) { return a + Math.random() * (b - a); };
+  function capLayer(n) { while (layer.childElementCount > n) layer.removeChild(layer.firstChild); }   // 조각이 n개를 넘으면 오래된 것부터 지운다
 
   // 조각 하나(하트, 글자 등)를 누른 자리에서 풍선처럼 띄운다. 효과마다 모양만 다르고 움직임은 이 함수가 맡는다.
   //   piece: 이미 만든 요소(크기는 style 로 정해져 있어야 함), x·y: 누른 자리(화면 좌표)
   function launch(piece, x, y) {
-    while (layer.childElementCount >= MAX_ALIVE) layer.removeChild(layer.firstChild);
+    capLayer(MAX_ALIVE - 1);
     layer.appendChild(piece);
     const w = piece.offsetWidth;
     const h = piece.offsetHeight;
@@ -77,23 +64,19 @@
 
   function makeHeart() {
     const size = Math.round(rand(2, 3.4) * 10) / 10;                       // 도트 한 칸 크기(px)
-    const heart = document.createElement("span");
-    heart.className = "fx-heart";
-    heart.style.width = GRID_W * size + "px";
-    heart.style.height = GRID_H * size + "px";
-    heart.style.backgroundImage = heartImages[Math.floor(Math.random() * heartImages.length)];
-    return heart;
+    return el("span", {
+      class: "fx-heart",
+      style: "width:" + HEART_W * size + "px;height:" + HEART_H * size + "px;background-image:" + heartImages[Math.floor(Math.random() * heartImages.length)]
+    });
   }
 
   // "ㅋ" 글자: 갈색 테두리를 두른 색 글자. 크기와 색이 제각각이다.
   const LAUGH_COLORS = ["#f0b429", "#ff9a6b", "#4c9a5b", "#f06a8a"];   // 노랑, 연한 주황, 초록, 분홍
   function makeLaugh() {
-    const t = document.createElement("span");
-    t.className = "fx-laugh";
-    t.textContent = "ㅋ";
-    t.style.fontSize = Math.round(rand(28, 46)) + "px";
-    t.style.color = LAUGH_COLORS[Math.floor(Math.random() * LAUGH_COLORS.length)];
-    return t;
+    return el("span", {
+      class: "fx-laugh", text: "ㅋ",
+      style: "font-size:" + Math.round(rand(28, 46)) + "px;color:" + LAUGH_COLORS[Math.floor(Math.random() * LAUGH_COLORS.length)]
+    });
   }
 
   function burst(make) {
@@ -171,17 +154,20 @@
   const CHIP_COLORS = ["#d6453d", "#f06a30", "#f9c32b", "#3a3d46", "#fff6c2"];
   const BOOM_WORDS = ["펑!", "쾅!", "뻥!"];
 
-  function place(node, x, y) {   // 요소 한가운데가 (x, y) 에 오게 놓는다
+  function place(node, x, y, w, h) {   // 요소 한가운데가 (x, y) 에 오게 놓는다. 크기(w, h)를 알면 재지 않는다(재면 그때마다 화면 배치를 다시 계산한다)
     layer.appendChild(node);
-    node.style.left = (x - node.offsetWidth / 2) + "px";
-    node.style.top = (y - node.offsetHeight / 2) + "px";
+    node.style.left = (x - (w === undefined ? node.offsetWidth : w) / 2) + "px";
+    node.style.top = (y - (h === undefined ? node.offsetHeight : h) / 2) + "px";
   }
   function dropWhenDone(node, anim) {
     anim.onfinish = function () { if (node.parentNode) node.parentNode.removeChild(node); };
   }
+  function fadeAway(node, ms) {   // 움직임 줄이기: 제자리에서 흐려지기만 한다
+    dropWhenDone(node, node.animate([{ opacity: 1 }, { opacity: 0 }], { duration: ms || 600, fill: "forwards" }));
+  }
 
   function explode(x, y, target) {
-    while (layer.childElementCount > 90) layer.removeChild(layer.firstChild);
+    capLayer(90);
 
     const burst = document.createElement("span");
     burst.className = "fx-heart";   // 도트 그림 요소(배경 이미지 확대) 공통 스타일
@@ -198,8 +184,8 @@
     place(word, x, y);
 
     if (reduceMotion) {   // 움직임 줄이기: 별과 글자가 제자리에서 흐려지기만 한다
-      dropWhenDone(burst, burst.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 600, fill: "forwards" }));
-      dropWhenDone(word, word.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 600, fill: "forwards" }));
+      fadeAway(burst);
+      fadeAway(word);
       return;
     }
 
@@ -225,7 +211,7 @@
       const size = Math.round(rand(3, 5));
       chip.style.width = chip.style.height = size + "px";
       chip.style.background = CHIP_COLORS[Math.floor(Math.random() * CHIP_COLORS.length)];
-      place(chip, x, y);
+      place(chip, x, y, size, size);
       const ang = rand(0, Math.PI * 2);
       const dist = rand(35, 95);
       const dx = Math.cos(ang) * dist;
@@ -248,7 +234,7 @@
   }
 
   function bomb(x, y, target) {
-    while (layer.childElementCount > 90) layer.removeChild(layer.firstChild);
+    capLayer(90);
     const b = document.createElement("span");
     b.className = "fx-heart";
     b.style.backgroundImage = bombSprite.url;
@@ -285,7 +271,7 @@
     sp.style.width = sp.style.height = size + "px";
     sp.style.background = color;
     sp.style.boxShadow = "0 0 " + size * 2 + "px " + color;
-    place(sp, x, y);
+    place(sp, x, y, size, size);
     return sp;
   }
 
@@ -314,11 +300,7 @@
 
   // 의성어 글자("슝~", "팡!"): 갈색 테두리 글자(.fx-laugh)를 (x, y) 에 놓는다.
   function sfxText(text, x, y, size, color) {
-    const t = document.createElement("span");
-    t.className = "fx-laugh";
-    t.textContent = text;
-    t.style.fontSize = Math.round(size) + "px";
-    t.style.color = color;
+    const t = el("span", { class: "fx-laugh", text: text, style: "font-size:" + Math.round(size) + "px;color:" + color });
     place(t, x, y);
     return t;
   }
@@ -333,7 +315,7 @@
       if (o.still) {   // 움직임 줄이기: 자리에 놓고 그 자리에서 흐려지기만 한다
         sp.style.transform = "translate(" + dx + "px, " + dy + "px)";
         sp.style.background = o.color;
-        dropWhenDone(sp, sp.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 700, fill: "forwards" }));
+        fadeAway(sp, 700);
         continue;
       }
       const glow = function (c) { return "0 0 " + sz * 2 + "px " + c; };
@@ -347,7 +329,7 @@
   }
 
   function fireworkBurst(cx, cy, scale, still) {
-    while (layer.childElementCount > MAX_FIRE_PIECES) layer.removeChild(layer.firstChild);
+    capLayer(MAX_FIRE_PIECES);
     const kinds = ["peony", "peony", "heart", "star", "willow"];   // 동그라미를 조금 더 자주
     const kind = kinds[Math.floor(Math.random() * kinds.length)];
     const main = pickColor();
@@ -364,7 +346,7 @@
       const ring = document.createElement("span");
       ring.className = "fx-ring";
       ring.style.width = ring.style.height = "24px";
-      place(ring, cx, cy);
+      place(ring, cx, cy, 24, 24);
       dropWhenDone(ring, ring.animate([
         { transform: "scale(0.3)", opacity: 0.9, offset: 0 }, { transform: "scale(" + (R / 12) + ")", opacity: 0, offset: 1 }
       ], { duration: 520, easing: "ease-out", fill: "forwards" }));
@@ -373,7 +355,7 @@
     // "팡!": 터지는 자리에서 통통 튀어나왔다가 위로 살짝 뜨며 사라진다
     const pang = sfxText("팡!", cx, cy - 4 * scale, 64 * scale, still ? "#ffffff" : main);
     if (still) {
-      dropWhenDone(pang, pang.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 700, fill: "forwards" }));
+      fadeAway(pang, 700);
     } else {
       const tilt = rand(-10, 10);
       dropWhenDone(pang, pang.animate([

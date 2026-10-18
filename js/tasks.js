@@ -27,7 +27,6 @@
   const $ = function (id) { return document.getElementById(id); };
   const planSelect = $("t-plan");
   const form = $("task-form");
-  const formMode = $("t-form-mode");
   const formError = $("t-form-error");
   const submitBtn = $("t-submit");
   const cancelBtn = $("t-cancel");
@@ -105,7 +104,6 @@
     if (!task && planId === null) { warn("먼저 계획을 하나 세워 주세요."); return; }
     if (task && task.status === "done") { warn("완료한 할 일은 고칠 수 없습니다. 진행 중으로 되돌리면 고칠 수 있습니다.", task.title); return; }
     editingId = task ? task.id : null;
-    formMode.hidden = true;   // "(계획 이름)에 담을 할 일입니다." 같은 안내는 두지 않는다
     if (task) {
       formTitle.textContent = task.title;
       submitBtn.textContent = "고친 내용 저장";
@@ -202,7 +200,7 @@
     dl.appendChild(el("dd", { text: value }));
   }
 
-  function renderExecution(exec, task) {
+  function renderExecution(exec) {
     const dl = el("dl", { class: "facts" });
     addFact(dl, "시작 시각", formatSeoul(exec.started_at));
     addFact(dl, "끝난 시각", formatSeoul(exec.ended_at));
@@ -232,21 +230,13 @@
     if (today > e) e = today;
     return { start: s, end: e };
   }
-  function taskBar(task, axis, done, late) {
-    const dn = window.PDS_UTIL.dayNumber;
-    const base = dn(axis.start);
-    const total = Math.max(1, dn(axis.end) - base + 1);
-    const bar = el("div", { class: "pl-bar", "aria-hidden": "true" });
-    if (task.due_date) {
-      const a = createdDay(task);
-      const from = a < task.due_date ? a : task.due_date;
-      const left = (dn(from) - base) / total * 100;
-      const width = Math.max(2, (dn(task.due_date) - dn(from) + 1) / total * 100);
-      bar.appendChild(el("span", { class: "pl-bar-fill " + (done ? "done" : (late ? "over" : "ing")), style: "left:" + left + "%;width:" + width + "%" }));
-    }
-    const t = dn(window.PDS_UTIL.todayKST());
-    bar.appendChild(el("span", { class: "pl-bar-today", style: "left:" + ((t - base + 0.5) / total * 100) + "%" }));
-    return bar;
+  function taskBar(task, axis, done, late, today) {
+    const made = task.due_date ? createdDay(task) : null;
+    return window.PDS_UTIL.periodBar({
+      axisStart: axis.start, axisEnd: axis.end, today: today,
+      start: made && made < task.due_date ? made : task.due_date, end: task.due_date,
+      cls: done ? "done" : (late ? "over" : "ing")
+    });
   }
 
   // ---------- 리스트 ↔ 달력 ----------
@@ -264,7 +254,7 @@
                tip: t.title + " (" + start + " ~ " + t.due_date + ")" };
     });
   }, { noun: "할 일" });
-  const TASK_VIEW_KEY = "pds-task-view";
+  const viewStore = window.PDS_UTIL.viewStore("pds-task-view");
   function setTaskView(view, save) {
     const cal = view === "cal";
     $("t-cal").hidden = !cal;
@@ -272,13 +262,13 @@
     $("t-view-list").setAttribute("aria-pressed", String(!cal));
     $("t-view-cal").setAttribute("aria-pressed", String(cal));
     if (cal) taskCal.render();
-    if (save) { try { window.localStorage.setItem(TASK_VIEW_KEY, view); } catch (e) { /* 저장이 막혀 있어도 화면은 동작 */ } }
+    if (save) viewStore.set(view);
   }
   $("t-view-list").addEventListener("click", function () { setTaskView("list", true); });
   $("t-view-cal").addEventListener("click", function () { setTaskView("cal", true); });
-  try { if (window.localStorage.getItem(TASK_VIEW_KEY) === "cal") setTaskView("cal", false); } catch (e) { /* 저장값을 못 읽으면 기본(리스트) */ }
+  if (viewStore.get() === "cal") setTaskView("cal", false);   // 저장값을 못 읽으면 기본(리스트)
 
-  function renderTask(task, axis) {
+  function renderTask(task, axis, today) {
     const done = task.status === "done";
     const panelId = "task-panel-" + task.id;
     const isOpen = openIds.has(task.id);
@@ -308,7 +298,7 @@
 
     const panelChildren = [dl];
     const active = (task.executions || [])[0];
-    if (done && active) panelChildren.push(renderExecution(active, task));
+    if (done && active) panelChildren.push(renderExecution(active));
     panelChildren.push(el("div", { class: "actions" }, [editBtn, toggleBtn, delBtn]));
     const panel = el("div", { class: "pl-panel", id: panelId }, panelChildren);
     panel.hidden = !isOpen;
@@ -326,19 +316,19 @@
 
     const badge = el("span", { class: done ? "badge done" : "badge", text: done ? "완료" : "진행 중" });
     // 네모칸: 완료 = 체크 표시, 진행 중 = 우선순위 색, 진행 중인데 마감일이 지났으면(서울 오늘 기준) 못한 표시(✕)
-    const late = !done && !!task.due_date && task.due_date < window.PDS_UTIL.todayKST();
+    const late = !done && !!task.due_date && task.due_date < today;
     const state = done ? "done" : (late ? "late" : "");
     const dotTitle = done ? "완료" : (late ? "마감일이 지났는데 못 했어요" : "진행 중");
     // 날짜 줄: 마감일 + (진행 중이고 마감일이 있으면) 남은 날 D-day. 완료한 할 일은 D-day 를 보여 주지 않는다.
     const dateLine = [document.createTextNode(task.due_date ? "마감일 " + task.due_date : "마감일 없음")];
     if (!done && task.due_date) {
-      dateLine.push(el("span", { class: "pl-dday", text: window.PDS_UTIL.ddayText(task.due_date, window.PDS_UTIL.todayKST()), title: "마감일까지 남은 날" }));
+      dateLine.push(el("span", { class: "pl-dday", text: window.PDS_UTIL.ddayText(task.due_date, today), title: "마감일까지 남은 날" }));
     }
     return el("li", { class: "pl-item" + (state ? " " + state : "") + " pri-" + task.priority }, [
       el("span", { class: "pl-dot", title: dotTitle, "aria-hidden": "true" }),
       el("div", { class: "pl-date" }, dateLine),
       el("h3", {}, [nameBtn, badge]),
-      taskBar(task, axis, done, late),
+      taskBar(task, axis, done, late, today),
       panel
     ]);
   }
@@ -354,7 +344,7 @@
       return;
     }
     const f = readFilters();
-    describeCriteria(f);
+    describeCriteria();
     countEl.textContent = "";
     emptyEl.hidden = true;
     setStatus("불러오는 중…");
@@ -363,9 +353,10 @@
       if (seq !== loadSeq) return; // 더 최근 요청이 있으면 이 결과는 버린다
       listEl.textContent = "";
       const axis = taskAxis(tasks);
-      tasks.forEach(function (t) { listEl.appendChild(renderTask(t, axis)); });
+      const today = window.PDS_UTIL.todayKST();
+      tasks.forEach(function (t) { listEl.appendChild(renderTask(t, axis, today)); });
       shownTasks = tasks;
-      taskCal.render();
+      if (!$("t-cal").hidden) taskCal.render();   // 달력이 보일 때만 그린다(보이게 될 때는 setTaskView 가 그린다)
       countEl.textContent = tasks.length ? tasks.length + "개" : "";   // 없을 때는 안내 문구만
       emptyEl.hidden = tasks.length > 0;
       // 검색·거르기 조건이 걸려 있는데 결과가 없으면 "조건에 맞는", 계획에 할 일이 아예 없으면 "할 일이 없습니다."
@@ -520,25 +511,24 @@
   // 계획이 바뀌거나 칸 너비가 바뀌면(창 크기) 다시 맞춘다.
   const planPick = planSelect.previousElementSibling;   // util.js 가 select 앞에 끼워 넣은 ▼ 버튼
   if (planPick) planPick.classList.add("plan-pick");
+  let pickCtx = null;                                  // 글자 폭 재기용 캔버스(한 번만 만든다)
+  let pickSize = "";
   function fitPlanPick() {
     if (!planPick || !planPick.getClientRects().length) return;   // 탭이 숨겨져 있으면 잴 수 없다(보이게 되면 다시 맞춘다)
     const cs = window.getComputedStyle(planPick);
     const room = planPick.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight);
-    const ctx = document.createElement("canvas").getContext("2d");
+    const ctx = pickCtx || (pickCtx = document.createElement("canvas").getContext("2d"));
     ctx.font = cs.fontWeight + " 100px " + cs.fontFamily;
     let widest = 0;                                    // 글자 크기 1px 일 때 가장 넓은 이름의 너비
     Object.keys(planTitles).forEach(function (id) { widest = Math.max(widest, ctx.measureText(planTitles[id]).width / 100); });
     if (!(room > 0)) return;
     const size = widest > 0 ? Math.max(10, Math.min(16, Math.floor(room / widest * 2) / 2)) : 16;
-    document.documentElement.style.setProperty("--plan-pick-fs", size + "px");
+    if (pickSize !== size + "px") { pickSize = size + "px"; document.documentElement.style.setProperty("--plan-pick-fs", pickSize); }
   }
   if (window.ResizeObserver && planPick) new ResizeObserver(function () { window.requestAnimationFrame(fitPlanPick); }).observe(planPick);   // 탭이 보이게 될 때·창 크기가 바뀔 때
-  let fitTimer = null;
-  window.addEventListener("resize", function () { clearTimeout(fitTimer); fitTimer = setTimeout(fitPlanPick, 350); });
-  $("tab-do").addEventListener("click", function () { setTimeout(fitPlanPick, 80); });
   document.addEventListener("plans-changed", function () { setTimeout(fitPlanPick, 0); });
   if (document.fonts && document.fonts.ready) document.fonts.ready.then(fitPlanPick);
 
   $("t-minutes").value = "0"; // 처음 화면의 기본값: 예상 시간 0분
-  describeCriteria(readFilters());
+  describeCriteria();
 })();

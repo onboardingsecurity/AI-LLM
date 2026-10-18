@@ -57,6 +57,8 @@
   const NAME_MAX = 100;           // DB 규칙(1~100자)과 같은 상한
   let nameLimit = 20;             // 아직 못 쟀을 때(계획 탭이 숨겨져 있을 때)의 기본값. 재면 이 값을 갱신한다.
 
+  let measureCtx = null;          // 글자 폭 재기용 캔버스(한 번만 만든다)
+
   function measureNameLimit() {
     if (!listEl.getClientRects().length) return nameLimit;     // 계획 탭이 안 보이면 잴 수 없다
     const btn = el("button", { type: "button", class: "pl-name", text: "가" });
@@ -68,7 +70,7 @@
     const box = btn.getBoundingClientRect();
     const cs = window.getComputedStyle(btn);
     const padX = parseFloat(cs.paddingLeft) + parseFloat(cs.paddingRight);
-    const ctx = document.createElement("canvas").getContext("2d");
+    const ctx = measureCtx || (measureCtx = document.createElement("canvas").getContext("2d"));
     ctx.font = cs.fontWeight + " " + cs.fontSize + " " + cs.fontFamily;
     const prefix = ctx.measureText("▸ ").width;                 // 이름 앞의 ▸ 표시
     listEl.removeChild(probe);
@@ -80,7 +82,7 @@
     nameLimit = Math.max(NAME_MIN, Math.min(NAME_MAX, Math.floor(fit / 5) * 5));
     return nameLimit;
   }
-  window.PDS_PLAN_NAME = { limit: function () { return measureNameLimit(); }, cached: function () { return nameLimit; } };
+  window.PDS_PLAN_NAME = { cached: function () { return nameLimit; } };
 
   function applyNameLimit() {
     const n = measureNameLimit();
@@ -229,30 +231,10 @@
   const openIds = new Set();
 
   // 오늘(서울) 기준으로 계획이 예정·진행 중·종료 중 어디에 있는지. 날짜는 "YYYY-MM-DD" 글자 그대로 비교한다.
-  function dayNumber(iso) {
-    const p = iso.split("-");
-    return Date.UTC(Number(p[0]), Number(p[1]) - 1, Number(p[2])) / 86400000;
-  }
   function phaseOf(plan, today) {
     if (today < plan.start_date) return "soon";
     if (today > plan.end_date) return "over";
     return "ing";
-  }
-
-  function periodBar(plan, today, axisStart, axisEnd) {
-    const base = dayNumber(axisStart);
-    const total = Math.max(1, dayNumber(axisEnd) - base + 1);   // 시작일·종료일 당일도 한 칸으로 센다
-    const from = (dayNumber(plan.start_date) - base) / total * 100;
-    const width = Math.max(2, (dayNumber(plan.end_date) - dayNumber(plan.start_date) + 1) / total * 100);
-    const phase = phaseOf(plan, today);
-    const bar = el("div", { class: "pl-bar", "aria-hidden": "true" }, [
-      el("span", { class: "pl-bar-fill " + phase, style: "left:" + from + "%;width:" + width + "%" })
-    ]);
-    const t = dayNumber(today);
-    if (t >= base && t < base + total) {
-      bar.appendChild(el("span", { class: "pl-bar-today", style: "left:" + ((t - base + 0.5) / total * 100) + "%" }));
-    }
-    return bar;
   }
 
   // 상세를 펼치면 그 계획이 목록 칸의 한가운데 오도록 스크롤한다. 계획이 칸보다 크면 맨 위(이름)가 보이게 맞춘다.
@@ -265,8 +247,7 @@
       const r = li.getBoundingClientRect();
       const gap = r.height >= b.height ? 0 : (b.height - r.height) / 2;
       const delta = (r.top - b.top) - gap;
-      const reduce = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-      box.scrollTo({ top: box.scrollTop + delta, behavior: reduce ? "auto" : "smooth" });
+      box.scrollTo({ top: box.scrollTop + delta, behavior: window.PDS_UTIL.reduceMotion() ? "auto" : "smooth" });
     });
   }
 
@@ -274,9 +255,7 @@
   // 달력은 계획의 시작일~종료일을 주 단위 막대로 그린다. 막대를 누르면 왼쪽 목록이 그 계획으로 이동해 펼쳐진다.
   const sideEl = document.getElementById("plan-side");
   const calEl = document.getElementById("plan-cal");
-  const VIEW_KEY = "pds-plan-view";
-
-  function isoFromDay(n) { return new Date(n * 86400000).toISOString().slice(0, 10); }
+  const viewStore = window.PDS_UTIL.viewStore("pds-plan-view");
 
   function focusPlan(id) {
     const li = listEl.querySelector('[data-plan-id="' + id + '"]');
@@ -293,19 +272,17 @@
                cls: "pri-" + p.priority, tip: p.title + " (" + p.start_date + " ~ " + p.end_date + ")" };
     });
   }, { noun: "계획", onClick: function (item) { focusPlan(item.id); } });
-  function renderCalendar() { planCal.render(); }
 
   function setView(view, save) {
     sideEl.setAttribute("data-view", view);
     document.getElementById("view-art").setAttribute("aria-pressed", String(view === "art"));
     document.getElementById("view-cal").setAttribute("aria-pressed", String(view === "cal"));
-    if (save) { try { window.localStorage.setItem(VIEW_KEY, view); } catch (e) { /* 저장이 막혀 있어도 화면은 동작 */ } }
+    if (view === "cal") planCal.render();   // 달력이 보일 때만 그린다
+    if (save) viewStore.set(view);
   }
   document.getElementById("view-art").addEventListener("click", function () { setView("art", true); });
   document.getElementById("view-cal").addEventListener("click", function () { setView("cal", true); });
-  try { if (window.localStorage.getItem(VIEW_KEY) === "cal") setView("cal", false); } catch (e) { /* 저장값을 못 읽으면 기본(그림) */ }
-
-  const ddayText = window.PDS_UTIL.ddayText;   // D-3 / D-Day / D+2
+  if (viewStore.get() === "cal") setView("cal", false);   // 저장값을 못 읽으면 기본(그림)
 
   // 정렬 선택(날짜순·종료일순·우선순위순)을 바꾸면 목록을 다시 그린다.
   document.getElementById("plan-sort").addEventListener("change", function () { renderPlans(); });
@@ -373,16 +350,15 @@
         el("span", { class: "pl-dot", "aria-hidden": "true" }),
         el("div", { class: "pl-date" }, [
           document.createTextNode(plan.start_date + " ~ " + plan.end_date),
-          el("span", { class: "pl-dday", text: ddayText(plan.end_date, today), title: "종료일까지 남은 날" })
+          el("span", { class: "pl-dday", text: window.PDS_UTIL.ddayText(plan.end_date, today), title: "종료일까지 남은 날" })
         ]),
         el("h3", {}, [nameBtn]),
-        periodBar(plan, today, axisStart, axisEnd),
+        window.PDS_UTIL.periodBar({ axisStart: axisStart, axisEnd: axisEnd, start: plan.start_date, end: plan.end_date, today: today, cls: phaseOf(plan, today) }),
         panel
       ]);
       listEl.appendChild(li);
     });
-    renderCalendar();
-    measureNameLimit();
+    if (sideEl.getAttribute("data-view") === "cal") planCal.render();
   }
 
   let resizeTimer = null;

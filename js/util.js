@@ -86,6 +86,14 @@
   // 그 자리에 버튼을 두어 누르면 바로 아래에 픽셀 스타일 목록이 열린다.
   // 목록은 열려 있는 창(<dialog>) 안에 붙인다. 창 밖(body)에 붙이면 창 뒤에 가려진다.
   let current = null;   // 지금 열려 있는 팝업(선택 목록 또는 달력) 하나. 서로 겹쳐 열리지 않게 같이 쓴다.
+
+  // 창(<dialog>)의 애니메이션 때문에 fixed 기준점이 화면이 아니라 창으로 잡힐 수 있다.
+  // 놓은 뒤 실제 위치를 재서, 어긋난 만큼 되돌려 원하는 자리(wantLeft, wantTop)에 맞춘다.
+  function settle(node, wantLeft, wantTop) {
+    const got = node.getBoundingClientRect();
+    if (Math.abs(got.left - wantLeft) > 0.5) node.style.left = (wantLeft - (got.left - wantLeft)) + "px";
+    if (Math.abs(got.top - wantTop) > 0.5) node.style.top = (wantTop - (got.top - wantTop)) + "px";
+  }
   (function () {
     const valueDesc = Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype, "value");
     const indexDesc = Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype, "selectedIndex");
@@ -97,7 +105,7 @@
     window.addEventListener("resize", function () { closeCurrent(false); });
     window.addEventListener("scroll", function (e) {
       if (current && !current.contains(e.target)) current.close(false);
-    }, true);
+    }, { capture: true, passive: true });
 
     function enhance(select) {
       const btn = el("button", { type: "button", class: "dd-btn", "aria-haspopup": "listbox", "aria-expanded": "false" });
@@ -150,11 +158,7 @@
         list.style.maxHeight = Math.max(80, Math.min(280, openDown ? below : above)) + "px";
         const wantTop = openDown ? r.bottom + 6 : Math.max(room, r.top - 6 - list.offsetHeight);
         list.style.top = wantTop + "px";
-        // 창(<dialog>)의 애니메이션 때문에 fixed 기준점이 화면이 아니라 창으로 잡힐 수 있다.
-        // 놓은 뒤 실제 위치를 재서, 어긋난 만큼 되돌려 버튼 바로 아래(또는 위)에 맞춘다.
-        const got = list.getBoundingClientRect();
-        if (Math.abs(got.left - r.left) > 0.5) list.style.left = (r.left - (got.left - r.left)) + "px";
-        if (Math.abs(got.top - wantTop) > 0.5) list.style.top = (wantTop - (got.top - wantTop)) + "px";
+        settle(list, r.left, wantTop);   // 버튼 바로 아래(또는 위)에 맞춘다
       }
 
       function open() {
@@ -310,18 +314,18 @@
       render(true);
     }
 
-    function navBtn(text, label, delta, byYear) {
+    function navBtn(text, label, months) {
       const b = el("button", { type: "button", class: "ghost cal-nav", text: text, "aria-label": label });
-      b.addEventListener("click", function () { move(byYear ? addMonths(focus, delta * 12) : addMonths(focus, delta)); });
+      b.addEventListener("click", function () { move(addMonths(focus, months)); });
       return b;
     }
 
     function render(keepFocus) {
       box.textContent = "";
       box.appendChild(el("div", { class: "cal-head" }, [
-        navBtn("«", "이전 해", -1, true), navBtn("‹", "이전 달", -1, false),
+        navBtn("«", "이전 해", -12), navBtn("‹", "이전 달", -1),
         el("span", { class: "cal-title", text: focus.y + "년 " + (focus.m + 1) + "월" }),
-        navBtn("›", "다음 달", 1, false), navBtn("»", "다음 해", 1, true)
+        navBtn("›", "다음 달", 1), navBtn("»", "다음 해", 12)
       ]));
 
       const grid = el("div", { class: "cal-grid", role: "grid" });
@@ -329,18 +333,23 @@
       const first = { y: focus.y, m: focus.m, d: 1 };
       const start = addDays(first, -new Date(Date.UTC(focus.y, focus.m, 1)).getUTCDay());
       const sel = input.value;
+      const todayIso = todayKST();
+      const focusIso = isoOf(focus);
       let focusBtn = null;
       for (let i = 0; i < 42; i++) {
         const day = addDays(start, i);
         const iso = isoOf(day);
-        const cls = "cal-day" + (day.m !== focus.m ? " out" : "") + (iso === todayKST() ? " today" : "") + (iso === sel ? " sel" : "");
-        const b = el("button", { type: "button", class: cls, text: String(day.d), tabindex: iso === isoOf(focus) ? "0" : "-1", "aria-label": day.y + "년 " + (day.m + 1) + "월 " + day.d + "일" });
+        const cls = "cal-day" + (day.m !== focus.m ? " out" : "") + (iso === todayIso ? " today" : "") + (iso === sel ? " sel" : "");
+        const b = el("button", { type: "button", class: cls, text: String(day.d), tabindex: iso === focusIso ? "0" : "-1", "data-iso": iso, "aria-label": day.y + "년 " + (day.m + 1) + "월 " + day.d + "일" });
         if (iso === sel) b.setAttribute("aria-pressed", "true");
         if (iso < MIN_ISO || iso > MAX_ISO) b.disabled = true;
-        b.addEventListener("click", function () { pick(iso); });
-        if (iso === isoOf(focus)) focusBtn = b;
+        if (iso === focusIso) focusBtn = b;
         grid.appendChild(b);
       }
+      grid.addEventListener("click", function (e) {   // 날짜 42칸에 따로 달지 않고 칸 전체에서 한 번에 받는다
+        const day = e.target.closest ? e.target.closest(".cal-day") : null;
+        if (day && !day.disabled) pick(day.getAttribute("data-iso"));
+      });
       box.appendChild(grid);
 
       const foot = el("div", { class: "cal-foot" });
@@ -348,10 +357,9 @@
         const clear = el("button", { type: "button", class: "ghost", text: "삭제" });
         clear.addEventListener("click", function () { pick(""); });
         foot.appendChild(clear);
-      } else {
-        foot.appendChild(el("span"));
       }
       const now = el("button", { type: "button", class: "ghost", text: "오늘" });
+      now.style.marginLeft = "auto";   // 삭제 버튼이 없을 때도 오른쪽에 둔다
       now.addEventListener("click", function () { pick(todayKST()); });
       foot.appendChild(now);
       box.appendChild(foot);
@@ -382,21 +390,20 @@
     box.style.width = w + "px";
     box.style.left = wantLeft + "px";
     box.style.top = wantTop + "px";
-    const got = box.getBoundingClientRect();
-    if (Math.abs(got.left - wantLeft) > 0.5) box.style.left = (wantLeft - (got.left - wantLeft)) + "px";
-    if (Math.abs(got.top - wantTop) > 0.5) box.style.top = (wantTop - (got.top - wantTop)) + "px";
+    settle(box, wantLeft, wantTop);
 
     const f = box.querySelector('.cal-day[tabindex="0"]');
     if (f) f.focus();
   }
 
   // ---- 기본값용 "오늘"·"지금" (모두 서울 시간 기준) ----
+  const seoulParted = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Asia/Seoul", year: "numeric", month: "2-digit", day: "2-digit",
+    hour: "2-digit", minute: "2-digit", hourCycle: "h23"
+  });
   function seoulParts(date) {
     const parts = {};
-    new Intl.DateTimeFormat("en-CA", {
-      timeZone: "Asia/Seoul", year: "numeric", month: "2-digit", day: "2-digit",
-      hour: "2-digit", minute: "2-digit", hourCycle: "h23"
-    }).formatToParts(date).forEach(function (p) { parts[p.type] = p.value; });
+    seoulParted.formatToParts(date).forEach(function (p) { parts[p.type] = p.value; });
     return parts;
   }
   function todayKST() {
@@ -416,14 +423,46 @@
     });
   }
 
+  // "2026-10-12" → 1970-01-01 부터 지난 날 수
+  function dayNumber(iso) { const p = iso.split("-"); return Date.UTC(Number(p[0]), Number(p[1]) - 1, Number(p[2])) / 86400000; }
+
+  // 기간 막대(계획·할 일 목록 공용). 기준 축(axisStart~axisEnd) 위에 start~end 를 칠하고 오늘 표시를 둔다.
+  // start·end 가 없으면(마감일 없는 할 일) 칠하지 않고, 오늘이 축 밖이면 오늘 표시도 없다. 날짜 하루가 한 칸이다.
+  function periodBar(o) {
+    const base = dayNumber(o.axisStart);
+    const total = Math.max(1, dayNumber(o.axisEnd) - base + 1);
+    const bar = el("div", { class: "pl-bar", "aria-hidden": "true" });
+    if (o.start && o.end) {
+      const a = dayNumber(o.start);
+      const left = (a - base) / total * 100;
+      const width = Math.max(2, (dayNumber(o.end) - a + 1) / total * 100);
+      bar.appendChild(el("span", { class: "pl-bar-fill " + o.cls, style: "left:" + left + "%;width:" + width + "%" }));
+    }
+    const t = dayNumber(o.today);
+    if (t >= base && t < base + total) {
+      bar.appendChild(el("span", { class: "pl-bar-today", style: "left:" + ((t - base + 0.5) / total * 100) + "%" }));
+    }
+    return bar;
+  }
+
+  // 목록/달력(그림/달력) 보기 선택을 브라우저에 기억한다. 저장이 막혀 있어도 화면은 동작한다.
+  function viewStore(key) {
+    return {
+      get: function () { try { return window.localStorage.getItem(key); } catch (e) { return null; } },
+      set: function (v) { try { window.localStorage.setItem(key, v); } catch (e) { /* 저장이 막혀 있어도 화면은 동작 */ } }
+    };
+  }
+
   window.PDS_UTIL = {
+    periodBar: periodBar,
+    viewStore: viewStore,
+    reduceMotion: function () { return !!(window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches); },
     todayKST: todayKST,
     nowKST: nowKST,
-    // "2026-10-12" → 1970-01-01 부터 지난 날 수
-    dayNumber: function (iso) { const p = iso.split("-"); return Date.UTC(Number(p[0]), Number(p[1]) - 1, Number(p[2])) / 86400000; },
+    dayNumber: dayNumber,
     // 마감·종료일까지 남은 날(서울 오늘 기준). 남았으면 D-3, 오늘이면 D-Day, 지났으면 D+2.
     ddayText: function (endDate, today) {
-      const left = window.PDS_UTIL.dayNumber(endDate) - window.PDS_UTIL.dayNumber(today);
+      const left = dayNumber(endDate) - dayNumber(today);
       if (left > 0) return "D-" + left;
       if (left === 0) return "D-Day";
       return "D+" + (-left);
