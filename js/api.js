@@ -70,6 +70,10 @@
 
     // ---- 할 일 (카드 2) ----
     // 검색·거르기·정렬은 서버(DB)에서 한다. f: { status, priority, q, tag, order }
+    // 계획 목록의 칸 막대용: 지워지지 않은 모든 할 일의 계획 번호·상태·마감일만 가져온다.
+    listTaskBrief: function () {
+      return request("tasks?select=plan_id,status,due_date&deleted_at=is.null");
+    },
     listTasks: function (planId, f) {
       const params = [
         "select=*,executions(*)",

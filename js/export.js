@@ -49,8 +49,7 @@
       URL.revokeObjectURL(url);
 
       msg.textContent = "";
-      notify("내려받았습니다.\n계획 " + counts.plans + ", 할 일 " + counts.tasks +
-        ", 실행 기록 " + counts.executions + ", 돌아보기 " + counts.retrospectives + "건");
+      notify("내려받기를 완료했습니다.");
     } catch (e) {
       msg.textContent = "";
       warn(e.message);

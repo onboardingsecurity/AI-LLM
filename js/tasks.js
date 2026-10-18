@@ -213,30 +213,17 @@
   // 위에서 아래 순서는 서버가 화면에 밝힌 정렬 기준대로 정해 준 목록 순서 그대로다.
   const openIds = new Set();
 
-  // 기간 막대: 만든 날 ~ 마감일. 보이는 할 일 전체의 가장 이른 날 ~ 가장 늦은 마감일을 한 줄(축)로 보고, 각 할 일이 그 안에서 어디에 놓이는지 그린다.
-  // 완료 = 초록, 진행 중 = 주황(마감 전) / 회색(마감 지남). 마감일이 없으면 칸만 비워 둔다. 검은 세로선이 서울 오늘.
+  // 칸 막대: 만든 날 ~ 마감일의 날 수만큼 칸(하루 한 칸)을 나누고, 지나간 날 수만큼 앞에서부터 초록으로 칠한다.
+  // 완료하면 모두 초록, 마감일이 지났는데 못 끝냈으면 모두 회색. 마감일이 없으면 칸 없는 빈 막대.
   function createdDay(task) { return new Date(Date.parse(task.created_at) + 9 * 3600000).toISOString().slice(0, 10); }
-  function taskAxis(tasks) {
-    let s = null, e = null;
-    tasks.forEach(function (t) {
-      const a = createdDay(t);
-      const b = t.due_date && t.due_date > a ? t.due_date : a;
-      if (s === null || a < s) s = a;
-      if (e === null || b > e) e = b;
-    });
-    const today = window.PDS_UTIL.todayKST();
-    if (s === null) return null;
-    if (today < s) s = today;
-    if (today > e) e = today;
-    return { start: s, end: e };
-  }
-  function taskBar(task, axis, done, late, today) {
-    const made = task.due_date ? createdDay(task) : null;
-    return window.PDS_UTIL.periodBar({
-      axisStart: axis.start, axisEnd: axis.end, today: today,
-      start: made && made < task.due_date ? made : task.due_date, end: task.due_date,
-      cls: done ? "done" : (late ? "over" : "ing")
-    });
+  function taskBar(task, done, late, today) {
+    if (!task.due_date) return window.PDS_UTIL.cellBar({ total: 0 });
+    const day = window.PDS_UTIL.dayNumber;
+    const made = createdDay(task);
+    const total = Math.max(1, day(task.due_date) - day(made) + 1);
+    if (done) return window.PDS_UTIL.cellBar({ total: total, green: total, gray: 0 });
+    if (late) return window.PDS_UTIL.cellBar({ total: total, green: 0, gray: total });
+    return window.PDS_UTIL.cellBar({ total: total, green: Math.max(0, day(today) - day(made)), gray: 0 });
   }
 
   // ---------- 리스트 ↔ 달력 ----------
@@ -268,7 +255,7 @@
   $("t-view-cal").addEventListener("click", function () { setTaskView("cal", true); });
   if (viewStore.get() === "cal") setTaskView("cal", false);   // 저장값을 못 읽으면 기본(리스트)
 
-  function renderTask(task, axis, today) {
+  function renderTask(task, today) {
     const done = task.status === "done";
     const panelId = "task-panel-" + task.id;
     const isOpen = openIds.has(task.id);
@@ -328,7 +315,7 @@
       el("span", { class: "pl-dot", title: dotTitle, "aria-hidden": "true" }),
       el("div", { class: "pl-date" }, dateLine),
       el("h3", {}, [nameBtn, badge]),
-      taskBar(task, axis, done, late, today),
+      taskBar(task, done, late, today),
       panel
     ]);
   }
@@ -352,9 +339,8 @@
       const tasks = await api.listTasks(planId, f);
       if (seq !== loadSeq) return; // 더 최근 요청이 있으면 이 결과는 버린다
       listEl.textContent = "";
-      const axis = taskAxis(tasks);
       const today = window.PDS_UTIL.todayKST();
-      tasks.forEach(function (t) { listEl.appendChild(renderTask(t, axis, today)); });
+      tasks.forEach(function (t) { listEl.appendChild(renderTask(t, today)); });
       shownTasks = tasks;
       if (!$("t-cal").hidden) taskCal.render();   // 달력이 보일 때만 그린다(보이게 될 때는 setTaskView 가 그린다)
       countEl.textContent = tasks.length ? tasks.length + "개" : "";   // 없을 때는 안내 문구만
@@ -509,12 +495,17 @@
   // 지금 있는 계획 이름 중 가장 넓은 것이 선택 칸(과 펼친 목록)에 한 줄로 다 들어가는 가장 큰 글자 크기(10~16px)로 맞춘다.
   // 이름은 길이 규칙(app.js)을 넘지 않으니, 가장 긴 이름이 한 줄에 들어가고 칸이 필요 이상으로 비지 않는다.
   // 계획이 바뀌거나 칸 너비가 바뀌면(창 크기) 다시 맞춘다.
-  const planPick = planSelect.previousElementSibling;   // util.js 가 select 앞에 끼워 넣은 ▼ 버튼
-  if (planPick) planPick.classList.add("plan-pick");
+  // 할 일 탭과 돌아보기 탭의 계획 선택 칸은 같은 크기라 같은 글자 크기를 같이 쓴다.
+  const planPicks = [planSelect, $("r-plan")].map(function (sel) {
+    const btn = sel && sel.previousElementSibling;   // util.js 가 select 앞에 끼워 넣은 ▼ 버튼
+    if (btn) btn.classList.add("plan-pick");
+    return btn;
+  }).filter(Boolean);
   let pickCtx = null;                                  // 글자 폭 재기용 캔버스(한 번만 만든다)
   let pickSize = "";
   function fitPlanPick() {
-    if (!planPick || !planPick.getClientRects().length) return;   // 탭이 숨겨져 있으면 잴 수 없다(보이게 되면 다시 맞춘다)
+    const planPick = planPicks.filter(function (b) { return b.getClientRects().length; })[0];
+    if (!planPick) return;   // 탭이 숨겨져 있으면 잴 수 없다(보이게 되면 다시 맞춘다)
     const cs = window.getComputedStyle(planPick);
     const room = planPick.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight);
     const ctx = pickCtx || (pickCtx = document.createElement("canvas").getContext("2d"));
@@ -525,7 +516,10 @@
     const size = widest > 0 ? Math.max(10, Math.min(16, Math.floor(room / widest * 2) / 2)) : 16;
     if (pickSize !== size + "px") { pickSize = size + "px"; document.documentElement.style.setProperty("--plan-pick-fs", pickSize); }
   }
-  if (window.ResizeObserver && planPick) new ResizeObserver(function () { window.requestAnimationFrame(fitPlanPick); }).observe(planPick);   // 탭이 보이게 될 때·창 크기가 바뀔 때
+  if (window.ResizeObserver) {   // 탭이 보이게 될 때·창 크기가 바뀔 때
+    const ro = new ResizeObserver(function () { window.requestAnimationFrame(fitPlanPick); });
+    planPicks.forEach(function (b) { ro.observe(b); });
+  }
   document.addEventListener("plans-changed", function () { setTimeout(fitPlanPick, 0); });
   if (document.fonts && document.fonts.ready) document.fonts.ready.then(fitPlanPick);
 

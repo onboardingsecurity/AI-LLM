@@ -25,7 +25,7 @@
   const dlg = document.getElementById("app-dialog");
   let queue = Promise.resolve();
 
-  function showDialog(text, kind, title) {
+  function showDialog(text, kind, title, extraClass) {
     const run = function () {
       return new Promise(function (resolve) {
         if (!dlg || typeof dlg.showModal !== "function") {
@@ -38,7 +38,7 @@
         document.getElementById("dlg-text").textContent = text;
         document.getElementById("dlg-icon").textContent = icons[kind];
         document.getElementById("dlg-cancel").hidden = kind !== "ask";
-        dlg.className = "dlg dlg-" + kind;
+        dlg.className = "dlg dlg-" + kind + (extraClass ? " " + extraClass : "");   // extraClass: 이 알림만 따로 꾸밀 때(예: dlg-fit)
         dlg.addEventListener("close", function onClose() {
           dlg.removeEventListener("close", onClose);
           resolve(dlg.returnValue === "ok");
@@ -426,21 +426,23 @@
   // "2026-10-12" → 1970-01-01 부터 지난 날 수
   function dayNumber(iso) { const p = iso.split("-"); return Date.UTC(Number(p[0]), Number(p[1]) - 1, Number(p[2])) / 86400000; }
 
-  // 기간 막대(계획·할 일 목록 공용). 기준 축(axisStart~axisEnd) 위에 start~end 를 칠하고 오늘 표시를 둔다.
-  // start·end 가 없으면(마감일 없는 할 일) 칠하지 않고, 오늘이 축 밖이면 오늘 표시도 없다. 날짜 하루가 한 칸이다.
-  function periodBar(o) {
-    const base = dayNumber(o.axisStart);
-    const total = Math.max(1, dayNumber(o.axisEnd) - base + 1);
+  // 칸 막대(계획·할 일 목록 공용): total 칸을 가로로 나누어 선으로 가르고, 앞에서부터 green 칸은 초록, 이어서 gray 칸은 회색, 나머지는 흰색.
+  // 칸이 너무 많으면(MAX_CELLS 초과) 선 없이 비율만큼만 칠한다. total 이 0 이면 빈 막대.
+  const MAX_CELLS = 40;
+  function cellBar(o) {
     const bar = el("div", { class: "pl-bar", "aria-hidden": "true" });
-    if (o.start && o.end) {
-      const a = dayNumber(o.start);
-      const left = (a - base) / total * 100;
-      const width = Math.max(2, (dayNumber(o.end) - a + 1) / total * 100);
-      bar.appendChild(el("span", { class: "pl-bar-fill " + o.cls, style: "left:" + left + "%;width:" + width + "%" }));
-    }
-    const t = dayNumber(o.today);
-    if (t >= base && t < base + total) {
-      bar.appendChild(el("span", { class: "pl-bar-today", style: "left:" + ((t - base + 0.5) / total * 100) + "%" }));
+    const total = o.total;
+    if (total <= 0) return bar;
+    const green = Math.min(total, o.green);
+    const gray = Math.min(total - green, o.gray);
+    if (total <= MAX_CELLS) {
+      for (let i = 0; i < total; i++) {
+        bar.appendChild(el("span", { class: "pl-cell" + (i < green ? " ok" : (i < green + gray ? " bad" : "")) }));
+      }
+    } else {
+      bar.classList.add("solid");
+      bar.appendChild(el("span", { class: "pl-fill ok", style: "left:0;width:" + (green / total * 100) + "%" }));
+      bar.appendChild(el("span", { class: "pl-fill bad", style: "left:" + (green / total * 100) + "%;width:" + (gray / total * 100) + "%" }));
     }
     return bar;
   }
@@ -454,7 +456,7 @@
   }
 
   window.PDS_UTIL = {
-    periodBar: periodBar,
+    cellBar: cellBar,
     viewStore: viewStore,
     reduceMotion: function () { return !!(window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches); },
     todayKST: todayKST,
@@ -469,7 +471,7 @@
     },
     keepEndAfterStart: keepEndAfterStart,
     notify: function (text, title) { return showDialog(text, "ok", title); },
-    warn: function (text, title) { return showDialog(text, "warn", title); },
+    warn: function (text, title, extraClass) { return showDialog(text, "warn", title, extraClass); },
     confirmBox: function (text, title) { return showDialog(text, "ask", title); },
     el: el,
     formatSeoul: function (iso) { return seoulTime.format(new Date(iso)); },

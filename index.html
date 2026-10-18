@@ -23,10 +23,6 @@
     </div>
   </header>
 
-  <p class="notice" role="note">
-    지금은 로그인이 없어 링크를 아는 사람은 누구나 볼 수 있습니다. 남이 봐도 괜찮은 내용만 넣으세요
-  </p>
-
   <nav class="tabs" role="tablist" aria-label="큰 분류">
     <button type="button" role="tab" id="tab-plan" class="tab" aria-controls="plan-col" aria-selected="true">계획</button>
     <span class="tab-line" aria-hidden="true"></span>
@@ -66,7 +62,7 @@
         <div class="plan-body">
           <div class="plan-scroll">
             <p class="status" id="list-status">불러오는 중…</p>
-            <ul class="plans timeline-list" id="plan-list"></ul>
+            <ul class="plans timeline-list divided" id="plan-list"></ul>
           </div>
           <div class="plan-side" id="plan-side" data-view="art">
             <div class="plan-arts">
@@ -150,77 +146,55 @@
           <div class="task-empty" id="t-empty" hidden>
             <img src="assets/empty-image.png" width="1254" height="1254" loading="lazy" decoding="async" alt="할 일이 없습니다">
           </div>
-          <ul class="plans timeline-list" id="t-list"></ul>
+          <ul class="plans timeline-list divided" id="t-list"></ul>
         </div>
       </section>
     </div>
 
     <div class="col" id="review-area" role="tabpanel" aria-labelledby="tab-see" hidden>
+      <div class="col-side">
+        <section class="card" aria-labelledby="r-plan-title">
+          <h2 id="r-plan-title">계획 선택</h2>
+          <select id="r-plan" aria-label="계획 선택"></select>
+        </section>
+
+        <section class="card" aria-labelledby="r-period-title">
+          <h2 id="r-period-title">집계</h2>
+          <ul class="plans stat-grid" id="r-stats" aria-label="집계"></ul>
+        </section>
+      </div>
+
       <section class="card" aria-labelledby="r-title">
-        <h2 id="r-title">돌아보기</h2>
-
-        <label>어느 계획을 돌아볼까요
-          <select id="r-plan"></select>
-        </label>
-        <div class="row">
-          <label>마감일 기간 시작 (비우면 전체)
-            <input id="r-from" type="date">
-          </label>
-          <label>마감일 기간 끝
-            <input id="r-to" type="date">
-          </label>
+        <div class="card-head task-head">
+          <div class="head-title">
+            <h2 id="r-title">돌아보기 리스트</h2>
+            <span class="status" id="r-status" role="status" hidden></span>
+          </div>
+          <button type="button" id="h-open">고칠 점을 다음 계획으로</button>
         </div>
-        <p class="hint">숫자를 누르면 그 숫자가 나온 할 일과 실행 기록이 아래에 나옵니다. "지연"은 완료하지 않았고 마감일이 서울 시간 기준 오늘보다 앞선 할 일입니다.</p>
-        <p class="status" id="r-status"></p>
 
-        <div class="stats" id="r-stats"></div>
-
-        <h3 class="sub-h" id="r-detail-title"></h3>
-        <ul class="plans" id="r-detail"></ul>
+        <div class="task-scroll">
+          <div class="task-arts" id="r-arts">
+            <div class="plan-arts">
+              <img class="plan-art" data-fx="hearts" role="button" tabindex="0" src="assets/plandsee-basic-640.png" width="640" height="640" loading="lazy" decoding="async"
+                   alt="프렌드씨 캐릭터가 노트북 앞에서 엄지를 들어 보이며 함께라서 좋아라고 말하는 그림">
+              <img class="plan-art" data-fx="laugh" role="button" tabindex="0" src="assets/plandsee-ready-640.png" width="640" height="640" loading="lazy" decoding="async"
+                   alt="프렌드씨 캐릭터가 머그컵을 들고 오늘도 프렌드씨와 함께라고 적힌 칠판 앞에 앉아 있는 그림">
+              <img class="plan-art" data-fx="bomb" role="button" tabindex="0" src="assets/plandsee-work-640.png" width="640" height="640" loading="lazy" decoding="async"
+                   alt="프렌드씨 캐릭터가 땀을 흘리며 열심히 노트북으로 일하는 그림">
+              <img class="plan-art" data-fx="firework" role="button" tabindex="0" src="assets/plandsee-window-640.png" width="640" height="873" loading="lazy" decoding="async"
+                   alt="노을 지는 창가에서 프렌드씨 캐릭터가 뒷모습으로 그래, 오늘도 잘했어라고 생각하는 그림">
+            </div>
+          </div>
+          <div class="task-empty" id="r-empty" hidden>
+            <img src="assets/empty-image.png" width="1254" height="1254" loading="lazy" decoding="async" alt="해당하는 할 일이 없습니다">
+          </div>
+          <ul class="plans timeline-list divided" id="r-detail"></ul>
+        </div>
       </section>
 
-      <section class="card" aria-labelledby="h-title">
-        <h2 id="h-title">고칠 점을 다음 계획으로</h2>
-        <p class="hint">돌아본 기간에서 고칠 점 한 줄을 정하면, 그 내용으로 다음 계획이 만들어집니다. 같은 기간은 한 번만 넘길 수 있습니다.</p>
-
-        <form id="handover-form" novalidate>
-          <label>고칠 점 (한 줄)
-            <input id="h-improve" type="text" maxlength="200" required>
-          </label>
-          <label>다음 계획 이름
-            <input id="h-title-in" type="text" maxlength="100" required>
-          </label>
-          <div class="row">
-            <label>시작일
-              <input id="h-start" type="date" required>
-            </label>
-            <label>종료일
-              <input id="h-end" type="date" required>
-            </label>
-          </div>
-          <div class="row">
-            <label>우선순위
-              <select id="h-priority">
-                <option value="1">높음</option>
-                <option value="2" selected>중간</option>
-                <option value="3">낮음</option>
-              </select>
-            </label>
-            <label>예상 시간 (분)
-              <input id="h-minutes" type="number" data-stepper min="0" step="1" inputmode="numeric" required>
-            </label>
-          </div>
-          <label>성공 기준
-            <textarea id="h-success" rows="2" maxlength="500" required></textarea>
-          </label>
-          <p class="error" id="h-error" role="alert" hidden></p>
-          <p class="status" id="h-result" role="status"></p>
-          <div class="actions">
-            <button type="submit" id="h-submit">다음 계획으로 넘기기</button>
-          </div>
-        </form>
-
-        <h3 class="sub-h">넘긴 기록</h3>
+      <section class="card card-wide" aria-labelledby="h-title">
+        <h2 id="h-title">넘긴 기록</h2>
         <ul class="plans" id="h-list"></ul>
       </section>
     </div>
@@ -280,7 +254,7 @@
         </label>
 
         <div class="row">
-          <label>마감일 (없어도 됨)
+          <label>마감일
             <input id="t-due" type="date">
           </label>
           <label>우선순위
@@ -306,6 +280,49 @@
       <div class="dlg-actions">
         <button type="button" id="t-cancel" class="ghost dlg-btn">닫기</button>
         <button type="submit" id="t-submit" class="dlg-btn">할 일 저장</button>
+      </div>
+    </form>
+  </dialog>
+
+  <dialog id="h-dialog" class="dlg dlg-ask dlg-wide" aria-labelledby="h-dlg-title">
+    <form id="handover-form" class="dlg-box" novalidate>
+      <div class="dlg-bar"><span class="dlg-icon" aria-hidden="true">✎</span><h2 id="h-dlg-title" class="dlg-title">고칠 점을 다음 계획으로</h2></div>
+      <div class="dlg-body">
+        <p class="callout" role="note">돌아보기에서 고칠 점 한 줄을 작성 후 다음 계획으로 만들 수 있습니다.</p>
+        <label>고칠 점
+          <input id="h-improve" type="text" maxlength="200" required>
+        </label>
+        <label>계획 이름
+          <input id="h-title-in" type="text" maxlength="100" required>
+        </label>
+        <div class="row">
+          <label>시작일
+            <input id="h-start" type="date" required>
+          </label>
+          <label>종료일
+            <input id="h-end" type="date" required>
+          </label>
+        </div>
+        <div class="row">
+          <label>우선순위
+            <select id="h-priority">
+              <option value="1">높음</option>
+              <option value="2" selected>중간</option>
+              <option value="3">낮음</option>
+            </select>
+          </label>
+          <label>예상 시간 (분)
+            <input id="h-minutes" type="number" data-stepper min="0" step="1" inputmode="numeric" required>
+          </label>
+        </div>
+        <label>성공 기준
+          <textarea id="h-success" rows="3" maxlength="500" required></textarea>
+        </label>
+        <p class="error" id="h-error" role="alert" hidden></p>
+      </div>
+      <div class="dlg-actions">
+        <button type="button" id="h-cancel" class="ghost dlg-btn">닫기</button>
+        <button type="submit" id="h-submit" class="dlg-btn">다음 계획으로 넘기기</button>
       </div>
     </form>
   </dialog>

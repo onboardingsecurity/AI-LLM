@@ -230,13 +230,6 @@
   // 이름을 누르면 그 자리에서 데이터와 고치기·수정 이력이 펼쳐진다.
   const openIds = new Set();
 
-  // 오늘(서울) 기준으로 계획이 예정·진행 중·종료 중 어디에 있는지. 날짜는 "YYYY-MM-DD" 글자 그대로 비교한다.
-  function phaseOf(plan, today) {
-    if (today < plan.start_date) return "soon";
-    if (today > plan.end_date) return "over";
-    return "ing";
-  }
-
   // 상세를 펼치면 그 계획이 목록 칸의 한가운데 오도록 스크롤한다. 계획이 칸보다 크면 맨 위(이름)가 보이게 맞춘다.
   // 맨 위·맨 아래 계획은 가운데까지 못 가도 스크롤 끝까지만 가고, 그래도 상세는 모두 보인다.
   function centerInList(li) {
@@ -287,19 +280,29 @@
   // 정렬 선택(날짜순·종료일순·우선순위순)을 바꾸면 목록을 다시 그린다.
   document.getElementById("plan-sort").addEventListener("change", function () { renderPlans(); });
 
+  // 칸 막대: 그 계획의 할 일 개수만큼 칸. 완료한 수만큼 초록, 기간 안에 못 끝낸 것(마감일이 지났거나 계획 종료일이 지났는데 미완료)은 회색, 나머지는 흰색.
+  let briefs = [];   // 모든 할 일의 { plan_id, status, due_date }
+  function planBar(plan, today) {
+    let total = 0, done = 0, missed = 0;
+    briefs.forEach(function (t) {
+      if (t.plan_id !== plan.id) return;
+      total++;
+      if (t.status === "done") done++;
+      else if (plan.end_date < today || (t.due_date && t.due_date < today)) missed++;
+    });
+    return window.PDS_UTIL.cellBar({ total: total, green: done, gray: missed });
+  }
+  async function loadBriefs() {
+    try { briefs = await api.listTaskBrief(); } catch (e) { briefs = []; }   // 막대만 비고 목록은 그대로 보인다
+  }
+  document.addEventListener("tasks-changed", async function () { await loadBriefs(); renderPlans(); });
+
   function renderPlans() {
     listEl.textContent = "";
     statusEl.hidden = plans.length > 0;
     if (!plans.length) statusEl.textContent = "아직 계획이 없습니다. 위에서 첫 계획을 세워 보세요.";
 
     const today = window.PDS_UTIL.todayKST();
-    // 기간 막대: 모든 계획의 가장 이른 시작일 ~ 가장 늦은 종료일을 한 줄(축)로 보고, 각 계획이 그 안에서 어디에 놓이는지 그린다.
-    let axisStart = null;
-    let axisEnd = null;
-    plans.forEach(function (p) {
-      if (axisStart === null || p.start_date < axisStart) axisStart = p.start_date;
-      if (axisEnd === null || p.end_date > axisEnd) axisEnd = p.end_date;
-    });
     // 정렬: 날짜순(기본, 시작일) / 종료일순(종료일이 가까운 것부터) / 우선순위순(높음 먼저). 같으면 시작일, 그다음 번호 순.
     const byStart = function (a, b) {
       if (a.start_date !== b.start_date) return a.start_date < b.start_date ? -1 : 1;
@@ -353,7 +356,7 @@
           el("span", { class: "pl-dday", text: window.PDS_UTIL.ddayText(plan.end_date, today), title: "종료일까지 남은 날" })
         ]),
         el("h3", {}, [nameBtn]),
-        window.PDS_UTIL.periodBar({ axisStart: axisStart, axisEnd: axisEnd, start: plan.start_date, end: plan.end_date, today: today, cls: phaseOf(plan, today) }),
+        planBar(plan, today),
         panel
       ]);
       listEl.appendChild(li);
@@ -373,7 +376,8 @@
     statusEl.hidden = false;
     statusEl.textContent = "불러오는 중…";
     try {
-      plans = await api.listPlans();
+      const got = await Promise.all([api.listPlans(), loadBriefs()]);
+      plans = got[0];
       renderPlans();
       document.dispatchEvent(new CustomEvent("plans-changed", { detail: plans }));
     } catch (e) {
@@ -412,6 +416,10 @@
 
   // 다른 화면(돌아보기)이 새 계획을 만들면 목록을 다시 불러온다.
   document.addEventListener("plans-reload", load);
+
+  // 첫 화면을 열 때 공개 안내를 알림으로 띄운다(요구사항 T06-C82). 첫 문장 뒤에서 줄을 바꾸고,
+  // 창 너비는 첫 문장에 맞추고(dlg-fit), 글은 가운데 정렬한다.
+  window.PDS_UTIL.warn("지금은 로그인이 없어 링크를 아는 사람은 누구나 볼 수 있습니다.\n남이 봐도 괜찮은 내용만 넣으세요", "공개 안내", "dlg-fit");
 
   load();
 })();

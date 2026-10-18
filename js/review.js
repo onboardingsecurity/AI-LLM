@@ -11,19 +11,26 @@
   const planSelect = $("r-plan");
   const statsEl = $("r-stats");
   const statusEl = $("r-status");
-  const detailTitle = $("r-detail-title");
   const detailList = $("r-detail");
+  const artsEl = $("r-arts");   // 집계를 고르지 않았을 때 보이는 그림 4장(계획 탭의 그림과 같다)
+  const emptyEl = $("r-empty");   // 고른 집계에 해당하는 할 일이 없을 때 보이는 그림
 
   // 숫자 카드 정의. metric 은 DB 함수 review_tasks 에 넘기는 값이다.
   const STATS = [
-    { key: "plan_count", label: "계획 수 (딸린 할 일)", metric: "all", unit: "개" },
-    { key: "done_count", label: "완료 수", metric: "done", unit: "개" },
-    { key: "overdue_count", label: "지연 수", metric: "overdue", unit: "개" },
-    { key: "blocked_count", label: "막힘 수", metric: "blocked", unit: "개" },
-    { key: "estimated_minutes", label: "예상 시간", metric: "all", unit: "분" },
-    { key: "actual_minutes", label: "실제 시간", metric: "all", unit: "분" },
-    { key: "diff_minutes", label: "차이 (실제 − 예상)", metric: "all", unit: "분" }
+    { key: "plan_count", label: "계획 수", metric: "all", unit: "개", empty: "할 일이 없습니다." },
+    { key: "done_count", label: "완료 수", metric: "done", unit: "개", empty: "완료한 일이 없습니다." },
+    { key: "overdue_count", label: "지연 수", metric: "overdue", unit: "개", empty: "지연된 일이 없습니다." },
+    { key: "blocked_count", label: "막힘 수", metric: "blocked", unit: "개", empty: "막힌 일이 없습니다." }
   ];
+  // 시간 집계(예상·실제·차이)는 별도 블록 없이 "계획 수" 블록 안에 함께 보인다. 셋 다 그 계획의 할 일 전체를 합한 값이라 근거 목록은 계획 수와 같다.
+  const TIME_ROWS = [
+    { key: "estimated_minutes", label: "예상 시간" },
+    { key: "actual_minutes", label: "실제 시간" },
+    { key: "diff_minutes", label: "차이" }
+  ];
+
+  // 제목 옆 안내(" - 계획 전체 기준입니다."): 비어 있으면 숨겨서 "-" 만 남지 않게 한다.
+  function setStatus(msg) { statusEl.textContent = msg; statusEl.hidden = !msg; }
 
   let plans = [];
   let planId = null;
@@ -31,63 +38,104 @@
   let summary = null;
   let seq = 0;
 
-  function range() {
-    return { from: $("r-from").value || null, to: $("r-to").value || null };
-  }
-
   function signed(n) { return (n > 0 ? "+" : "") + n; }
 
   // ---------- 집계 ----------
+
+  function syncArts() { artsEl.hidden = selectedKey !== null; }
 
   async function loadSummary() {
     const my = ++seq;
     if (planId === null) {
       statsEl.textContent = "";
       detailList.textContent = "";
-      detailTitle.textContent = "";
-      statusEl.textContent = "먼저 계획을 하나 세워 주세요.";
+      emptyEl.hidden = true;
+      setStatus("먼저 계획을 하나 세워 주세요.");
+      syncArts();
       return;
     }
-    const r = range();
-    if (r.from && r.to && r.to < r.from) {
-      statusEl.textContent = "기간 끝은 시작보다 빠를 수 없습니다.";
-      return;
-    }
-    statusEl.textContent = "불러오는 중…";
+    setStatus("불러오는 중…");
     try {
-      const s = await api.reviewSummary(planId, r.from, r.to);
+      const s = await api.reviewSummary(planId, null, null);   // 기간 제한 없이 그 계획에 딸린 할 일 전체를 센다
       if (my !== seq) return;
       summary = s;
-      statusEl.textContent = r.from || r.to
-        ? "마감일 " + (r.from || "처음") + " ~ " + (r.to || "끝") + " 기준입니다."
-        : "계획 전체 기준입니다.";
+      setStatus("");
       renderStats();
       if (selectedKey) await showDetail(selectedKey);
-      else { detailList.textContent = ""; detailTitle.textContent = ""; }
+      else { detailList.textContent = ""; emptyEl.hidden = true; }
+      syncArts();
     } catch (e) {
-      if (my === seq) statusEl.textContent = e.message;
+      if (my === seq) setStatus(e.message);
     }
   }
 
+  // 집계 숫자 글자: 개수는 "5개", 시간은 "99분", 차이는 부호를 붙여 "+30분"
+  function statText(st) { return String(summary[st.key]) + st.unit; }
+  function minutesText(key) { return (key === "diff_minutes" ? signed(summary[key]) : String(summary[key])) + "분"; }
+
+  // 집계 4개를 테트리스 블록(ㅣ ㄴ ㅁ ㄱ)으로 맞물려 집계 창(4칸 × 4줄 = 16칸)을 가득 채운다. 가운데 ㅁ 블록이 가장 크고 "계획 수"와 시간 줄이 들어간다.
+  // cells 는 [줄, 칸](0부터), at 은 글자의 가운데 자리(칸 단위, [위에서, 왼쪽에서]), w 는 글자 폭(칸 수, 없으면 글자만큼).
+  // color 는 우선순위·상태 색과 같은 진한 색(완료=초록, 지연=빨강, 계획 수=파랑, 막힘=노랑), text 는 그 위에 읽히는 글자 색.
+  //   0 0 0 0     0 완료 수 (ㅣ)     1 지연 수 (ㄴ)
+  //   1 2 2 3     2 계획 수 (ㅁ)     3 막힘 수 (ㄱ 모양을 뒤집은 것)
+  //   1 2 2 3
+  //   1 1 3 3
+  const PIECES = [
+    { key: "done_count", cells: [[0, 0], [0, 1], [0, 2], [0, 3]], at: [0.5, 2], color: "var(--st-done)", text: "#fff" },
+    { key: "overdue_count", cells: [[1, 0], [2, 0], [3, 0], [3, 1]], at: [2.5, 0.5], color: "var(--pri-1)", text: "#fff" },
+    { key: "plan_count", cells: [[1, 1], [1, 2], [2, 1], [2, 2]], at: [2, 2], w: 2, color: "var(--pri-3)", text: "var(--pixel-ink)" },
+    { key: "blocked_count", cells: [[1, 3], [2, 3], [3, 3], [3, 2]], at: [2.5, 3.5], color: "var(--pri-2)", text: "var(--pixel-ink)" }
+  ];
+
   function renderStats() {
     statsEl.textContent = "";
-    STATS.forEach(function (st) {
-      const value = summary[st.key];
-      const shown = st.key === "diff_minutes" ? signed(value) : String(value);
-      const btn = el("button", {
-        type: "button",
-        class: "stat" + (selectedKey === st.key ? " on" : ""),
-        "aria-pressed": selectedKey === st.key ? "true" : "false"
-      }, [
-        el("span", { class: "num", text: shown + st.unit }),
-        el("span", { class: "lbl", text: st.label })
-      ]);
-      btn.addEventListener("click", function () {
-        selectedKey = st.key;
-        renderStats();
-        showDetail(st.key);
+    PIECES.forEach(function (piece) {
+      const st = STATS.filter(function (x) { return x.key === piece.key; })[0];
+      const on = selectedKey === st.key;
+      const has = function (r, c) { return piece.cells.some(function (x) { return x[0] === r && x[1] === c; }); };
+      const li = el("li", { class: "stat-piece", style: "--pc:" + piece.color + ";--tc:" + piece.text });
+      piece.cells.forEach(function (rc) {
+        const r = rc[0];
+        const c = rc[1];
+        // 같은 블록의 이웃 칸이 없는 쪽에만 테두리와 바깥 간격을 둔다(그래서 블록 바깥 윤곽만 그려진다).
+        const sides = (has(r - 1, c) ? "" : " bt") + (has(r, c + 1) ? "" : " br") + (has(r + 1, c) ? "" : " bb") + (has(r, c - 1) ? "" : " bl");
+        const cell = el("span", { class: "stat-cell" + sides, style: "grid-area:" + (r + 1) + "/" + (c + 1), "aria-hidden": "true" });
+        // 안쪽으로 꺾이는 모서리(양옆 이웃은 같은 블록인데 대각선 칸만 다른 블록)는 두 테두리가 이어지도록 모서리 조각을 얹는다.
+        // 그 칸의 바탕이 모서리의 간격 자리를 덮지 않도록 칸에 ck-* 클래스도 붙인다(칸 하나에 이런 모서리는 하나뿐이다).
+        [["tl", -1, -1], ["tr", -1, 1], ["bl", 1, -1], ["br", 1, 1]].forEach(function (k) {
+          if (has(r + k[1], c) && has(r, c + k[2]) && !has(r + k[1], c + k[2])) {
+            cell.appendChild(el("span", { class: "stat-corner k-" + k[0] }));
+            cell.classList.add("ck-" + k[0]);
+          }
+        });
+        li.appendChild(cell);
       });
-      statsEl.appendChild(btn);
+      const parts = [
+        el("span", { class: "stat-lbl", text: st.label }),
+        el("span", { class: "stat-num", text: statText(st) })
+      ];
+      if (st.key === "plan_count") {   // 이 블록 안에 예상 시간·실제 시간·차이를 함께 보인다
+        parts.push(el("span", { class: "stat-subs" }, TIME_ROWS.map(function (t) {
+          return el("span", { class: "stat-sub" }, [el("span", { text: t.label }), el("b", { text: minutesText(t.key) })]);
+        })));
+      }
+      const width = piece.w ? "width:calc(" + (piece.w * 25) + "% - 24px);" : "";
+      const btn = el("button", {
+        type: "button", class: "stat-text", "aria-pressed": String(on),
+        style: "top:" + (piece.at[0] * 25) + "%;left:" + (piece.at[1] * 25) + "%;" + width
+      }, parts);
+      li.appendChild(btn);
+      li.addEventListener("click", function () {   // 블록의 어느 칸(글자 포함)을 눌러도 같다. 누를 때마다 보였다 안 보였다(켬/끔)를 하며, 켜진 표시는 따로 없다.
+        li.classList.remove("press");
+        void li.offsetWidth;   // 같은 블록을 연달아 눌러도 눌림 모션이 매번 다시 재생되게
+        li.classList.add("press");
+        if (selectedKey === st.key) clearDetail();
+        else selectedKey = st.key;
+        statsEl.querySelectorAll(".stat-text").forEach(function (b) { b.setAttribute("aria-pressed", String(b === btn && selectedKey === st.key)); });   // 보이지 않는 켬/끔 상태(보조기기용)
+        if (selectedKey) showDetail(st.key);
+      });
+      li.addEventListener("animationend", function () { li.classList.remove("press"); });
+      statsEl.appendChild(li);
     });
   }
 
@@ -98,56 +146,69 @@
     dl.appendChild(el("dd", { text: v }));
   }
 
-  async function showDetail(key) {
-    const st = STATS.filter(function (x) { return x.key === key; })[0];
-    const r = range();
-    detailTitle.textContent = "\"" + st.label + "\"의 근거";
+  let detailSeq = 0;   // 근거 목록을 불러오는 도중에 껐거나 다른 집계를 눌렀으면 늦게 온 결과는 버린다
+
+  // 고른 집계를 끈다: 근거 목록·그림·제목 옆 표시를 모두 지운다.
+  function clearDetail() {
+    selectedKey = null;
+    detailSeq++;
     detailList.textContent = "";
+    emptyEl.hidden = true;
+    setStatus("");
+    syncArts();
+  }
+
+  async function showDetail(key) {
+    const my = ++detailSeq;
+    const st = STATS.filter(function (x) { return x.key === key; })[0];
+    detailList.textContent = "";
+    emptyEl.hidden = true;
+    syncArts();
+    // 제목 옆에 고른 집계 종류와 숫자(할 일 리스트의 개수 표시처럼). 해당하는 할 일이 하나도 없으면 숫자 대신 안내 문구.
+    setStatus(summary[key] === 0 ? st.empty : st.label + " " + statText(st));
     try {
-      const tasks = await api.reviewTasks(planId, r.from, r.to, st.metric);
+      const tasks = await api.reviewTasks(planId, null, null, st.metric);
       const execs = await api.listActiveExecutions(tasks.map(function (t) { return t.id; }));
+      if (my !== detailSeq) return;
       const byTask = {};
       execs.forEach(function (e) { byTask[e.task_id] = e; });
 
-      let sumEst = 0;
-      let sumAct = 0;
+      const today = window.PDS_UTIL.todayKST();
       tasks.forEach(function (t) {
-        sumEst += t.estimated_minutes;
-        if (byTask[t.id]) sumAct += byTask[t.id].actual_minutes;
-        detailList.appendChild(renderRow(t, byTask[t.id]));
+        detailList.appendChild(renderRow(t, byTask[t.id], today));
       });
-
-      let note;
-      if (key === "estimated_minutes") note = "할 일 " + tasks.length + "개의 예상 시간 합계 = " + sumEst + "분";
-      else if (key === "actual_minutes") note = "실행 기록 " + execs.length + "건의 걸린 시간 합계 = " + sumAct + "분";
-      else if (key === "diff_minutes") note = "실제 " + sumAct + "분 − 예상 " + sumEst + "분 = " + signed(sumAct - sumEst) + "분";
-      else note = "목록 " + tasks.length + "개 = 숫자 " + summary[key] + "개" + (tasks.length === summary[key] ? " (일치)" : " (불일치!)");
-      detailTitle.textContent += " — " + note;
-      if (!tasks.length) detailList.appendChild(el("li", { class: "status", text: "해당하는 할 일이 없습니다." }));
+      emptyEl.hidden = tasks.length > 0;   // 없으면 글자 대신 그림
     } catch (e) {
-      detailTitle.textContent = e.message;
+      setStatus(e.message);
     }
   }
 
-  function renderRow(task, exec) {
+  // 할 일 탭의 리스트와 같은 모양: 네모칸(완료 = 초록 체크, 진행 중 = 우선순위 색, 마감 지남 = 회색 ✕), 마감일 + D-day, 이름 + 상태, 구분선.
+  // 근거 자료라서 상세(데이터와 실행 기록)는 처음부터 펼쳐 둔다.
+  function renderRow(task, exec, today) {
     const done = task.status === "done";
+    const late = !done && !!task.due_date && task.due_date < today;
+    const state = done ? "done" : (late ? "late" : "");
     const dl = el("dl", { class: "facts" });
-    addFact(dl, "마감일", task.due_date || "없음");
     addFact(dl, "우선순위", PRIORITY_LABEL[task.priority]);
-    addFact(dl, "예상 시간", task.estimated_minutes + "분");
+    addFact(dl, "시간", task.estimated_minutes + "분 → " + (exec ? exec.actual_minutes + "분" : "기록 없음"));   // 예상 시간 → 실제 시간
+    addFact(dl, "태그", task.tags && task.tags.length ? task.tags.join(", ") : "없음");   // 할 일 탭의 상세와 같은 표기
     if (exec) {
-      addFact(dl, "실제 시간", exec.actual_minutes + "분");
-      addFact(dl, "시작~끝", formatSeoul(exec.started_at) + " ~ " + formatSeoul(exec.ended_at));
+      addFact(dl, "기간", formatSeoul(exec.started_at) + " ~ " + formatSeoul(exec.ended_at));
       addFact(dl, "막혔던 이유", exec.blocked_reason ? exec.blocked_reason : "없음");
-      addFact(dl, "실행 기록", "기록 " + exec.id + " (할 일 " + exec.task_id + "번에 붙어 있음)");
     }
-    return el("li", { class: "plan" }, [
+    const dateLine = [document.createTextNode(task.due_date ? "마감일 " + task.due_date : "마감일 없음")];
+    if (!done && task.due_date) {
+      dateLine.push(el("span", { class: "pl-dday", text: window.PDS_UTIL.ddayText(task.due_date, today), title: "마감일까지 남은 날" }));
+    }
+    return el("li", { class: "pl-item" + (state ? " " + state : "") + " pri-" + task.priority }, [
+      el("span", { class: "pl-dot", title: done ? "완료" : (late ? "마감일이 지났는데 못 했어요" : "진행 중"), "aria-hidden": "true" }),
+      el("div", { class: "pl-date" }, dateLine),
       el("h3", {}, [
-        el("span", { class: "id", text: "할 일 " + task.id }),
-        document.createTextNode(task.title),
+        el("span", { class: "pl-name static", text: task.title }),
         el("span", { class: done ? "badge done" : "badge", text: done ? "완료" : "진행 중" })
       ]),
-      dl
+      el("div", { class: "pl-panel" }, [dl])
     ]);
   }
 
@@ -155,10 +216,8 @@
 
   const hForm = $("handover-form");
   const hError = $("h-error");
-  const hResult = $("h-result");
+  const hDialog = $("h-dialog");
   const hSubmit = $("h-submit");
-  let titleTouched = false;
-  let successTouched = false;
 
   function showHError(msg) { hError.textContent = msg || ""; hError.hidden = !msg; }
 
@@ -171,21 +230,28 @@
   handoverDefaults();
   window.PDS_UTIL.keepEndAfterStart($("h-start"), $("h-end"));
 
-  $("h-improve").addEventListener("input", function () {
-    const v = $("h-improve").value;
-    if (!titleTouched) $("h-title-in").value = v.slice(0, nameLimit());
-    if (!successTouched) $("h-success").value = v.slice(0, 500);
-  });
-  $("h-title-in").addEventListener("input", function () { titleTouched = true; });
+  // 계획 만들기처럼 열 때마다 빈 입력 창에 기본값(우선순위 중간, 시작일·종료일 오늘, 예상 시간 0분)을 채운다.
+  function resetHandoverForm() {
+    hForm.reset();
+    $("h-priority").value = "2";
+    handoverDefaults();
+  }
+
   // 다음 계획 이름도 계획 이름 길이 규칙(5자 단위, 목록에서 한 줄로 보이는 길이)을 따른다. 계획 탭에서 잰 값을 쓴다.
   function nameLimit() {
     const n = window.PDS_PLAN_NAME ? window.PDS_PLAN_NAME.cached() : 20;
     $("h-title-in").maxLength = n;
+    $("h-title-in").placeholder = "최대 " + n + "자 입력 가능합니다.";
     return n;
   }
   nameLimit();
   $("h-title-in").addEventListener("focus", nameLimit);
-  $("h-success").addEventListener("input", function () { successTouched = true; });
+
+  // 계획 번호 대신 이름으로 보여 준다(목록에 아직 없으면 번호로).
+  function titleOf(id) {
+    const p = plans.filter(function (x) { return x.id === id; })[0];
+    return p ? p.title : "계획 " + id + "번";
+  }
 
   function currentPlan() {
     return plans.filter(function (p) { return p.id === planId; })[0] || null;
@@ -198,18 +264,17 @@
     try {
       const rows = await api.listRetrospectives(planId);
       if (!rows.length) {
-        list.appendChild(el("li", { class: "status", text: "아직 넘긴 기록이 없습니다." }));
+        list.appendChild(el("li", { class: "plan plan-empty", text: "아직 넘긴 기록이 없습니다." }));
         return;
       }
       rows.forEach(function (r) {
+        // 네 줄 모두 같은 표(항목 이름 칸 + 내용 칸)에 넣어 글자 크기와 시작 위치가 같다.
         const dl = el("dl", { class: "facts" });
+        addFact(dl, "돌아본 계획", titleOf(r.plan_id));
         addFact(dl, "돌아본 기간", r.period_start + " ~ " + r.period_end);
         addFact(dl, "고칠 점", r.improvement);
-        addFact(dl, "다음 계획", "계획 " + r.next_plan_id + "번으로 넘어감");
-        list.appendChild(el("li", { class: "plan" }, [
-          el("h3", {}, [el("span", { class: "id", text: "돌아보기 " + r.id }), document.createTextNode("계획 " + r.plan_id + "번")]),
-          dl
-        ]));
+        addFact(dl, "다음 계획", titleOf(r.next_plan_id));
+        list.appendChild(el("li", { class: "plan" }, [dl]));
       });
     } catch (e) {
       list.appendChild(el("li", { class: "status", text: e.message }));
@@ -221,11 +286,10 @@
     const plan = currentPlan();
     if (!plan) { showHError("먼저 계획을 하나 세워 주세요."); return; }
 
-    const r = range();
     const a = {
       planId: planId,
-      periodStart: r.from || plan.start_date,
-      periodEnd: r.to || plan.end_date,
+      periodStart: plan.start_date,   // 돌아본 기간 = 그 계획의 기간
+      periodEnd: plan.end_date,
       improvement: $("h-improve").value.trim(),
       nextTitle: $("h-title-in").value.trim(),
       nextStart: $("h-start").value,
@@ -236,29 +300,30 @@
     };
     if (a.periodEnd < a.periodStart) { showHError("돌아본 기간이 올바르지 않습니다."); return; }
     if (!a.improvement) { showHError("고칠 점을 한 줄 적어 주세요."); return; }
-    if (!a.nextTitle) { showHError("다음 계획 이름을 적어 주세요."); return; }
-    if (!a.nextStart || !a.nextEnd) { showHError("다음 계획의 시작일과 종료일을 정해 주세요."); return; }
+    // 새 계획이 만들어지는 것이라 계획 만들기와 같은 규칙·같은 문구를 쓴다.
+    if (!a.nextTitle) { showHError("계획 이름을 적어 주세요."); return; }
+    if (a.nextTitle.length > nameLimit()) {
+      showHError("계획 이름은 " + nameLimit() + "자까지 쓸 수 있습니다. (지금 " + a.nextTitle.length + "자)");
+      return;
+    }
+    if (!a.nextStart || !a.nextEnd) { showHError("시작일과 종료일을 정해 주세요."); return; }
     if (a.nextEnd < a.nextStart) { showHError("종료일은 시작일보다 빠를 수 없습니다."); return; }
-    if (!a.nextSuccess) { showHError("다음 계획의 성공 기준을 적어 주세요."); return; }
+    if (!a.nextSuccess) { showHError("성공 기준을 적어 주세요."); return; }
     if (!Number.isInteger(a.nextMinutes) || a.nextMinutes < 0) {
       showHError("예상 시간은 0 이상의 정수(분)로 적어 주세요.");
       return;
     }
 
     showHError("");
-    hResult.textContent = "";
     hSubmit.disabled = true;
     try {
       const retro = await api.handOver(a);
       const already = retro.improvement !== a.improvement;
       const message = already
-        ? "이 기간은 이미 넘긴 기록이 있어 기존 기록을 그대로 두었습니다.\n(고칠 점: " + retro.improvement + " → 계획 " + retro.next_plan_id + "번)"
-        : "\"" + retro.improvement + "\" 한 줄이 다음 계획 " + retro.next_plan_id + "번으로 넘어갔습니다.";
-      hForm.reset();
-      $("h-priority").value = "2";
-      handoverDefaults();
-      titleTouched = false;
-      successTouched = false;
+        ? "이미 넘긴 기록이 있습니다."
+        : "다음 계획으로 넘겼습니다.";
+      resetHandoverForm();
+      hDialog.close();
       document.dispatchEvent(new CustomEvent("plans-reload"));
       await loadRetros();
       notify(message);
@@ -269,6 +334,17 @@
     }
   });
 
+  // "고칠 점을 다음 계획으로" 버튼: 계획 만들기·할 일 만들기처럼 입력 창을 띄운다.
+  $("h-open").addEventListener("click", function () {
+    if (!currentPlan()) { warn("먼저 계획을 하나 세워 주세요."); return; }
+    resetHandoverForm();
+    showHError("");
+    nameLimit();
+    hDialog.showModal();
+    $("h-improve").focus();
+  });
+  $("h-cancel").addEventListener("click", function () { hDialog.close(); });
+
   // ---------- 선택·기간이 바뀌면 다시 계산 ----------
 
   planSelect.addEventListener("change", function () {
@@ -277,13 +353,12 @@
     loadSummary();
     loadRetros();
   });
-  ["r-from", "r-to"].forEach(function (id) { $(id).addEventListener("change", loadSummary); });
 
   document.addEventListener("plans-changed", function (ev) {
     plans = ev.detail;
     planSelect.textContent = "";
     plans.forEach(function (p) {
-      planSelect.appendChild(el("option", { value: String(p.id), text: "계획 " + p.id + " · " + p.title }));
+      planSelect.appendChild(el("option", { value: String(p.id), text: p.title }));
     });
     if (!plans.length) planId = null;
     else {

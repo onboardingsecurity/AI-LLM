@@ -63,7 +63,7 @@ body::before {
 
 /* ---------- 머리말 ---------- */
 
-.top, .notice, .board {
+.top, .board {
   max-width: var(--layout-w);
   margin-left: auto;
   margin-right: auto;
@@ -77,25 +77,12 @@ body::before {
 .top h1 { margin: 0; font-size: 34px; font-weight: 400; line-height: 1.1; color: var(--pixel-ink); }
 .sub { margin: 4px 0 0; color: var(--muted); font-size: 16px; }
 
-.notice {
-  display: block;
-  margin-top: 10px;
-  margin-bottom: 10px;
-  padding: 6px 12px;
-  background: #fff3cf;
-  color: var(--pixel-ink);
-  font-size: 17px;
-  border-radius: 0;
-  max-width: calc(var(--layout-w) - 32px);
-  box-shadow: var(--px3);
-}
-
 /* ---------- 구역과 카드 ---------- */
 
 .board { margin-bottom: 24px; }
 /* 계획 탭의 흰 카드는 브라우저 바닥(아래 여백 24px 위)까지 늘린다. 화면이 낮으면 그림 높이가 정하는 원래 크기를 쓴다. */
 body { display: flex; flex-direction: column; min-height: 100vh; }
-.top, .notice, .tabs { width: 100%; }
+.top, .tabs { width: 100%; }
 .board { flex: 1 0 auto; width: 100%; display: flex; flex-direction: column; }
 #plan-col:not([hidden]) { flex: 1 1 auto; align-items: stretch; }
 #plan-col .card { display: flex; flex-direction: column; }
@@ -113,7 +100,7 @@ body { display: flex; flex-direction: column; min-height: 100vh; }
 /* 계획 탭: 왼쪽 타임라인, 오른쪽에 프렌드씨 그림 네 장을 2×2로 놓는다.
    순서: 1 왼쪽 위(basic) · 2 오른쪽 위(ready) · 3 왼쪽 아래(work) · 4 오른쪽 아래(window). HTML 에 적힌 순서가 곧 이 순서다.
    4번은 세로로 긴 그림이라 위아래를 잘라 정사각형으로 맞춘다(말풍선이 있는 위쪽을 살림). 그림은 모두 투명도 85%. 좁은 화면(800px 이하)에서는 숨긴다. */
-#plan-col { --art-w: clamp(420px, min(calc(100vh - 300px), calc(100vw - 620px)), 900px); }   /* 그림 2×2가 카드 높이를 꽉 채우는 너비(그림은 정사각형이라 너비 = 높이). 300px 은 카드 위쪽 머리·여백·아래 여백 */   /* 오른쪽 영역 폭: 머리 줄과 본문이 같은 값을 쓴다 */
+#plan-col { --art-w: clamp(420px, min(calc(100vh - 242px), calc(100vw - 620px)), 900px); }   /* 그림 2×2가 카드 높이를 꽉 채우는 너비(그림은 정사각형이라 너비 = 높이). 242px 은 카드 위쪽 머리·여백·아래 여백(안내 띠를 없앤 뒤 값) */   /* 오른쪽 영역 폭: 머리 줄과 본문이 같은 값을 쓴다 */
 .plan-body { position: relative; display: grid; grid-template-columns: minmax(0, 1fr) var(--art-w); gap: 20px; align-items: start; }
 /* 계획 리스트와 그림 사이 구분선: 목록 끝(막대 테두리까지)과 그림 테두리 바깥 사이의 한가운데, 갈색 2px 선 */
 .plan-body::after { content: ""; position: absolute; top: 0; bottom: 0; right: calc(var(--art-w) + 12.5px); width: 2px; background: var(--pixel-ink); opacity: 0.4; }
@@ -161,15 +148,14 @@ body { display: flex; flex-direction: column; min-height: 100vh; }
 .plan-cal button.pc-seg.pri-2 { background: var(--pri-2); color: var(--pixel-ink); }
 .plan-cal button.pc-seg.pri-3 { background: var(--pri-3); color: var(--pixel-ink); }
 .plan-cal button.pc-seg:focus-visible { outline: 2px dashed var(--pixel-ink); outline-offset: 1px; }
-/* 기간 막대: 갈색 픽셀 테두리 칸 안에 그 계획의 기간만큼 색을 칠한다. 진행 중=주황, 예정=연한 주황, 종료=회갈색. 검은 세로선이 오늘. */
-.pl-bar { position: relative; height: 10px; margin: 8px 6px 4px 2px; background: #fff;
+/* 칸 막대: 갈색 픽셀 테두리 칸 안에 칸을 선으로 가른다. 기본 흰색, 완료·지난 기간만큼 초록(.ok), 기간 안에 못 끝낸 것은 회색(.bad). 칸이 너무 많으면 선 없이 비율로(.solid). */
+.pl-bar { position: relative; display: flex; height: 10px; margin: 8px 6px 4px 2px; background: #fff;
   box-shadow: var(--px2); }
-.pl-bar-fill { position: absolute; top: 0; bottom: 0; }
-.pl-bar-fill.ing { background: var(--accent); }
-.pl-bar-fill.soon { background: #f2b98a; }
-.pl-bar-fill.over { background: var(--st-late); }
-.pl-bar-fill.done { background: var(--st-done); }   /* 할 일: 완료한 것은 초록 */
-.pl-bar-today { position: absolute; top: -5px; bottom: -5px; width: 3px; margin-left: -1px; background: var(--pixel-ink); }
+.pl-cell { flex: 1 1 0; min-width: 0; }
+.pl-cell + .pl-cell { border-left: 2px solid var(--pixel-ink); }
+.pl-cell.ok, .pl-fill.ok { background: var(--st-done); }
+.pl-cell.bad, .pl-fill.bad { background: var(--st-late); }
+.pl-fill { position: absolute; top: 0; bottom: 0; }
 /* 흰 카드의 크기는 목록 길이와 상관없이 그대로다. 카드 높이는 오른쪽 그림 영역이 정하고,
    계획 리스트는 그 높이에 맞춰 늘어난 칸 안에서만 스크롤된다.
    contain: size 는 안쪽 내용 길이를 칸 크기에 반영하지 않게 해서, 계획이 많아도 카드가 커지지 않게 한다.
@@ -194,7 +180,11 @@ body { display: flex; flex-direction: column; min-height: 100vh; }
 }
 @media (max-width: 760px) {
   .col { grid-template-columns: minmax(0, 1fr); }   /* 좁은 화면에서는 세로로 */
-  #tasks-area .task-scroll { contain: none; flex: none; max-height: 60vh; }
+  #tasks-area .task-scroll, #review-area .task-scroll { contain: none; flex: none; max-height: 60vh; }
+  #review-area:not([hidden]) { grid-template-rows: none; }
+  .task-arts { position: static; padding: 4px 10px 10px 4px; }
+  .task-arts .plan-arts { height: auto; }
+  .task-arts .plan-art { height: auto; aspect-ratio: 1 / 1; }
   #tasks-area .task-cal { flex: none; height: 60vh; }   /* 세로로 쌓이면 리스트 높이는 화면의 60%까지만 */
   .top h1 { font-size: 26px; }
   .mascot { width: 44px; height: 44px; }
@@ -301,7 +291,7 @@ button.dd-btn:focus-visible { outline: 3px solid var(--accent); outline-offset: 
 button.dd-btn:disabled { opacity: .6; }
 
 /* 할 일 탭(과 할 일 입력 창)의 ▼ 버튼은 조금 작게: 30x28 → 26x24 */
-#tasks-area button.dd-btn, #t-dialog button.dd-btn {
+#tasks-area button.dd-btn, #review-area button.dd-btn, #t-dialog button.dd-btn {
   padding-right: 42px;
   background-size: 12px 8px, 22px 20px, 26px 24px;
   background-position:
@@ -379,6 +369,8 @@ button.ghost:active { transform: translateY(2px); }
 }
 .plan h3 { margin: 0 0 6px; font-size: 19px; font-weight: 400; color: var(--pixel-ink); }
 .plan .id { color: var(--muted); font-size: 15px; margin-right: 8px; }
+/* 넘긴 기록이 없을 때: 기록이 있을 때의 카드(제목 + 3줄)와 같은 높이의 상자에 안내 글을 세로 가운데로 놓는다 */
+.plan-empty { display: flex; align-items: center; min-height: 120px; color: var(--muted); font-size: 16px; }
 
 /* 계획 타임라인: 왼쪽 세로선 위에 점, 오른쪽에 날짜와 계획 이름. 이름을 누르면 아래로 상세가 펼쳐진다. */
 .plans.timeline-list { gap: 0; }
@@ -388,13 +380,13 @@ button.ghost:active { transform: translateY(2px); }
   background: var(--pixel-ink); opacity: 0.4;
 }
 /* 계획 리스트와 할 일 리스트: 타임라인 연결선은 없애고(점만 남김), 항목 사이에 구분선을 긋고 위아래 간격을 넓힌다. */
-#plan-list .pl-item, #t-list .pl-item { --pt: 18px; padding: var(--pt) 0 18px 34px; }
-#plan-list .pl-item:first-child, #t-list .pl-item:first-child { --pt: 4px; }
-#plan-list .pl-item:not(:last-child)::after, #t-list .pl-item:not(:last-child)::after {
+.divided .pl-item { --pt: 18px; padding: var(--pt) 0 18px 34px; }
+.divided .pl-item:first-child { --pt: 4px; }
+.divided .pl-item:not(:last-child)::after {
   top: auto; bottom: 0; left: 34px; right: 4px; width: auto; height: 2px;   /* 양쪽 끝이 기간 막대의 바깥 테두리와 같다(막대 여백 2px/6px에서 테두리 2px씩 바깥) */
   background: var(--pixel-ink); opacity: 0.3;
 }
-#plan-list .pl-dot, #t-list .pl-dot { top: calc(var(--pt) + 2px); }
+.divided .pl-dot { top: calc(var(--pt) + 2px); }
 .pl-dot {
   position: absolute; top: 2px; left: 0; width: 22px; height: 22px; background: #fff;
   box-shadow: var(--px2);
@@ -425,21 +417,23 @@ button.ghost:active { transform: translateY(2px); }
 .pri-legend .pri-3 { background: var(--pri-3); color: var(--pixel-ink); }
 
 /* 계획·할 일: 점(네모칸)을 우선순위 색으로 채운다. 높음=빨강, 중간=노랑, 낮음=연한 파랑. 할 일의 완료 여부는 이름 옆 "완료/진행 중" 표시와 아래 규칙으로 본다. */
-#plan-list .pri-1 .pl-dot, #t-list .pri-1 .pl-dot { background: var(--pri-1); }
-#plan-list .pri-2 .pl-dot, #t-list .pri-2 .pl-dot { background: var(--pri-2); }
-#plan-list .pri-3 .pl-dot, #t-list .pri-3 .pl-dot { background: var(--pri-3); }
+.divided .pri-1 .pl-dot { background: var(--pri-1); }
+.divided .pri-2 .pl-dot { background: var(--pri-2); }
+.divided .pri-3 .pl-dot { background: var(--pri-3); }
 /* 할 일 네모칸: 완료 = 초록 칸에 흰 체크, 진행 중 = 우선순위 색(위), 진행 중인데 마감일이 지남 = 회색 칸에 ✕(못 했어요) */
-#t-list .pl-item.done .pl-dot {
+.divided .pl-item.done .pl-dot {
   background-color: var(--st-done); background-repeat: no-repeat; background-position: center; background-size: 16px 12px;
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 9' shape-rendering='crispEdges'%3E%3Cpath fill='%23ffffff' d='M9 1h1v1h-1zM10 1h1v1h-1zM8 2h1v1h-1zM9 2h1v1h-1zM7 3h1v1h-1zM8 3h1v1h-1zM1 4h1v1h-1zM2 4h1v1h-1zM6 4h1v1h-1zM7 4h1v1h-1zM2 5h1v1h-1zM3 5h1v1h-1zM5 5h1v1h-1zM6 5h1v1h-1zM3 6h1v1h-1zM4 6h1v1h-1zM5 6h1v1h-1zM4 7h1v1h-1z'/%3E%3C/svg%3E");
 }
-#t-list .pl-item.late .pl-dot {
+.divided .pl-item.late .pl-dot {
   background-color: var(--st-late); background-repeat: no-repeat; background-position: center; background-size: 14px 14px;
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 10 10' shape-rendering='crispEdges'%3E%3Cpath fill='%233b2a1e' d='M2 2h1v1h-1zM2 6h1v1h-1zM2 7h1v1h-1zM3 2h1v1h-1zM3 3h1v1h-1zM3 5h1v1h-1zM3 6h1v1h-1zM4 3h1v1h-1zM4 4h1v1h-1zM4 5h1v1h-1zM5 3h1v1h-1zM5 4h1v1h-1zM5 5h1v1h-1zM6 2h1v1h-1zM6 3h1v1h-1zM6 5h1v1h-1zM6 6h1v1h-1zM7 2h1v1h-1zM7 6h1v1h-1zM7 7h1v1h-1z'/%3E%3C/svg%3E");
 }
 .pl-item.done .pl-dot { background: var(--accent); }                   /* 할 일: 완료한 것의 점을 강조 */
 .pl-date { font-size: 15px; color: var(--muted); }
-.pl-dday { margin-left: 18px; }
+/* 날짜와 D-day 사이에 세로 구분선(갈색 2px)을 두어 기간과 남은 날이 따로 보이게 한다 */
+.pl-dday { margin-left: 12px; }
+.pl-dday::before { content: ""; display: inline-block; width: 2px; height: 0.95em; margin-right: 12px; background: var(--pixel-ink); opacity: 0.45; vertical-align: -0.1em; }
 /* 계획 리스트 머리 오른쪽 끝의 정렬 선택(작은 크기의 같은 모양 드롭다운) */
 .plan-sort { margin-left: auto; flex: 0 0 128px; width: 128px; min-width: 128px; max-width: 128px; }
 .plan-sort button.dd-btn {
@@ -461,6 +455,8 @@ button.pl-name:hover { background: var(--tint); filter: none; }
 button.pl-name:active { transform: none; }
 button.pl-name:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 .pl-name::before { content: "▸ "; color: var(--muted); }
+.pl-name.static { cursor: default; }   /* 펼치기가 없는 이름(돌아보기 근거 목록) */
+.pl-name.static::before { content: none; }
 .pl-name[aria-expanded="true"]::before { content: "▾ "; }
 .pl-panel {
   margin-top: 8px; padding: 8px 12px 10px; background: var(--panel);
@@ -468,7 +464,7 @@ button.pl-name:focus-visible { outline: 2px solid var(--accent); outline-offset:
 }
 .pl-panel[hidden] { display: none; }
 /* 계획: 펼친 상세의 양옆 끝을 기간 막대와 똑같이 맞춘다(막대 margin 2px/6px, 둘 다 테두리 2px). */
-#plan-list .pl-panel, #t-list .pl-panel { margin-top: 9px; margin-left: 2px; margin-right: 6px; }   /* 기간 막대와 상세 창 사이를 띄운다 */
+.divided .pl-panel { margin-top: 9px; margin-left: 2px; margin-right: 6px; }   /* 기간 막대와 상세 창 사이를 띄운다 */
 .pl-panel .actions { margin-top: 12px; }
 
 .facts { margin: 0; display: grid; grid-template-columns: 6.5em 1fr; gap: 2px 10px; font-size: 16px; }
@@ -503,12 +499,12 @@ button.pl-name:focus-visible { outline: 2px solid var(--accent); outline-offset:
 
 .toolbar { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 0 12px; }
 .task-head { justify-content: flex-start; gap: 16px; }   /* 제목 옆에 [리스트|달력], 맨 오른쪽에 할 일 만들기 */
-.task-head #t-new { margin-left: auto; }
+.task-head #t-new, .task-head #h-open { margin-left: auto; }
 /* 제목·개수·[리스트|달력]·할 일 만들기의 세로 중심을 모두 같은 선에 둔다(계획 리스트 머리 줄과 같은 방식) */
 .task-head { height: 34px; align-items: center; margin-bottom: 8px; }
 .task-head .head-title { align-items: center; height: 100%; }
 .task-head .head-title h2, .task-head .head-title .count, .task-head .head-title .status { margin: 0; line-height: 1.5; position: relative; top: 1px; }
-.task-head #t-new { margin-top: 0; margin-bottom: 0; padding-top: 1px; padding-bottom: 1px; }
+.task-head #t-new, .task-head #h-open { margin-top: 0; margin-bottom: 0; padding-top: 1px; padding-bottom: 1px; }
 .task-head .view-toggle { margin-left: 0; }
 .task-head .view-toggle button { padding-top: 0; padding-bottom: 0; }
 .task-cal { flex: 1 1 0; min-height: 0; margin-bottom: 0; }   /* 달력은 리스트 자리를 그대로 쓴다 */
@@ -518,16 +514,25 @@ button.pl-name:focus-visible { outline: 2px solid var(--accent); outline-offset:
 .head-title .count, .head-title .status { margin: 0; font-size: 18px; line-height: 1.5; color: var(--muted); }   /* 개수와 안내 문구는 글자 크기·색·간격이 같다 */
 .head-title .count:not(:empty)::before, .head-title .status:not([hidden])::before { content: "-"; margin-right: 10px; color: var(--muted); }   /* 제목 - 5개 / 제목 - 안내 문구 */
 .head-title .count:empty { display: none; }   /* 비어 있는 개수 칸이 간격(gap)만 차지하지 않게 */
-button.dd-btn.plan-pick, .dd-list[data-for="t-plan"] { font-size: var(--plan-pick-fs, 16px); }   /* 계획 이름 최대 길이가 한 줄로 들어가는 크기(tasks.js 가 맞춘다) */
+button.dd-btn.plan-pick, .dd-list[data-for="t-plan"], .dd-list[data-for="r-plan"] { font-size: var(--plan-pick-fs, 16px); }   /* 계획 이름 최대 길이가 한 줄로 들어가는 크기(tasks.js 가 맞춘다) */
 /* 할 일 탭도 계획 탭처럼 카드 바닥이 브라우저 바닥(아래 여백 24px 위)에 닿는다. 왼쪽 두 창과 오른쪽 리스트 창의 바닥이 같고,
    할 일이 많아도 리스트 창은 커지지 않고 안에서만 스크롤된다(스크롤바는 숨김). 화면이 낮으면 왼쪽 창들의 원래 높이를 쓴다. */
 #tasks-area:not([hidden]) { flex: 1 1 auto; align-items: stretch; }
+.col > .card-wide { grid-column: 1 / -1; }   /* 돌아보기 맨 아래 "다음 계획으로" 창: 가로 전체 */
 #tasks-area .col-side > .card:last-child { flex: 1 1 auto; }
 /* 검색·정렬 창 아래 남는 빈 곳에 그림. 그림이 창을 키우지 않도록(contain: size) 남는 높이 안에서만 크기를 맞춘다. */
 #tasks-area .col-side > .card:last-child { display: flex; flex-direction: column; }
 .side-pic { flex: 1 1 0; min-height: 0; contain: size; display: flex; align-items: center; justify-content: center; margin-top: 12px; padding: 4px; }
 .side-pic img { display: block; width: auto; height: auto; max-width: 100%; max-height: 100%; user-select: none; }   /* 배경이 투명한 그림이라 테두리·투명도는 주지 않는다 */
 #tasks-area > .card { display: flex; flex-direction: column; }
+/* 돌아보기 탭도 같은 방식: 카드 바닥이 브라우저 바닥(아래 여백 24px 위)에 닿는다.
+   위 줄(왼쪽 집계 창 + 오른쪽 돌아보기 리스트 창)이 남는 높이를 모두 쓰고, 맨 아래 넘긴 기록 창은 자기 높이만큼 차지한다. 창 사이 간격은 12px.
+   근거 목록이 길어도 돌아보기 리스트 창은 커지지 않고 안에서만 스크롤된다(.task-scroll 과 같은 규칙). */
+#review-area:not([hidden]) { flex: 1 1 auto; align-items: stretch; grid-template-rows: 1fr auto; }
+#review-area .col-side > .card:last-child { flex: 1 1 auto; }
+#review-area > .card:not(.card-wide) { display: flex; flex-direction: column; }
+#h-list { max-height: 270px; overflow-y: auto; scrollbar-width: none; }   /* 기록이 쌓여도 아래 창이 커지지 않게 */
+#h-list::-webkit-scrollbar { display: none; }
 .task-scroll {
   contain: size; flex: 1 1 0; min-height: 0; overflow-y: auto; overscroll-behavior: contain; scrollbar-width: none;
   padding: 4px 8px 6px 4px; margin: -4px -8px -6px -4px;
@@ -536,6 +541,11 @@ button.dd-btn.plan-pick, .dd-list[data-for="t-plan"] { font-size: var(--plan-pic
 .task-scroll { position: relative; }
 /* 할 일이 없을 때: 리스트 창 한가운데에 그림. 그림의 흰 바탕은 multiply 로 창 바탕과 섞어 네모가 보이지 않게 한다. */
 .task-empty { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; pointer-events: none; }
+/* 집계를 고르지 않았을 때(처음, 또는 고른 블록을 한 번 더 눌러 껐을 때): 계획 탭과 같은 그림 4장(2×2)을 창에 꽉 차게. */
+.task-arts { position: absolute; inset: 0; box-sizing: border-box; padding: 4px 10px 10px 4px; display: flex; align-items: center; justify-content: center; }
+.task-arts[hidden] { display: none; }
+.task-arts .plan-arts { height: 100%; width: 100%; margin: 0; grid-template-rows: repeat(2, minmax(0, 1fr)); }
+.task-arts .plan-art { height: 100%; aspect-ratio: auto; }   /* 정사각형을 풀고 창을 꽉 채운다(그림은 가운데 부분이 보이게 잘린다) */
 .task-empty img { display: block; width: min(70%, 300px); height: auto; max-height: 90%; object-fit: contain; mix-blend-mode: multiply; user-select: none; }
 .col-side { display: flex; flex-direction: column; gap: 12px; min-width: 0; }   /* 할 일 탭 왼쪽: 계획 선택 창과 검색·정렬 창을 위아래로 */
 .toolbar-side { grid-template-columns: repeat(2, minmax(0, 1fr)); }
@@ -544,17 +554,51 @@ button.dd-btn.plan-pick, .dd-list[data-for="t-plan"] { font-size: var(--plan-pic
 
 /* ---------- 돌아보기 숫자 ---------- */
 
-.stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(110px, 1fr)); gap: 10px; margin-bottom: 14px; padding: 4px; }
-.stat {
-  display: block; text-align: left; margin: 0; padding: 8px 12px;
-  background: var(--panel); color: var(--pixel-ink);
-  box-shadow: var(--px2);
+/* 집계 숫자는 테트리스 블록(ㅣ ㄴ ㅁ ㄱ)이다. 4칸 × 4줄 격자를 4개 블록이 빈틈없이 채우고(블록 배치는 js/review.js 의 PIECES),
+   블록 하나는 4칸이다. 칸마다 "같은 블록의 이웃이 없는 쪽"에만 테두리(.bt .br .bb .bl)와 바깥 간격을 주어 블록의 바깥 윤곽만 그려진다.
+   글자(.stat-text)는 칸에 매이지 않고 블록의 가운데에 얹는다. 줄 높이는 창 높이를 똑같이 나눈다(최소 84px). */
+.card:has(> .stat-grid) { display: flex; flex-direction: column; }
+.plans.stat-grid { position: relative; flex: 1 1 0; min-height: 0; grid-template-columns: repeat(4, minmax(0, 1fr)); grid-template-rows: repeat(4, minmax(84px, 1fr)); gap: 0; margin-top: 0; }
+.card:has(> .stat-grid) h2 { margin-bottom: 2px; }   /* 제목 글자 아래 ~ 블록 위 간격을 블록 아래 ~ 창 끝 간격(약 15px)과 같게 */
+.stat-piece { display: contents; cursor: pointer; }
+.stat-cell { position: relative; --bc: var(--pixel-ink); background: var(--pc); min-width: 0; min-height: 0; box-sizing: border-box; }
+/* 픽셀 버튼(고칠 점을 다음 계획으로 같은 버튼)과 같은 느낌: 갈색 3px 테두리 + 안쪽 밝은 윗·왼쪽 선과 어두운 아래·오른쪽 선(입체감).
+   안쪽 선도 블록의 바깥 윤곽(이웃이 없는 쪽)에만 그려서 한 덩어리 버튼처럼 보인다. */
+.stat-cell { box-shadow: var(--sh-t, 0 0 #0000), var(--sh-r, 0 0 #0000), var(--sh-b, 0 0 #0000), var(--sh-l, 0 0 #0000); }
+.stat-cell.bt { border-top: 3px solid var(--bc); margin-top: 4px; --sh-t: inset 0 3px 0 rgba(255, 255, 255, 0.3); }
+.stat-cell.br { border-right: 3px solid var(--bc); margin-right: 4px; --sh-r: inset -3px 0 0 rgba(0, 0, 0, 0.25); }
+.stat-cell.bb { border-bottom: 3px solid var(--bc); margin-bottom: 4px; --sh-b: inset 0 -3px 0 rgba(0, 0, 0, 0.25); }
+.stat-cell.bl { border-left: 3px solid var(--bc); margin-left: 4px; --sh-l: inset 3px 0 0 rgba(255, 255, 255, 0.3); }
+.stat-piece:hover .stat-cell { filter: brightness(1.1); }   /* 버튼과 같은 누름 반응 */
+/* 안쪽으로 꺾이는 모서리: 7×7 조각에 두 선(3px)을 그려 양쪽 테두리를 잇는다 */
+/* 안쪽으로 꺾이는 모서리 칸은 칸 바탕(블록 색)이 이웃 블록 쪽 간격 4px 모서리를 덮어 색이 삐져나온다 → 바탕을 "전체에서 그 4px 네모만 뺀" 모양(두 장 겹침)으로 칠한다. */
+.stat-cell.ck-tl { background: linear-gradient(var(--pc), var(--pc)) right top / calc(100% - 4px) 100% no-repeat, linear-gradient(var(--pc), var(--pc)) right bottom / 100% calc(100% - 4px) no-repeat; }
+.stat-cell.ck-tr { background: linear-gradient(var(--pc), var(--pc)) left top / calc(100% - 4px) 100% no-repeat, linear-gradient(var(--pc), var(--pc)) left bottom / 100% calc(100% - 4px) no-repeat; }
+.stat-cell.ck-bl { background: linear-gradient(var(--pc), var(--pc)) right bottom / calc(100% - 4px) 100% no-repeat, linear-gradient(var(--pc), var(--pc)) right top / 100% calc(100% - 4px) no-repeat; }
+.stat-cell.ck-br { background: linear-gradient(var(--pc), var(--pc)) left bottom / calc(100% - 4px) 100% no-repeat, linear-gradient(var(--pc), var(--pc)) left top / 100% calc(100% - 4px) no-repeat; }
+.stat-corner { position: absolute; width: 7px; height: 7px; background-repeat: no-repeat; }
+.stat-corner.k-br { right: 0; bottom: 0; background-image: linear-gradient(var(--bc), var(--bc)), linear-gradient(var(--bc), var(--bc)); background-size: 3px 100%, 100% 3px; background-position: 0 0, 0 0; }
+.stat-corner.k-tl { left: 0; top: 0; background-image: linear-gradient(var(--bc), var(--bc)), linear-gradient(var(--bc), var(--bc)); background-size: 3px 100%, 100% 3px; background-position: 100% 0, 0 100%; }
+.stat-corner.k-tr { right: 0; top: 0; background-image: linear-gradient(var(--bc), var(--bc)), linear-gradient(var(--bc), var(--bc)); background-size: 3px 100%, 100% 3px; background-position: 0 0, 0 100%; }
+.stat-corner.k-bl { left: 0; bottom: 0; background-image: linear-gradient(var(--bc), var(--bc)), linear-gradient(var(--bc), var(--bc)); background-size: 3px 100%, 100% 3px; background-position: 100% 0, 0 0; }
+.stat-text {
+  all: unset; box-sizing: border-box; position: absolute; z-index: 1; transform: translate(-50%, -50%); cursor: pointer;
+  display: flex; flex-direction: column; align-items: center; text-align: center; gap: 2px; white-space: nowrap; color: var(--tc, var(--pixel-ink));
 }
-.stat:hover { background: var(--tint); filter: none; }
-.stat:active { transform: translateY(2px); }
-.stat .num { display: block; font-size: 27px; line-height: 1.2; color: var(--accent); }
-.stat .lbl { color: var(--muted); font-size: 15px; }
-.stat.on { background: var(--tint); box-shadow: 0 -3px 0 var(--accent), 0 3px 0 var(--accent), -3px 0 0 var(--accent), 3px 0 0 var(--accent); }
+.stat-text:active { transform: translate(-50%, -50%); }   /* 공용 button:active 의 내려앉는 효과가 가운데 맞춤(translate)을 덮어써 글자가 튀지 않게 */
+/* 누르면 블록(칸 + 글자)이 버튼처럼 3px 내려앉는다. 눌렀다 바로 뗀 클릭·키보드에서도 보이도록 클릭 때 .press 로 짧게 한 번 더 내려갔다 올라온다. */
+.stat-piece:active .stat-cell, .stat-piece:active .stat-text { translate: 0 3px; }
+.stat-piece.press .stat-cell, .stat-piece.press .stat-text { animation: stat-press 0.18s steps(2, end); }
+@keyframes stat-press { 0%, 60% { translate: 0 3px; } 100% { translate: 0 0; } }
+@media (prefers-reduced-motion: reduce) { .stat-piece.press .stat-cell, .stat-piece.press .stat-text { animation: none; } }
+.stat-text:focus-visible { outline: 3px solid var(--accent); outline-offset: 4px; }
+.stat-lbl { font-size: 14px; line-height: 1.2; }   /* 글자 색은 블록의 --tc(진한 바탕 위에서 읽히는 색)를 따른다 */
+.stat-num { font-size: 24px; line-height: 1.1; }
+.stat-piece:has(.stat-subs) .stat-num { font-size: 30px; }   /* 가장 큰 블록은 숫자를 더 크게 */
+/* "계획 수" 블록 안의 시간 줄: 항목 이름과 값을 가운데에 나란히 */
+.stat-subs { display: grid; gap: 4px; align-self: stretch; margin-top: 10px; padding-top: 8px; border-top: 3px solid color-mix(in srgb, currentColor 45%, transparent); }
+.stat-sub { display: flex; justify-content: center; align-items: baseline; gap: 8px; font-size: 14px; }
+.stat-sub b { font-weight: 400; font-size: 18px; }
 
 /* ---------- 알림·확인 창(<dialog>) ----------
    처리 결과는 이 창으로 알린다. 종류별로 제목 띠 색과 아이콘이 다르다(완료·알림·확인). */
@@ -588,11 +632,15 @@ button.dd-btn.plan-pick, .dd-list[data-for="t-plan"] { font-size: var(--plan-pic
               inset -3px -3px 0 rgba(0, 0, 0, 0.25), inset 3px 3px 0 rgba(255, 255, 255, 0.3);
 }
 .dlg-title { margin: 0; font-size: 18px; font-weight: 400; color: var(--pixel-ink); }
+.dlg-fit { width: max-content; max-width: calc(100vw - 48px); }   /* 알림 너비를 가장 긴 줄에 맞춘다(높이는 줄 수대로) */
+.dlg-fit .dlg-text { text-align: center; padding-left: 104px; padding-right: 104px; }   /* 양쪽에 확인 버튼 폭만큼 여백을 두어, 글이 오른쪽 아래 확인 버튼과 가로로 겹치지 않고 가운데에 남는다 */
 .dlg-text { margin: 0; padding: 12px 14px 2px; font-size: 17px; line-height: 1.45; white-space: pre-line; overflow-wrap: anywhere; }
 .dlg-body { padding: 10px 14px 0; }
 .dlg-body .row { grid-template-columns: 1fr; gap: 0; }  /* 시각 입력칸이 넓어서 창 안에서는 세로로 쌓는다 */
 .dlg-body input, .dlg-body textarea { min-width: 0; }
 .dlg-body .hint { margin-bottom: 10px; }
+/* 창 안의 안내 문구: 글자를 조금 크고 진하게 */
+.callout { margin: 0 0 14px; color: var(--pixel-ink); font-size: 16px; line-height: 1.4; }
 .dlg-body h4 { margin: 0 0 8px; font-size: 17px; font-weight: 400; color: var(--pixel-ink); }
 /* 입력 칸이 많은 창(계획): 더 넓게, 칸은 두 줄로 나란히. 화면보다 길면 안쪽만 스크롤한다. */
 .dlg-wide { width: min(480px, calc(100vw - 48px)); }
