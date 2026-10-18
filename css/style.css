@@ -163,6 +163,7 @@ body { display: flex; flex-direction: column; min-height: 100vh; }
 .plan-scroll {
   contain: size; align-self: stretch; overflow-y: auto; overscroll-behavior: contain;
   padding: 4px 8px 6px 4px; margin: -4px -8px -6px -4px;
+  position: relative;   /* 계획이 없을 때의 그림(.task-empty)을 이 칸 한가운데에 얹는다 */
   scrollbar-width: none;   /* 스크롤바는 보이지 않게(마우스 휠·터치패드·터치·키보드로는 그대로 스크롤) */
 }
 .plan-scroll::-webkit-scrollbar { display: none; }
@@ -176,7 +177,8 @@ body { display: flex; flex-direction: column; min-height: 100vh; }
   .plan-side, .view-toggle { display: none; }
   #plan-col .plan-head { grid-template-columns: minmax(0, 1fr) auto; }   /* (#plan-col 로 우선순위를 올린 이유: 기본 규칙이 이 줄보다 아래에 적혀 있어서) */
   .plan-body::after { display: none; }
-  .plan-scroll { contain: none; max-height: 60vh; align-self: auto; }   /* 그림이 없는 좁은 화면: 높이를 정해 줄 그림이 없으니 화면 높이의 60%까지만 */
+  .plan-scroll { contain: none; max-height: 60vh; align-self: auto; }
+  .plan-scroll:has(#p-empty:not([hidden])) { min-height: 240px; }   /* 높이를 내용이 정하지 못해 그림 칸이 0이 되지 않게 */   /* 그림이 없는 좁은 화면: 높이를 정해 줄 그림이 없으니 화면 높이의 60%까지만 */
 }
 @media (max-width: 760px) {
   .col { grid-template-columns: minmax(0, 1fr); }   /* 좁은 화면에서는 세로로 */
@@ -223,7 +225,6 @@ button.tab[aria-selected="true"] {
   box-shadow: 0 1px 2px rgba(28, 36, 48, .14), 0 4px 10px rgba(28, 36, 48, .12), inset 0 1px 0 #fff;
 }
 .card h2 { margin: 0 0 10px; font-size: 20px; font-weight: 400; color: var(--pixel-ink); }
-.sub-h { margin: 14px 0 8px; font-size: 18px; font-weight: 400; color: var(--pixel-ink); }
 
 /* ---------- 입력 ---------- */
 
@@ -368,7 +369,6 @@ button.ghost:active { transform: translateY(2px); }
   box-shadow: 0 1px 2px rgba(28, 36, 48, .14), 0 4px 10px rgba(28, 36, 48, .12), inset 0 1px 0 #fff;
 }
 .plan h3 { margin: 0 0 6px; font-size: 19px; font-weight: 400; color: var(--pixel-ink); }
-.plan .id { color: var(--muted); font-size: 15px; margin-right: 8px; }
 /* 넘긴 기록이 없을 때: 기록이 있을 때의 카드(제목 + 3줄)와 같은 높이의 상자에 안내 글을 세로 가운데로 놓는다 */
 .plan-empty { display: flex; align-items: center; min-height: 120px; color: var(--muted); font-size: 16px; }
 
@@ -383,7 +383,7 @@ button.ghost:active { transform: translateY(2px); }
 .divided .pl-item { --pt: 18px; padding: var(--pt) 0 18px 34px; }
 .divided .pl-item:first-child { --pt: 4px; }
 .divided .pl-item:not(:last-child)::after {
-  top: auto; bottom: 0; left: 34px; right: 4px; width: auto; height: 2px;   /* 양쪽 끝이 기간 막대의 바깥 테두리와 같다(막대 여백 2px/6px에서 테두리 2px씩 바깥) */
+  top: auto; bottom: 0; left: 34px; right: 4px; width: auto; height: 2px;   /* 양쪽 끝이 칸 막대의 바깥 테두리와 같다(막대 여백 2px/6px에서 테두리 2px씩 바깥) */
   background: var(--pixel-ink); opacity: 0.3;
 }
 .divided .pl-dot { top: calc(var(--pt) + 2px); }
@@ -429,7 +429,6 @@ button.ghost:active { transform: translateY(2px); }
   background-color: var(--st-late); background-repeat: no-repeat; background-position: center; background-size: 14px 14px;
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 10 10' shape-rendering='crispEdges'%3E%3Cpath fill='%233b2a1e' d='M2 2h1v1h-1zM2 6h1v1h-1zM2 7h1v1h-1zM3 2h1v1h-1zM3 3h1v1h-1zM3 5h1v1h-1zM3 6h1v1h-1zM4 3h1v1h-1zM4 4h1v1h-1zM4 5h1v1h-1zM5 3h1v1h-1zM5 4h1v1h-1zM5 5h1v1h-1zM6 2h1v1h-1zM6 3h1v1h-1zM6 5h1v1h-1zM6 6h1v1h-1zM7 2h1v1h-1zM7 6h1v1h-1zM7 7h1v1h-1z'/%3E%3C/svg%3E");
 }
-.pl-item.done .pl-dot { background: var(--accent); }                   /* 할 일: 완료한 것의 점을 강조 */
 .pl-date { font-size: 15px; color: var(--muted); }
 /* 날짜와 D-day 사이에 세로 구분선(갈색 2px)을 두어 기간과 남은 날이 따로 보이게 한다 */
 .pl-dday { margin-left: 12px; }
@@ -463,8 +462,8 @@ button.pl-name:focus-visible { outline: 2px solid var(--accent); outline-offset:
   box-shadow: var(--px2);
 }
 .pl-panel[hidden] { display: none; }
-/* 계획: 펼친 상세의 양옆 끝을 기간 막대와 똑같이 맞춘다(막대 margin 2px/6px, 둘 다 테두리 2px). */
-.divided .pl-panel { margin-top: 9px; margin-left: 2px; margin-right: 6px; }   /* 기간 막대와 상세 창 사이를 띄운다 */
+/* 계획: 펼친 상세의 양옆 끝을 칸 막대와 똑같이 맞춘다(막대 margin 2px/6px, 둘 다 테두리 2px). */
+.divided .pl-panel { margin-top: 9px; margin-left: 2px; margin-right: 6px; }   /* 칸 막대와 상세 창 사이를 띄운다 */
 .pl-panel .actions { margin-top: 12px; }
 
 .facts { margin: 0; display: grid; grid-template-columns: 6.5em 1fr; gap: 2px 10px; font-size: 16px; }

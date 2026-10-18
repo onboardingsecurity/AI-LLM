@@ -16,12 +16,12 @@
   const emptyEl = $("r-empty");   // 고른 집계에 해당하는 할 일이 없을 때 보이는 그림
 
   // 숫자 카드 정의. metric 은 DB 함수 review_tasks 에 넘기는 값이다.
-  const STATS = [
-    { key: "plan_count", label: "계획 수", metric: "all", unit: "개", empty: "할 일이 없습니다." },
-    { key: "done_count", label: "완료 수", metric: "done", unit: "개", empty: "완료한 일이 없습니다." },
-    { key: "overdue_count", label: "지연 수", metric: "overdue", unit: "개", empty: "지연된 일이 없습니다." },
-    { key: "blocked_count", label: "막힘 수", metric: "blocked", unit: "개", empty: "막힌 일이 없습니다." }
-  ];
+  const STATS = {
+    plan_count: { key: "plan_count", label: "계획 수", metric: "all", empty: "할 일이 없습니다." },
+    done_count: { key: "done_count", label: "완료 수", metric: "done", empty: "완료한 일이 없습니다." },
+    overdue_count: { key: "overdue_count", label: "지연 수", metric: "overdue", empty: "지연된 일이 없습니다." },
+    blocked_count: { key: "blocked_count", label: "막힘 수", metric: "blocked", empty: "막힌 일이 없습니다." }
+  };
   // 시간 집계(예상·실제·차이)는 별도 블록 없이 "계획 수" 블록 안에 함께 보인다. 셋 다 그 계획의 할 일 전체를 합한 값이라 근거 목록은 계획 수와 같다.
   const TIME_ROWS = [
     { key: "estimated_minutes", label: "예상 시간" },
@@ -46,31 +46,29 @@
 
   async function loadSummary() {
     const my = ++seq;
-    if (planId === null) {
-      statsEl.textContent = "";
-      detailList.textContent = "";
-      emptyEl.hidden = true;
+    if (planId === null) {   // 계획이 없으면 모든 숫자가 0인 블록을 그대로 보여 준다
+      summary = { plan_count: 0, done_count: 0, overdue_count: 0, blocked_count: 0, estimated_minutes: 0, actual_minutes: 0, diff_minutes: 0 };
+      renderStats();
+      clearDetail();
       setStatus("먼저 계획을 하나 세워 주세요.");
-      syncArts();
       return;
     }
     setStatus("불러오는 중…");
     try {
-      const s = await api.reviewSummary(planId, null, null);   // 기간 제한 없이 그 계획에 딸린 할 일 전체를 센다
+      const s = await api.reviewSummary(planId);
       if (my !== seq) return;
       summary = s;
       setStatus("");
       renderStats();
       if (selectedKey) await showDetail(selectedKey);
-      else { detailList.textContent = ""; emptyEl.hidden = true; }
-      syncArts();
+      else clearDetail();
     } catch (e) {
       if (my === seq) setStatus(e.message);
     }
   }
 
   // 집계 숫자 글자: 개수는 "5개", 시간은 "99분", 차이는 부호를 붙여 "+30분"
-  function statText(st) { return String(summary[st.key]) + st.unit; }
+  function statText(st) { return summary[st.key] + "개"; }
   function minutesText(key) { return (key === "diff_minutes" ? signed(summary[key]) : String(summary[key])) + "분"; }
 
   // 집계 4개를 테트리스 블록(ㅣ ㄴ ㅁ ㄱ)으로 맞물려 집계 창(4칸 × 4줄 = 16칸)을 가득 채운다. 가운데 ㅁ 블록이 가장 크고 "계획 수"와 시간 줄이 들어간다.
@@ -90,9 +88,10 @@
   function renderStats() {
     statsEl.textContent = "";
     PIECES.forEach(function (piece) {
-      const st = STATS.filter(function (x) { return x.key === piece.key; })[0];
+      const st = STATS[piece.key];
       const on = selectedKey === st.key;
-      const has = function (r, c) { return piece.cells.some(function (x) { return x[0] === r && x[1] === c; }); };
+      const cellSet = new Set(piece.cells.map(function (x) { return x[0] + "," + x[1]; }));
+      const has = function (r, c) { return cellSet.has(r + "," + c); };
       const li = el("li", { class: "stat-piece", style: "--pc:" + piece.color + ";--tc:" + piece.text });
       piece.cells.forEach(function (rc) {
         const r = rc[0];
@@ -160,14 +159,14 @@
 
   async function showDetail(key) {
     const my = ++detailSeq;
-    const st = STATS.filter(function (x) { return x.key === key; })[0];
+    const st = STATS[key];
     detailList.textContent = "";
     emptyEl.hidden = true;
     syncArts();
     // 제목 옆에 고른 집계 종류와 숫자(할 일 리스트의 개수 표시처럼). 해당하는 할 일이 하나도 없으면 숫자 대신 안내 문구.
     setStatus(summary[key] === 0 ? st.empty : st.label + " " + statText(st));
     try {
-      const tasks = await api.reviewTasks(planId, null, null, st.metric);
+      const tasks = planId === null ? [] : await api.reviewTasks(planId, st.metric);
       const execs = await api.listActiveExecutions(tasks.map(function (t) { return t.id; }));
       if (my !== detailSeq) return;
       const byTask = {};
@@ -187,8 +186,6 @@
   // 근거 자료라서 상세(데이터와 실행 기록)는 처음부터 펼쳐 둔다.
   function renderRow(task, exec, today) {
     const done = task.status === "done";
-    const late = !done && !!task.due_date && task.due_date < today;
-    const state = done ? "done" : (late ? "late" : "");
     const dl = el("dl", { class: "facts" });
     addFact(dl, "우선순위", PRIORITY_LABEL[task.priority]);
     addFact(dl, "시간", task.estimated_minutes + "분 → " + (exec ? exec.actual_minutes + "분" : "기록 없음"));   // 예상 시간 → 실제 시간
@@ -197,13 +194,10 @@
       addFact(dl, "기간", formatSeoul(exec.started_at) + " ~ " + formatSeoul(exec.ended_at));
       addFact(dl, "막혔던 이유", exec.blocked_reason ? exec.blocked_reason : "없음");
     }
-    const dateLine = [document.createTextNode(task.due_date ? "마감일 " + task.due_date : "마감일 없음")];
-    if (!done && task.due_date) {
-      dateLine.push(el("span", { class: "pl-dday", text: window.PDS_UTIL.ddayText(task.due_date, today), title: "마감일까지 남은 날" }));
-    }
-    return el("li", { class: "pl-item" + (state ? " " + state : "") + " pri-" + task.priority }, [
-      el("span", { class: "pl-dot", title: done ? "완료" : (late ? "마감일이 지났는데 못 했어요" : "진행 중"), "aria-hidden": "true" }),
-      el("div", { class: "pl-date" }, dateLine),
+    const head = window.PDS_UTIL.taskRowHead(task, today);
+    return el("li", { class: head.cls }, [
+      head.dot,
+      head.date,
       el("h3", {}, [
         el("span", { class: "pl-name static", text: task.title }),
         el("span", { class: done ? "badge done" : "badge", text: done ? "완료" : "진행 중" })
@@ -239,13 +233,11 @@
 
   // 다음 계획 이름도 계획 이름 길이 규칙(5자 단위, 목록에서 한 줄로 보이는 길이)을 따른다. 계획 탭에서 잰 값을 쓴다.
   function nameLimit() {
-    const n = window.PDS_PLAN_NAME ? window.PDS_PLAN_NAME.cached() : 20;
+    const n = window.PDS_PLAN_NAME.cached();
     $("h-title-in").maxLength = n;
-    $("h-title-in").placeholder = "최대 " + n + "자 입력 가능합니다.";
+    $("h-title-in").placeholder = window.PDS_PLAN_NAME.placeholder(n);
     return n;
   }
-  nameLimit();
-  $("h-title-in").addEventListener("focus", nameLimit);
 
   // 계획 번호 대신 이름으로 보여 준다(목록에 아직 없으면 번호로).
   function titleOf(id) {
@@ -260,9 +252,8 @@
   async function loadRetros() {
     const list = $("h-list");
     list.textContent = "";
-    if (planId === null) return;
     try {
-      const rows = await api.listRetrospectives(planId);
+      const rows = planId === null ? [] : await api.listRetrospectives(planId);
       if (!rows.length) {
         list.appendChild(el("li", { class: "plan plan-empty", text: "아직 넘긴 기록이 없습니다." }));
         return;
@@ -298,12 +289,11 @@
       nextSuccess: $("h-success").value.trim(),
       nextMinutes: $("h-minutes").value === "" ? NaN : Number($("h-minutes").value)
     };
-    if (a.periodEnd < a.periodStart) { showHError("돌아본 기간이 올바르지 않습니다."); return; }
     if (!a.improvement) { showHError("고칠 점을 한 줄 적어 주세요."); return; }
     // 새 계획이 만들어지는 것이라 계획 만들기와 같은 규칙·같은 문구를 쓴다.
     if (!a.nextTitle) { showHError("계획 이름을 적어 주세요."); return; }
     if (a.nextTitle.length > nameLimit()) {
-      showHError("계획 이름은 " + nameLimit() + "자까지 쓸 수 있습니다. (지금 " + a.nextTitle.length + "자)");
+      showHError(window.PDS_PLAN_NAME.tooLong(a.nextTitle, nameLimit()));
       return;
     }
     if (!a.nextStart || !a.nextEnd) { showHError("시작일과 종료일을 정해 주세요."); return; }

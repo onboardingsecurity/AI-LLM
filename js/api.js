@@ -140,14 +140,15 @@
 
     // ---- 돌아보기 (카드 4) ----
     // 집계와 "숫자를 눌러 가는 목록"은 DB의 같은 함수에서 나온다.
-    reviewSummary: function (planId, from, to) {
+    // 기간 제한 없이 그 계획에 딸린 할 일 전체를 센다(DB 함수의 기간 인자는 비워 둔다).
+    reviewSummary: function (planId) {
       return request("rpc/review_summary", {
-        method: "POST", body: { p_plan_id: planId, p_from: from, p_to: to }
+        method: "POST", body: { p_plan_id: planId, p_from: null, p_to: null }
       }).then(function (rows) { return rows[0]; });
     },
-    reviewTasks: function (planId, from, to, metric) {
+    reviewTasks: function (planId, metric) {
       return request("rpc/review_tasks", {
-        method: "POST", body: { p_plan_id: planId, p_from: from, p_to: to, p_metric: metric }
+        method: "POST", body: { p_plan_id: planId, p_from: null, p_to: null, p_metric: metric }
       });
     },
     listActiveExecutions: function (taskIds) {

@@ -139,7 +139,7 @@
       const saved = wasEdit ? await api.updateTask(editingId, task) : await api.createTask(task);
       taskDialog.close();
       editingId = null;
-      await loadTasks();
+      await loadTasks(true);
       notify(wasEdit ? "할 일을 고쳤습니다." : "할 일을 저장했습니다.", task.title);
     } catch (e) {
       warn(e.message, task.title);
@@ -302,25 +302,18 @@
     });
 
     const badge = el("span", { class: done ? "badge done" : "badge", text: done ? "완료" : "진행 중" });
-    // 네모칸: 완료 = 체크 표시, 진행 중 = 우선순위 색, 진행 중인데 마감일이 지났으면(서울 오늘 기준) 못한 표시(✕)
-    const late = !done && !!task.due_date && task.due_date < today;
-    const state = done ? "done" : (late ? "late" : "");
-    const dotTitle = done ? "완료" : (late ? "마감일이 지났는데 못 했어요" : "진행 중");
-    // 날짜 줄: 마감일 + (진행 중이고 마감일이 있으면) 남은 날 D-day. 완료한 할 일은 D-day 를 보여 주지 않는다.
-    const dateLine = [document.createTextNode(task.due_date ? "마감일 " + task.due_date : "마감일 없음")];
-    if (!done && task.due_date) {
-      dateLine.push(el("span", { class: "pl-dday", text: window.PDS_UTIL.ddayText(task.due_date, today), title: "마감일까지 남은 날" }));
-    }
-    return el("li", { class: "pl-item" + (state ? " " + state : "") + " pri-" + task.priority }, [
-      el("span", { class: "pl-dot", title: dotTitle, "aria-hidden": "true" }),
-      el("div", { class: "pl-date" }, dateLine),
+    const head = window.PDS_UTIL.taskRowHead(task, today);   // 네모칸·마감일 줄(돌아보기 근거 목록과 같다)
+    return el("li", { class: head.cls }, [
+      head.dot,
+      head.date,
       el("h3", {}, [nameBtn, badge]),
-      taskBar(task, done, late, today),
+      taskBar(task, done, head.late, today),
       panel
     ]);
   }
 
-  async function loadTasks() {
+  // changed: 할 일이 실제로 바뀐 뒤(만들기·고치기·완료·되돌리기·지우기)의 다시 불러오기면 true. 이때만 다른 화면(계획 막대·돌아보기 집계)에 알린다.
+  async function loadTasks(changed) {
     const seq = ++loadSeq;
     if (planId === null) {
       criteriaEl.textContent = "";
@@ -348,7 +341,7 @@
       // 검색·거르기 조건이 걸려 있는데 결과가 없으면 "조건에 맞는", 계획에 할 일이 아예 없으면 "할 일이 없습니다."
       const filtered = !!(f.q || f.status || f.priority || f.tag);
       setStatus(tasks.length ? "" : (filtered ? "조건에 맞는 할 일이 없습니다." : "할 일이 없습니다."));
-      document.dispatchEvent(new CustomEvent("tasks-changed"));
+      if (changed === true) document.dispatchEvent(new CustomEvent("tasks-changed"));
     } catch (e) {
       if (seq === loadSeq) { countEl.textContent = ""; setStatus(e.message); }
     }
@@ -364,7 +357,7 @@
     try {
       await api.deleteTask(task.id);
       openIds.delete(task.id);
-      await loadTasks();
+      await loadTasks(true);
       notify("삭제가 완료되었습니다.", task.title);
     } catch (e) {
       btn.disabled = false;
@@ -379,7 +372,7 @@
     btn.disabled = true;
     try {
       await api.reopenTask(task.id);
-      await loadTasks();
+      await loadTasks(true);
       notify("진행 중으로 되돌렸습니다.", task.title);
     } catch (e) {
       btn.disabled = false;
@@ -462,7 +455,7 @@
         blockedReason: $("c-blocked").value.trim() || null
       });
       dialog.close();
-      await loadTasks();
+      await loadTasks(true);
       notify("완료로 기록했습니다.", completingTitle);
     } catch (e) {
       showError(cError, e.message);

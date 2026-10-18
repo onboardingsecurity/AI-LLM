@@ -455,6 +455,31 @@
     };
   }
 
+  // 마감·종료일까지 남은 날(서울 오늘 기준). 남았으면 D-3, 오늘이면 D-Day, 지났으면 D+2.
+  function ddayText(endDate, today) {
+    const left = dayNumber(endDate) - dayNumber(today);
+    if (left > 0) return "D-" + left;
+    if (left === 0) return "D-Day";
+    return "D+" + (-left);
+  }
+
+  // 할 일 한 줄(할 일 탭 목록·돌아보기 근거 목록 공용)의 머리: li 클래스, 네모칸(완료 = 체크, 진행 중 = 우선순위 색, 마감 지남 = ✕), 마감일 + D-day.
+  // late: 진행 중인데 마감일이 지남(서울 오늘 기준). 완료한 할 일은 D-day 를 보여 주지 않는다.
+  function taskRowHead(task, today) {
+    const done = task.status === "done";
+    const late = !done && !!task.due_date && task.due_date < today;
+    const dateLine = [document.createTextNode(task.due_date ? "마감일 " + task.due_date : "마감일 없음")];
+    if (!done && task.due_date) {
+      dateLine.push(el("span", { class: "pl-dday", text: ddayText(task.due_date, today), title: "마감일까지 남은 날" }));
+    }
+    return {
+      late: late,
+      cls: "pl-item" + (done ? " done" : (late ? " late" : "")) + " pri-" + task.priority,
+      dot: el("span", { class: "pl-dot", title: done ? "완료" : (late ? "마감일이 지났는데 못 했어요" : "진행 중"), "aria-hidden": "true" }),
+      date: el("div", { class: "pl-date" }, dateLine)
+    };
+  }
+
   window.PDS_UTIL = {
     cellBar: cellBar,
     viewStore: viewStore,
@@ -462,13 +487,8 @@
     todayKST: todayKST,
     nowKST: nowKST,
     dayNumber: dayNumber,
-    // 마감·종료일까지 남은 날(서울 오늘 기준). 남았으면 D-3, 오늘이면 D-Day, 지났으면 D+2.
-    ddayText: function (endDate, today) {
-      const left = dayNumber(endDate) - dayNumber(today);
-      if (left > 0) return "D-" + left;
-      if (left === 0) return "D-Day";
-      return "D+" + (-left);
-    },
+    ddayText: ddayText,
+    taskRowHead: taskRowHead,
     keepEndAfterStart: keepEndAfterStart,
     notify: function (text, title) { return showDialog(text, "ok", title); },
     warn: function (text, title, extraClass) { return showDialog(text, "warn", title, extraClass); },
