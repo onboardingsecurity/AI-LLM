@@ -3,7 +3,7 @@
 6번에서 만든 다이어리에 가입·로그인을 붙여, 내 계획과 기록을 로그인한 나만 볼 수 있게 만들었습니다.
 이 문서는 여섯 항목(①~⑥)으로 나뉘어 있습니다. 비밀번호·토큰·비밀키는 원문을 적지 않고 가려서 적습니다.(예: `eyJhb…생략`)
 
-- 이어서 쓴 6번 결과: (작성 예정: 실제 제출한 6번 결과 주소와 커밋)
+- 이어서 쓴 6번 결과: 배포 주소 https://skt-aleph-ai-first-plan-do-see.vercel.app/#plan , 커밋 https://github.com/onboardingsecurity/AI-LLM/commit/d66c687509131d810aeacbe1fcfc206bb6f35849 (`d66c687`, 이 7번 소스 이력의 조상입니다)
 
 ---
 
@@ -57,16 +57,18 @@
 | `js/api.js` | 요청마다 토큰을 `Authorization` 헤더로 전송, 401·403이면 갱신 후 한 번 재시도, 쓰기를 DB 함수 호출로 바꿈 |
 | `supabase/auth-lock.sql` (새 파일) | 모든 표에 `user_id`(주인), 내 것만 읽는 정책, 주인을 확인하는 쓰기·읽기 함수 |
 | `supabase/auth-session-check.sql` (새 파일) | 로그아웃·비밀번호 변경 뒤 옛 토큰을 거절 |
+| `supabase/auth-password-change.sql` (새 파일) | 비밀번호를 바꾸면 바꾼 세션을 포함해 그 계정의 모든 세션을 끊음 |
+| `supabase/auth-delete-account.sql` (새 파일) | 로그인한 본인 계정만 지우는 함수 `delete_my_account` (계정 탈퇴) |
 
 ### 네 흐름이 지나는 소스
 
-1. **가입:** 화면 `index.html:18` → 제출 처리 `js/auth.js:183` → `signUp` `js/auth.js:66` → Supabase Auth `/auth/v1/signup` → 토큰 보관 `saveSession` `js/auth.js:27` → 앱 열기 `showApp` `js/auth.js:164`
-2. **로그인:** 제출 처리 `js/auth.js:183` → `logIn` `js/auth.js:73` → `/auth/v1/token?grant_type=password` → `saveSession` → `showApp` → 앱 스크립트 불러오기 `loadScripts` `js/auth.js:155`
+1. **가입:** 화면 `index.html:18` → 제출 처리 `js/auth.js:219` → `signUp` `js/auth.js:66` → Supabase Auth `/auth/v1/signup` → 토큰 보관 `saveSession` `js/auth.js:27` → 앱 열기 `showApp` `js/auth.js:192`
+2. **로그인:** 제출 처리 `js/auth.js:219` → `logIn` `js/auth.js:73` → `/auth/v1/token?grant_type=password` → `saveSession` → `showApp` → 앱 스크립트 불러오기 `loadScripts` `js/auth.js:183`
 3. **로그아웃:** 버튼 `index.html:45` → `logOut` `js/auth.js:105` → `/auth/v1/logout?scope=global`(서버가 세션을 지움, `js/auth.js:108`) → 브라우저 값 삭제 → 새로고침 → 로그인 화면
 4. **자료 조회:** 화면 → `request` `js/api.js:22` → 토큰 준비 `getToken` `js/auth.js:95`(만료 60초 전이면 `refresh` `js/auth.js:81`) → `send` `js/api.js:7`(`Authorization` 헤더) → Supabase REST → DB
    - 읽기는 표의 정책 `supabase/auth-session-check.sql:54`, 쓰기·집계는 DB 함수 `supabase/auth-lock.sql:172` 이후를 지납니다.
    - 함수는 먼저 `require_user` `supabase/auth-session-check.sql:33`(세션이 살아 있는지 `session_alive` `:19`)과 `assert_plan_owner` `supabase/auth-lock.sql:132`(내 계획인지)를 확인합니다.
-   - 401이나 403을 받으면 `js/api.js:28`에서 갱신을 한 번 시도하고, 안 되면 `expired` `js/auth.js:117`로 로그인 화면으로 돌아갑니다.
+   - 401이나 403을 받으면 `js/api.js:28`에서 갱신을 한 번 시도하고, 안 되면 `expired` `js/auth.js:145`로 로그인 화면으로 돌아갑니다.
 
 ### 거절을 만들어 내는 소스 위치
 
@@ -76,7 +78,7 @@
 | 표에 직접 쓰기(403) | 쓰기 권한을 주지 않고 읽기만 부여: `supabase/auth-lock.sql:105` |
 | 남의 자료를 표로 읽기(빈 목록) | 정책 "내 것만 읽기": `supabase/auth-session-check.sql:54`~`58` (처음 만든 곳은 `supabase/auth-lock.sql:109`~`113`) |
 | 남의 자료를 함수로 읽기·수정·삭제(404) | `assert_plan_owner` `supabase/auth-lock.sql:132`와 각 함수의 주인 조건: `update_plan` `:193`, `plan_revisions_of` `:219`, `create_task` `:232`, `update_task` `:254`, `delete_task` `:278`, `complete_task` `:294`, `reopen_task` `:339`, `review_tasks` `:362`, `hand_over_improvement` `:399` |
-| 로그아웃·비밀번호 변경 뒤 옛 토큰(403) | `session_alive` `supabase/auth-session-check.sql:19`, `require_user` `:33` |
+| 로그아웃·비밀번호 변경 뒤 옛 토큰(403) | `session_alive` `supabase/auth-session-check.sql:19`, `require_user` `:33`, 비밀번호가 바뀌면 세션을 지우는 함수 `supabase/auth-password-change.sql:24`(지우는 줄 `:28`)와 트리거 `:35` |
 
 ## ④ 안 열리는 것을 확인한 기록
 
@@ -91,6 +93,85 @@
 | B | 계획 1개, 할 일 1개를 완료 처리한 실행 기록 1개 | 계획 11, 할 일 14, 실행 기록 11 |
 
 두 계정은 서로의 자료를 조작해 보는 테스트를 마친 뒤 삭제합니다.
+
+### 6번 자료가 내 계정으로 옮겨졌는지 확인
+
+6번 다이어리에 넣어 둔 자료는 주인(`user_id`) 칸이 없었습니다. `supabase/auth-lock.sql:47-51`이 주인이 비어 있는 자료를 전부 내 계정 하나로 채웁니다.
+옮긴 뒤 Supabase 대시보드의 SQL Editor에서 계정별 건수를 세어 보았습니다. (읽기만 하는 조회이고, 이메일은 적지 않고 시험 계정 여부만 구분했습니다.)
+
+| 계정 | 계획 | 할 일 | 실행 기록 | 돌아보기 | 수정 이력 |
+|---|---|---|---|---|---|
+| 내 계정 (시험 계정이 아님) | 3 | 14 | 10 | 1 | 5 |
+| 시험 계정 6개의 합계 | 9 | 8 | 6 | 3 | 12 |
+| 표 전체 | 12 | 22 | 16 | 4 | 17 |
+
+- 주인이 없는 자료는 0건입니다(주인 없음 조회 결과 전부 `false`). 6번 자료가 빠짐없이 한 계정으로 옮겨졌다는 뜻입니다.
+- 내 계정의 건수는 6번에 넣어 둔 자료(계획 3, 할 일 14, 실행 기록 10, 돌아보기 1, 수정 이력 5)이고, 로그인한 화면에서도 내 계획 목록이 보였습니다.
+- 시험 계정은 6개입니다. 위의 A·B 한 쌍과, 앞서 중단된 시험이 만든 두 쌍입니다. 모두 시험이 끝나면 삭제합니다.
+
+### 로그인 요청·응답에 비밀번호가 남지 않는 것 확인
+
+시험 계정 A로 로그인 요청을 한 번 보내고, 요청과 응답에서 비밀번호 원문을 찾아보았습니다. 비밀번호는 시험용 무작위 값이라 적지 않았고, 토큰은 `eyJhb…생략`으로 가렸습니다.
+
+**요청** (서버로 가는 것은 이메일과 비밀번호뿐이고, 주소에는 둘 다 실리지 않습니다)
+```
+POST /auth/v1/token?grant_type=password
+Content-Type: application/json
+{"email":"<시험 A 이메일>","password":"(시험용 무작위 값, 적지 않음)"}
+```
+
+**응답**
+```
+→ HTTP 200
+{"access_token":"eyJhb…생략","token_type":"bearer","expires_in":3600,"expires_at":<만료 시각>,
+ "refresh_token":"…생략","user":{"id":"6377b22e…","email":"<시험 A 이메일>","aud":"authenticated","role":"authenticated", …}}
+```
+
+| 찾아본 곳 | 시험 계정 A의 비밀번호 원문이 나온 횟수 |
+|---|---|
+| 응답 본문(2217자) | 0 |
+| 응답 헤더 21개(쿠키 `__cf_bm` 포함) | 0 |
+| 접근 토큰(JWT) 안의 내용(`iss` `sub` `aud` `exp` `iat` `email` `phone` `app_metadata` `user_metadata` `role` `aal` `amr` `session_id` `is_anonymous`) | 0 |
+| 응답 본문에 비밀번호 해시(`$2a$…`)가 들어 있는지 | 없음 |
+
+- 응답에는 비밀번호도, 그 해시도 없습니다. 돌려주는 것은 토큰과 계정 번호·이메일뿐입니다.
+- 브라우저 쪽에서는 `js/auth.js`가 로그인에 성공하면 비밀번호 입력 칸을 바로 비우고(`:233`), 비밀번호를 `sessionStorage`에 저장하지 않습니다. 저장하는 것은 토큰과 계정 정보뿐입니다(`saveSession`, `:27`).
+
+### 비밀번호를 바꾼 뒤 이전에 발급한 값이 통하는지 확인
+
+시험 계정 B로 같은 계정의 세션 3개를 만들었습니다. S1이 비밀번호를 바꾸고, S2·S3은 다른 기기라고 보면 됩니다. 비밀번호와 토큰은 적지 않았습니다.
+
+**처음 시험에서 구멍을 찾았습니다.** 인증 서비스는 비밀번호를 바꾸면 다른 기기의 세션은 끊지만, 바꾸는 데 쓴 세션은 살려 두었습니다. S2·S3은 거절됐지만 S1은 바꾼 뒤에도 자료 조회 200, 함수 호출 200, 갱신 토큰으로 갱신 200이었습니다. 같은 결과를 두 번 확인했습니다.
+
+**고친 방법:** 비밀번호 칸이 바뀌면 그 계정의 세션을 모두 지우는 트리거를 DB에 추가했습니다(`supabase/auth-password-change.sql:24`·`:35`). 적용 뒤 같은 시험을 다시 했습니다.
+
+**같은 요청, 달라진 것은 "비밀번호를 바꿨는지"뿐**
+
+```
+GET /rest/v1/plans?select=id                     Authorization: Bearer eyJhb…생략 (S1)
+POST /rest/v1/rpc/review_tasks {"p_plan_id":11}  Authorization: Bearer eyJhb…생략 (S1)
+POST /auth/v1/token?grant_type=refresh_token     {"refresh_token":"…생략"} (S1)
+```
+
+| 요청 | 비밀번호를 바꾸기 전 (S1·S2·S3) | 바꾼 뒤 (S1·S2·S3 모두 같음) |
+|---|---|---|
+| 목록 조회 | HTTP 200 `[{"id":11}]` | HTTP 200 `[]` (자료가 나가지 않음) |
+| `review_tasks` 호출 | HTTP 200 (자료 있음) | **HTTP 403** `{"code":"42501","message":"로그인이 끝났습니다. 다시 로그인해 주세요."}` |
+| 갱신 토큰으로 갱신 | (시험하지 않음) | **HTTP 400** `refresh_token_not_found` |
+
+비밀번호를 바꾼 요청은 이렇게 보냈습니다.
+```
+PUT /auth/v1/user   Authorization: Bearer eyJhb…생략 (S1)
+{"password":"(시험용 무작위 값, 적지 않음)"}
+→ HTTP 200
+```
+
+바꾼 뒤에 확인한 것은 다음과 같습니다.
+- 옛 비밀번호로 로그인: HTTP 400 `invalid_credentials`
+- 새 비밀번호로 로그인: HTTP 200, 그 새 토큰으로 목록 조회 `[{"id":11}]` (계정은 정상 사용 가능)
+- 다른 계정(시험 계정 A)의 로그인은 영향 없이 HTTP 200
+
+이 트리거는 비밀번호가 실제로 바뀔 때만 동작하고, 가입과 로그인에는 영향이 없습니다. 이 앱에는 비밀번호 변경 화면이 없어서, 이 시험은 인증 서비스의 API(`PUT /auth/v1/user`)를 직접 불러 한 것입니다.
 
 ### 확인 다섯 가지: 성공한 요청과 거절된 요청
 
@@ -208,6 +289,129 @@ Authorization: Bearer eyJhb…생략
 
 B의 [계획 수, 지우지 않은 할 일 수]: 시험 전 `[1,1]`, 시험 후 `[1,1]` → 같음(B의 자료는 그대로)
 
+### 반대 방향 확인: 계정 B로 계정 A의 자료를 읽기·수정·삭제
+
+위의 확인 2~4는 A가 B의 자료를 건드린 것이었습니다. 반대로 **B로 로그인해 A의 자료**(계획 10, 할 일 13)를 건드렸습니다. 토큰은 `eyJhb…생략`으로 가렸고, 요청마다 `Authorization: Bearer eyJhb…생략`(B의 토큰)을 실었습니다.
+
+| 하려던 일 | 요청 | 응답 |
+|---|---|---|
+| 읽기: 집계 | `POST /rest/v1/rpc/review_summary` `{"p_plan_id":10,"p_from":null,"p_to":null}` | **404** `PT404` "찾을 수 없습니다." |
+| 읽기: 돌아보기 목록 | `POST /rest/v1/rpc/review_tasks` `{"p_plan_id":10}` | **404** `PT404` |
+| 읽기: 수정 이력 | `POST /rest/v1/rpc/plan_revisions_of` `{"p_plan_id":10}` | **404** `PT404` |
+| 읽기: 표에서 계획 직접 조회 | `GET /rest/v1/plans?select=*&id=eq.10` | 200 `[]` (빈 목록) |
+| 읽기: 표에서 할 일 직접 조회 | `GET /rest/v1/tasks?select=*&id=eq.13` | 200 `[]` (빈 목록) |
+| 수정: 할 일 | `POST /rest/v1/rpc/update_task` `{"p_id":13,"p_title":"침입-수정", …}` | **404** `PT404` |
+| 수정: 계획 | `POST /rest/v1/rpc/update_plan` `{"p_id":10,"p_title":"침입-수정", …}` | **404** `PT404` |
+| 수정: A의 계획에 할 일 끼워 넣기 | `POST /rest/v1/rpc/create_task` `{"p_plan_id":10,"p_title":"끼워넣기", …}` | **404** `PT404` |
+| 수정: 표에 직접 PATCH | `PATCH /rest/v1/plans?id=eq.10` `{"title":"침입-수정"}` | **403** `42501` permission denied for table plans |
+| 삭제: 할 일 | `POST /rest/v1/rpc/delete_task` `{"p_id":13}` | **404** `PT404` |
+| 삭제: 표에 직접 DELETE (할 일) | `DELETE /rest/v1/tasks?id=eq.13` | **403** `42501` permission denied for table tasks |
+| 삭제: 표에 직접 DELETE (계획) | `DELETE /rest/v1/plans?id=eq.10` | **403** `42501` permission denied for table plans |
+
+**요청 앞뒤의 건수** (각 계정이 자기 토큰으로 센 값)
+
+| 계정 | 계획 | 수정 이력 | 할 일 | 실행 기록 | 돌아보기 | 요청 전 → 후 |
+|---|---|---|---|---|---|---|
+| A (공격받은 쪽) | 2 | 3 | 3 | 1 | 1 | **같음**, A의 계획 10의 제목도 `A-계획` 그대로 |
+| B (시도한 쪽) | 1 | 1 | 1 | 1 | 0 | **같음**, A의 자료는 B의 할 일 목록에 하나도 섞여 오지 않음(0건) |
+
+읽기는 함수는 404, 표는 빈 목록으로 막히고, 수정·삭제는 함수는 404, 표 직접 요청은 403으로 막힙니다. 존재 여부를 알려 주지 않는 것은 위의 A → B 방향과 같습니다.
+
+### 주소·헤더·본문에 다른 계정을 적어 보낸 요청
+
+계정 B로 로그인한 채, 계정 A(`6377b22e…`)의 번호를 **주소·요청 헤더·요청 본문**에 적어 보냈습니다. 토큰은 `eyJhb…생략`으로 가렸고, 요청마다 B의 토큰을 실었습니다. 기준이 되는 요청 `GET /rest/v1/plans?select=id`는 B의 계획 하나(11)만 돌려줍니다.
+
+| 어디에 적었나 | 요청 | 응답 |
+|---|---|---|
+| 기준 (아무것도 안 적음) | `GET /rest/v1/plans?select=id` | 200 `[{"id":11}]` (B의 계획만) |
+| 주소 | `GET /rest/v1/plans?select=id,user_id&user_id=eq.<A의 번호>` | 200 `[]` (A의 계획이 안 나옴) |
+| 주소 | `GET /rest/v1/plans?select=id&or=(user_id.eq.<A의 번호>,user_id.eq.<B의 번호>)` | 200 `[{"id":11}]` (B의 것만) |
+| 주소 | `GET /rest/v1/tasks?select=id&user_id=eq.<A의 번호>` | 200 `[]` |
+| 헤더 | `GET /rest/v1/plans?select=id` + `x-user-id: <A의 번호>` | 200 `[{"id":11}]` (헤더는 무시됨) |
+| 헤더 | 같은 요청 + `X-Forwarded-User`, `X-Authenticated-User`: `<A의 번호>` | 200 `[{"id":11}]` |
+| 헤더 | 같은 요청 + `Accept-Profile: auth` (사용자 표로 건너가기) | 406 `PGRST106` "Invalid schema: auth" |
+| 본문 | `POST /rest/v1/plans` `{"user_id":"<A의 번호>","title":"본문조작", …}` (표에 직접 넣기) | **403** `42501` permission denied for table plans |
+| 본문 | `POST /rest/v1/rpc/create_plan` `{…, "p_user_id":"<A의 번호>","user_id":"<A의 번호>"}` | **404** `PGRST202` (함수가 소유자 인자를 받지 않음) |
+| 본문 | `POST /rest/v1/rpc/update_plan` `{"p_id":11, …, "user_id":"<A의 번호>"}` | **404** `PGRST202` |
+| 본문 | `PATCH /rest/v1/plans?id=eq.11` `{"user_id":"<A의 번호>"}` (내 계획의 주인을 A로 바꾸기) | **403** `42501` permission denied for table plans |
+| 토큰 | B의 토큰에서 사용자 번호(`sub`)만 A의 번호로 고친 토큰으로 `GET /rest/v1/plans?select=id` | **401** `PGRST301` "No suitable key or wrong key type" |
+
+- 주소·헤더에 A를 적어도 응답은 **B의 자료만** 돌아오거나 빈 목록입니다. 사람을 알아보는 값은 토큰 하나뿐이고, 서버가 토큰 안의 번호로 정합니다(`default auth.uid()` `supabase/auth-lock.sql:70`, `create_plan`의 `me := require_user()`).
+- 본문에 소유자를 적어 넣을 길은 없습니다. 표에는 직접 쓰기 권한이 없고(403), 쓰기 함수에는 소유자를 받는 인자가 없어 함수를 찾지 못합니다(404). 소유자는 서버가 로그인한 사람으로 정합니다.
+- 토큰 속 번호만 고치면 서명이 맞지 않아 거절됩니다(401).
+- 요청 앞뒤 건수는 두 계정 모두 같았습니다. A는 계획 2, 수정 이력 3, 할 일 3, 실행 기록 1, 돌아보기 1이고, B는 1, 1, 1, 1, 0입니다. B의 계획 11의 제목은 `B-계획` 그대로입니다.
+
+### 목록 응답에 다른 계정의 자료가 없는 것 확인
+
+계정 A와 B가 각자 자기 토큰으로 다섯 표의 목록 전체(`GET /rest/v1/<표>?select=*&order=id`)를 불렀습니다. 같은 요청이고 토큰만 다릅니다. 토큰은 `eyJhb…생략`으로 가렸습니다.
+
+| 표 | A의 응답 (HTTP 200) | B의 응답 (HTTP 200) |
+|---|---|---|
+| plans | 2건 (번호 10, 12) | 1건 (번호 11) |
+| plan_revisions | 3건 (12, 14, 15) | 1건 (13) |
+| tasks | 3건 (13, 21, 22) | 1건 (14) |
+| executions | 1건 (10) | 1건 (11) |
+| retrospectives | 1건 (4) | 0건 (`[]`) |
+
+응답에 남의 자료가 섞였는지 세 가지로 찾아보았습니다. 열 개 응답(두 계정 × 다섯 표) 전부 **0건**이었습니다.
+
+| 찾아본 것 | 나온 횟수 |
+|---|---|
+| 행의 주인(`user_id`)이 요청한 계정이 아닌 행 | 0 |
+| 상대 계정이 가진 자료 번호와 겹치는 행 | 0 |
+| 응답 글자 안에 상대 계정의 번호가 들어 있는지 | 0 |
+
+응답 모양의 예(B의 `plans` 첫 행, 계정 번호는 앞부분만 남김):
+```
+GET /rest/v1/plans?select=*&order=id
+Authorization: Bearer eyJhb…생략
+→ HTTP 200  [{"id":11,"title":"B-계획","start_date":"2026-10-20","end_date":"2026-10-25","priority":1,"success_criteria":"B 성공 기준","estimated_minutes":60,"created_at":"2026-10-19T14:43:53.717449+00:00","updated_at":"2026-10-19T14:43:53.717449+00:00","user_id":"d144b435…"}]
+```
+
+데이터베이스 전체에는 다른 계정의 자료가 더 있습니다(앞의 건수표 참고). 그런데도 이 응답에는 자기 것만 나오는 것은 표 읽기 정책 "내 것만 읽기"(`supabase/auth-session-check.sql:54`~`58`)가 `user_id = auth.uid()`인 행만 돌려주기 때문입니다.
+
+### 계정 탈퇴: 두 번 확인한 뒤 계정과 모든 자료를 지운다
+
+**화면:** 로그인한 화면의 위쪽 막대에서 로그아웃 버튼 바로 옆에 **계정 탈퇴** 버튼이 있습니다(`index.html:46`). 누르면 두 번 묻고, 1단계는 [확인], 2단계는 [탈퇴]를 눌러야 진행합니다(`js/auth.js:201`~`:208`).
+
+| 단계 | 알림창 | 버튼 |
+|---|---|---|
+| 1 | 제목 "계정 탈퇴 안내" / "계정 탈퇴 시 모든 정보는 삭제됩니다." | [취소] [확인] |
+| 2 | 제목 "계정 탈퇴" / "계정을 탈퇴하시겠습니까?" | [탈퇴] [취소] (취소에 먼저 초점, 실수로 엔터를 눌러도 취소) |
+| 3 | 서버에 `POST /rest/v1/rpc/delete_my_account` 본문 `{}` (`Authorization: Bearer eyJhb…생략`) | |
+| 4 | "탈퇴되었습니다." | [확인] → 로그인 화면 |
+
+**서버:** `supabase/auth-delete-account.sql`의 함수 `delete_my_account()`가 토큰의 주인 계정 한 개만 지웁니다. 인자가 없어서 다른 계정을 지정할 길이 없고, `require_user()`로 로그인·세션이 살아 있는지 먼저 확인하며(로그아웃한 토큰은 403), 로그인하지 않은 사람(anon)에게는 실행 권한이 없습니다. 계정이 지워지면 다섯 표의 `user_id`가 `on delete cascade`(`supabase/auth-lock.sql:63`~`67`)라서 그 계정의 자료와 세션이 함께 지워집니다.
+
+**화면 시험** (시험 계정 A로 로그인하고, 탈퇴 요청만 가짜 응답으로 바꿔 실제 계정은 지우지 않음)
+
+| 확인 | 결과 |
+|---|---|
+| 1단계 알림의 문구와 버튼 글자(취소·확인) | 통과 |
+| 1단계에서 [취소]: 닫히고 서버 요청 없음, 로그인 유지 | 통과 |
+| 1단계에서 [확인]을 눌러도 아직 서버 요청 없음(2단계가 뜸) | 통과 |
+| 2단계 알림의 문구와 버튼 글자 | 통과 |
+| 2단계에서 [취소]: 서버 요청 없음, 로그인 유지 | 통과 |
+| 서버가 거절하면(가짜 404) "탈퇴하지 못했습니다. (오류 404)" 안내, 로그인 유지, 요청은 1회 | 통과 |
+| 요청의 주소·방식·본문이 `POST /rest/v1/rpc/delete_my_account`, `{}` | 통과 |
+| 성공하면(가짜 204) "탈퇴되었습니다." 알림, 그 동안 세션은 이미 지워짐, 확인 뒤 로그인 화면 | 통과 |
+
+**서버 시험** (새 시험 계정 C에 계획 2·수정 이력 3·할 일 1·실행 기록 1·돌아보기 1을 넣은 뒤, 화면과 같은 요청으로 탈퇴. 토큰은 `eyJhb…생략`)
+
+| 요청 | 응답 |
+|---|---|
+| 로그인 없이 `POST /rest/v1/rpc/delete_my_account` | **401** `42501` permission denied for function delete_my_account |
+| 가짜 토큰으로 같은 요청 | **401** |
+| 계정 C의 토큰으로 `POST /rest/v1/rpc/delete_my_account` `{}` | **204** (탈퇴됨) |
+| 탈퇴 뒤 같은 토큰으로 `GET /rest/v1/plans?select=id` | 200 `[]` |
+| 탈퇴 뒤 같은 토큰으로 `review_summary` 호출 | **403** |
+| 탈퇴 뒤 같은 토큰으로 다시 `delete_my_account` | **403** |
+| 탈퇴 뒤 같은 이메일·비밀번호로 로그인 | **400** `invalid_credentials` |
+| 탈퇴 뒤 갱신 토큰으로 갱신 | **400** `refresh_token_not_found` |
+
+- 탈퇴 전후로 **다른 계정(시험 A·B)의 건수는 그대로**였습니다. A는 계획 2·수정 이력 3·할 일 3·실행 기록 1·돌아보기 1, B는 1·1·1·1·0입니다. 본인 계정 하나만 지워졌습니다.
+- 지운 뒤 Supabase 대시보드 SQL Editor에서 그 계정(`c3ad7f6a…`)의 자료를 다섯 표에서 세어 보았고, 계획·수정 이력·할 일·실행 기록·돌아보기와 계정 모두 **0건**이었습니다. 계정이 지워지면 자료가 함께 지워집니다.
+
 ## ⑤ AI와 나
 
 **과제 제출 화면의 AI와 내 판단 3줄 칸**에 직접 작성했습니다.
@@ -227,3 +431,4 @@ B의 [계획 수, 지우지 않은 할 일 수]: 시험 전 `[1,1]`, 시험 후 
 | 7 | **토큰이 브라우저 `sessionStorage`에 있다.** | 화면에 악성 스크립트가 실행되는 문제(XSS)가 생기면 토큰을 빼 갈 수 있다. | 사용자 입력은 `textContent`로만 넣고 `innerHTML`을 쓰지 않으며, 외부 스크립트를 불러오지 않는다. 탭을 닫으면 사라진다. |
 | 8 | **로그아웃 요청이 서버에 닿지 않으면 서버 세션이 남는다.** (네트워크 오류 등) | 브라우저에서는 지워지지만 서버에서는 토큰이 만료(1시간)될 때까지 유효하다. | 브라우저 값은 항상 지운다. 접근 토큰은 1시간 뒤 만료된다. |
 | 9 | **API 오류 응답이 표 이름과 권한 힌트를 보여 준다.** (API를 직접 호출했을 때) | 내부 구조를 조금 알려 준다. | 앱 화면에는 일반 문구만 보인다. 표 이름은 공개 소스에도 있고, 힌트가 접근을 열어 주지는 않는다. |
+| 10 | **세션을 끊는 트리거가 SQL로 직접 적용한 설정이다.** (`supabase/auth-password-change.sql`) | 같은 DB를 새로 만들거나 옮길 때 이 파일을 다시 실행하지 않으면 "비밀번호를 바꾼 세션이 살아남는" 구멍이 되살아난다. | 파일 머리말에 사용법과 되돌리는 법을 적었고, 적용 여부는 `pg_trigger` 조회로 확인할 수 있다. |
