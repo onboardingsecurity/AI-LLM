@@ -113,6 +113,34 @@
     window.location.reload();
   }
 
+  // 계정 탈퇴: 서버 함수 delete_my_account 가 토큰의 주인(본인) 계정만 지운다. 계정이 지워지면 자료·세션도 함께 지워진다.
+  async function withdraw() {
+    const btn = document.getElementById("withdraw-btn");
+    btn.disabled = true;
+    const token = await getToken();
+    if (!token) { expired(); return; }
+    let res;
+    try {
+      res = await fetch(window.PDS_CONFIG.SUPABASE_URL + "/rest/v1/rpc/delete_my_account", {
+        method: "POST",
+        headers: { apikey: KEY, "Content-Type": "application/json", Authorization: "Bearer " + token },
+        body: "{}"
+      });
+    } catch (e) {
+      btn.disabled = false;
+      await window.PDS_UTIL.warn("서버에 연결하지 못했습니다. 탈퇴하지 않았습니다.", "계정 탈퇴");
+      return;
+    }
+    if (!res.ok) {
+      btn.disabled = false;
+      await window.PDS_UTIL.warn("탈퇴하지 못했습니다. (오류 " + res.status + ")", "계정 탈퇴");
+      return;
+    }
+    clearSession();
+    await window.PDS_UTIL.notify("탈퇴되었습니다.", "계정 탈퇴");
+    window.location.reload();
+  }
+
   // 서버가 세션을 더는 받아 주지 않을 때(만료·끊김) 로그인 화면으로 돌아간다.
   function expired() {
     clearSession();
@@ -169,6 +197,14 @@
     document.getElementById("logout-btn").addEventListener("click", function () {
       document.getElementById("logout-btn").disabled = true;
       logOut();
+    });
+    // 계정 탈퇴: 두 번 물어본 뒤에만 진행한다. 1단계는 [확인], 2단계는 [탈퇴]를 눌러야 하고, 취소·닫기는 아무것도 지우지 않는다.
+    document.getElementById("withdraw-btn").addEventListener("click", async function () {
+      const U = window.PDS_UTIL;
+      const labels = { ok: "탈퇴", cancel: "취소", safe: true };   // 2단계(마지막 확인)에만 쓴다
+      if (!(await U.confirmBox("계정 탈퇴 시 모든 정보는 삭제됩니다.", "계정 탈퇴 안내"))) return;
+      if (!(await U.confirmBox("계정을 탈퇴하시겠습니까?", "계정 탈퇴", labels))) return;
+      withdraw();
     });
     loadScripts(0);
   }

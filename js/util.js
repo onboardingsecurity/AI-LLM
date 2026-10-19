@@ -25,7 +25,7 @@
   const dlg = document.getElementById("app-dialog");
   let queue = Promise.resolve();
 
-  function showDialog(text, kind, title, extraClass) {
+  function showDialog(text, kind, title, extraClass, labels) {
     const run = function () {
       return new Promise(function (resolve) {
         if (!dlg || typeof dlg.showModal !== "function") {
@@ -38,6 +38,9 @@
         document.getElementById("dlg-text").textContent = text;
         document.getElementById("dlg-icon").textContent = icons[kind];
         document.getElementById("dlg-cancel").hidden = kind !== "ask";
+        // labels: 확인·취소 버튼의 글자를 이 알림만 바꿀 때(예: 탈퇴·취소). 주지 않으면 기본 글자로 돌아간다. labels.safe 면 취소에 먼저 초점을 둔다.
+        document.getElementById("dlg-ok").textContent = (labels && labels.ok) || "확인";
+        document.getElementById("dlg-cancel").textContent = (labels && labels.cancel) || "취소";
         dlg.className = "dlg dlg-" + kind + (extraClass ? " " + extraClass : "");   // extraClass: 이 알림만 따로 꾸밀 때(예: dlg-fit)
         dlg.addEventListener("close", function onClose() {
           dlg.removeEventListener("close", onClose);
@@ -45,6 +48,7 @@
         });
         dlg.returnValue = "cancel";
         dlg.showModal();
+        if (labels && labels.safe) document.getElementById("dlg-cancel").focus();
       });
     };
     const p = queue.then(run);
@@ -492,7 +496,7 @@
     keepEndAfterStart: keepEndAfterStart,
     notify: function (text, title) { return showDialog(text, "ok", title); },
     warn: function (text, title, extraClass) { return showDialog(text, "warn", title, extraClass); },
-    confirmBox: function (text, title) { return showDialog(text, "ask", title); },
+    confirmBox: function (text, title, labels) { return showDialog(text, "ask", title, undefined, labels); },
     el: el,
     formatSeoul: function (iso) { return seoulTime.format(new Date(iso)); },
     PRIORITY_LABEL: { 1: "높음", 2: "중간", 3: "낮음" }
