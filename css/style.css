@@ -78,11 +78,31 @@ body::before {
 .sub { margin: 4px 0 0; color: var(--muted); font-size: 16px; }
 
 /* ---------- 로그인 화면 (js/auth.js) ---------- */
-.auth-view { width: 100%; max-width: 420px; margin: 0 auto; padding: 40px 16px 24px; }
-.auth-head { display: flex; align-items: center; justify-content: center; gap: 12px; margin-bottom: 16px; }
-.auth-head h1 { margin: 0; font-size: 34px; font-weight: 400; line-height: 1.1; color: var(--pixel-ink); }
-.auth-card { padding: 16px 18px; }
-.auth-card .actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 6px; }
+/* body 가 세로 flex(min-height 100vh)라서 margin: auto 로 브라우저 화면의 가로·세로 가운데에 놓인다. */
+/* 가운데에 오는 것은 로그인 카드다. 제목(마스코트+이름)은 카드 바로 위에 띄워 두어 카드의 위치에 영향을 주지 않는다. */
+.auth-view { position: relative; width: 100%; max-width: 640px; margin: auto; padding: 24px 16px; }
+.auth-head { position: absolute; left: 0; right: 0; bottom: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; text-align: center; }
+.auth-head .mascot { width: 120px; height: 120px; }
+@media (max-width: 760px) { .auth-head .mascot { width: 88px; height: 88px; } }
+/* 화면이 낮으면 제목이 화면 밖으로 나갈 수 있으니, 제목을 카드 위에 이어 붙이고 둘을 함께 가운데에 둔다. */
+@media (max-height: 800px) { .auth-head { position: static; margin-bottom: 20px; } }
+.auth-head h1 { margin: 0; font-size: 44px; font-weight: 400; line-height: 1.1; color: var(--pixel-ink); }
+/* .card 규칙이 파일 뒤쪽에 있어서, 두 클래스를 함께 써서 우선하게 한다. */
+.card.auth-card { padding: 32px 36px; }
+.card.auth-card h2 { margin-bottom: 22px; font-size: 30px; text-align: center; }
+.auth-card label { margin-bottom: 18px; font-size: 18px; }
+.auth-card input { margin-top: 6px; padding: 12px 14px; font-size: 18px; }
+.auth-card .actions { display: flex; flex-wrap: wrap; justify-content: center; gap: 12px; margin-top: 12px; }
+.auth-card .actions button { padding: 10px 20px; font-size: 18px; }
+/* 좁은 화면에서는 버튼을 위아래로 쌓아, 로그인·가입하기 화면의 높이와 위치가 같게 한다. */
+@media (max-width: 560px) {
+  .auth-card .actions { flex-direction: column; align-items: stretch; }
+  .auth-card .actions button { margin: 0; }
+}
+@media (max-width: 480px) {
+  .card.auth-card { padding: 22px 18px; }
+  .auth-head h1 { font-size: 30px; }
+}
 .user-email { margin-right: 10px; font-size: 15px; color: var(--muted); max-width: 220px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .top-right { gap: 6px; }
 

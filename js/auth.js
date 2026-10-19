@@ -108,6 +108,8 @@
       try { await call("logout?scope=global", {}, token); } catch (e) { /* 서버에 닿지 않아도 이 브라우저에서는 끊는다 */ }
     }
     clearSession();
+    // 로그아웃했다는 알림을 보여 주고, 확인을 누르면 로그인 화면으로 돌아간다.
+    if (window.PDS_UTIL) await window.PDS_UTIL.notify("로그아웃되었습니다.", "로그아웃");
     window.location.reload();
   }
 
@@ -143,8 +145,9 @@
     const signup = mode === "signup";
     modeTitle.textContent = signup ? "가입하기" : "로그인";
     submitBtn.textContent = signup ? "가입하기" : "로그인";
-    switchBtn.textContent = signup ? "이미 계정이 있어요. 로그인" : "처음이에요. 가입하기";
+    switchBtn.textContent = signup ? "이미 계정이 있어요" : "처음이에요";
     passIn.autocomplete = signup ? "new-password" : "current-password";
+    emailIn.placeholder = signup ? "이메일 형식을 지켜주세요." : "";
     passIn.placeholder = signup ? MIN_PASSWORD + "자 이상 입력해 주세요." : "";
     showError("");
   }
@@ -189,8 +192,11 @@
     showError("");
     submitBtn.disabled = true;
     try {
-      if (mode === "signup") await signUp(email, password); else await logIn(email, password);
+      const signup = mode === "signup";
+      if (signup) await signUp(email, password); else await logIn(email, password);
       passIn.value = "";   // 입력 칸에서도 바로 지운다
+      // 가입·로그인에 성공하면 알림을 보여 주고, 확인을 누르면 메인 화면으로 넘어간다. (실패는 아래 catch 에서 입력 창 안에 알린다)
+      if (window.PDS_UTIL) await window.PDS_UTIL.notify(signup ? "회원가입이 완료되었습니다." : "로그인되었습니다.", signup ? "회원가입" : "로그인");
       showApp();
     } catch (e) {
       showError(e.message);
