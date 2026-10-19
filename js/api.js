@@ -3,21 +3,33 @@
   const BASE = window.PDS_CONFIG.SUPABASE_URL + "/rest/v1/";
   const KEY = window.PDS_CONFIG.SUPABASE_PUBLISHABLE_KEY;
 
-  async function request(path, options) {
-    const opts = options || {};
-    const headers = { apikey: KEY };
+  // 한 번 보낸다. 로그인한 사람의 접근 토큰을 Authorization 헤더에 싣는다. (주소에는 싣지 않는다)
+  async function send(path, opts, token) {
+    const headers = { apikey: KEY, Authorization: "Bearer " + token };
     if (opts.body !== undefined) headers["Content-Type"] = "application/json";
     if (opts.prefer) headers.Prefer = opts.prefer;
-
-    let res;
     try {
-      res = await fetch(BASE + path, {
+      return await fetch(BASE + path, {
         method: opts.method || "GET",
         headers: headers,
         body: opts.body === undefined ? undefined : JSON.stringify(opts.body)
       });
     } catch (e) {
       throw new Error("서버에 연결하지 못했습니다. 인터넷 연결을 확인해 주세요.");
+    }
+  }
+
+  async function request(path, options) {
+    const opts = options || {};
+    const token = await window.PDS_AUTH.getToken();
+    if (!token) { window.PDS_AUTH.expired(); throw new Error("로그인이 필요합니다."); }
+
+    let res = await send(path, opts, token);
+    if (res.status === 401) {
+      // 접근 토큰이 만료됐을 수 있다. 갱신 토큰으로 한 번만 다시 시도하고, 그래도 안 되면 로그인 화면으로 돌아간다.
+      const fresh = await window.PDS_AUTH.refresh();
+      if (!fresh) { window.PDS_AUTH.expired(); throw new Error("로그인이 만료되었습니다. 다시 로그인해 주세요."); }
+      res = await send(path, opts, fresh.access_token);
     }
 
     if (!res.ok) {

@@ -14,16 +14,41 @@
   <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
-  <header class="top">
+  <!-- 로그인 화면: 로그인하기 전에는 이것만 보인다. 아래 머리말·탭·본문은 로그인한 뒤에만 열린다. -->
+  <section id="auth-view" class="auth-view" aria-labelledby="auth-title">
+    <div class="auth-head">
+      <img class="mascot" src="assets/left.png" alt="" aria-hidden="true" decoding="async">
+      <h1 id="auth-title">프렌드씨 다이어리</h1>
+    </div>
+    <form id="auth-form" class="card auth-card" novalidate>
+      <h2 id="auth-mode-title">로그인</h2>
+      <p class="hint">내 계획과 기록은 로그인한 나만 볼 수 있습니다.</p>
+      <label>이메일
+        <input id="auth-email" name="email" type="email" autocomplete="email" required>
+      </label>
+      <label>비밀번호
+        <input id="auth-password" name="password" type="password" autocomplete="current-password" required>
+      </label>
+      <p class="error" id="auth-error" role="alert" hidden></p>
+      <div class="actions">
+        <button type="submit" id="auth-submit">로그인</button>
+        <button type="button" id="auth-switch" class="ghost">처음이에요. 가입하기</button>
+      </div>
+    </form>
+  </section>
+
+  <header class="top" id="app-top" hidden>
     <img class="mascot" src="assets/left.png" alt="" aria-hidden="true" decoding="async">
     <h1>프렌드씨 다이어리</h1>
     <div class="top-right">
+      <span id="user-email" class="user-email"></span>
       <button type="button" id="export-btn" class="ghost">내려받기</button>
+      <button type="button" id="logout-btn" class="ghost">로그아웃</button>
       <span id="export-msg" hidden></span>
     </div>
   </header>
 
-  <nav class="tabs" role="tablist" aria-label="큰 분류">
+  <nav class="tabs" id="app-tabs" role="tablist" aria-label="큰 분류" hidden>
     <button type="button" role="tab" id="tab-plan" class="tab" aria-controls="plan-col" aria-selected="true">계획</button>
     <span class="tab-line" aria-hidden="true"></span>
     <button type="button" role="tab" id="tab-do" class="tab" aria-controls="tasks-area" aria-selected="false" tabindex="-1">할 일</button>
@@ -31,7 +56,7 @@
     <button type="button" role="tab" id="tab-see" class="tab" aria-controls="review-area" aria-selected="false" tabindex="-1">돌아보기</button>
   </nav>
 
-  <main class="board">
+  <main class="board" id="app-board" hidden>
     <div class="col col-one" id="plan-col" role="tabpanel" aria-labelledby="tab-plan">
       <section class="card" aria-labelledby="list-title">
         <div class="card-head plan-head">
@@ -379,15 +404,9 @@
   </dialog>
 
 
+  <!-- 여기서는 로그인에 필요한 것만 불러온다. api.js·app.js 등 앱 코드는 로그인한 뒤 js/auth.js 가 차례로 불러온다. -->
   <script src="js/config.js"></script>
   <script src="js/util.js"></script>
-  <script src="js/api.js"></script>
-  <script src="js/cal.js"></script>
-  <script src="js/app.js"></script>
-  <script src="js/tasks.js"></script>
-  <script src="js/review.js"></script>
-  <script src="js/export.js"></script>
-  <script src="js/tabs.js"></script>
-  <script src="js/fx.js"></script>
+  <script src="js/auth.js"></script>
 </body>
 </html>

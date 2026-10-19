@@ -77,6 +77,15 @@ body::before {
 .top h1 { margin: 0; font-size: 34px; font-weight: 400; line-height: 1.1; color: var(--pixel-ink); }
 .sub { margin: 4px 0 0; color: var(--muted); font-size: 16px; }
 
+/* ---------- 로그인 화면 (js/auth.js) ---------- */
+.auth-view { width: 100%; max-width: 420px; margin: 0 auto; padding: 40px 16px 24px; }
+.auth-head { display: flex; align-items: center; justify-content: center; gap: 12px; margin-bottom: 16px; }
+.auth-head h1 { margin: 0; font-size: 34px; font-weight: 400; line-height: 1.1; color: var(--pixel-ink); }
+.auth-card { padding: 16px 18px; }
+.auth-card .actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 6px; }
+.user-email { margin-right: 10px; font-size: 15px; color: var(--muted); max-width: 220px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.top-right { gap: 6px; }
+
 /* ---------- 구역과 카드 ---------- */
 
 .board { margin-bottom: 24px; }
