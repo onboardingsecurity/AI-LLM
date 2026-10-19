@@ -25,8 +25,13 @@
     if (!token) { window.PDS_AUTH.expired(); throw new Error("로그인이 필요합니다."); }
 
     let res = await send(path, opts, token);
-    if (res.status === 401) {
-      // 접근 토큰이 만료됐을 수 있다. 갱신 토큰으로 한 번만 다시 시도하고, 그래도 안 되면 로그인 화면으로 돌아간다.
+    let authProblem = res.status === 401;
+    if (res.status === 403) {
+      // 다른 기기에서 로그아웃했거나 비밀번호를 바꿔 서버가 세션을 끊은 경우도 같은 길로 간다. (42501 = 로그인 세션 없음)
+      try { authProblem = (await res.clone().json()).code === "42501"; } catch (e) { /* 본문 없음 */ }
+    }
+    if (authProblem) {
+      // 접근 토큰이 만료됐거나 세션이 끊겼을 수 있다. 갱신 토큰으로 한 번만 다시 시도하고, 그래도 안 되면 로그인 화면으로 돌아간다.
       const fresh = await window.PDS_AUTH.refresh();
       if (!fresh) { window.PDS_AUTH.expired(); throw new Error("로그인이 만료되었습니다. 다시 로그인해 주세요."); }
       res = await send(path, opts, fresh.access_token);
@@ -47,20 +52,26 @@
         throw new Error("이미 처리된 요청입니다. 새로고침해서 확인해 주세요.");
       }
       // 우리가 DB 함수에서 직접 쓴 한국어 안내(raise exception)만 그대로 보여 준다.
-      if (code === "P0001" && message) {
+      // PT404 = 내 자료가 아니거나 없는 자료(둘을 구별하지 않는다). 42501 = 권한 없음.
+      if ((code === "P0001" || code === "PT404") && message) {
         throw new Error(message);
+      }
+      if (code === "42501") {
+        throw new Error("권한이 없습니다. 다시 로그인해 주세요.");
       }
       throw new Error("저장하거나 불러오지 못했습니다. (오류 " + res.status + ")");
     }
     return res.status === 204 ? null : res.json();
   }
 
-  const PLAN_FIELDS = ["title", "start_date", "end_date", "priority", "success_criteria", "estimated_minutes"];
-
-  function pick(plan) {
-    const out = {};
-    PLAN_FIELDS.forEach(function (k) { out[k] = plan[k]; });
-    return out;
+  // 읽기는 표(RLS 가 내 행만 돌려줌), 쓰기는 DB 함수(rpc)로만 한다. 함수가 주인을 확인한다. (supabase/auth-lock.sql)
+  // 이쪽에서 user_id 를 보내지 않는다. 주인은 서버가 토큰으로 정한다.
+  function planArgs(plan) {
+    return {
+      p_title: plan.title, p_start_date: plan.start_date, p_end_date: plan.end_date,
+      p_priority: plan.priority, p_success_criteria: plan.success_criteria,
+      p_estimated_minutes: plan.estimated_minutes
+    };
   }
 
   window.PDS_API = {
@@ -68,16 +79,13 @@
       return request("plans?select=*&order=id.asc");
     },
     createPlan: function (plan) {
-      return request("plans", { method: "POST", body: pick(plan), prefer: "return=representation" })
-        .then(function (rows) { return rows[0]; });
+      return request("rpc/create_plan", { method: "POST", body: planArgs(plan) });
     },
     updatePlan: function (id, plan) {
-      return request("plans?id=eq." + encodeURIComponent(id), {
-        method: "PATCH", body: pick(plan), prefer: "return=representation"
-      }).then(function (rows) { return rows[0]; });
+      return request("rpc/update_plan", { method: "POST", body: Object.assign({ p_id: id }, planArgs(plan)) });
     },
     listRevisions: function (planId) {
-      return request("plan_revisions?select=*&plan_id=eq." + encodeURIComponent(planId) + "&order=version.asc");
+      return request("rpc/plan_revisions_of", { method: "POST", body: { p_plan_id: planId } });
     },
 
     // ---- 할 일 (카드 2) ----
@@ -104,30 +112,26 @@
       return request("tasks?" + params.join("&"));
     },
     createTask: function (task) {
-      return request("tasks", {
+      return request("rpc/create_task", {
         method: "POST",
         body: {
-          plan_id: task.plan_id, title: task.title, due_date: task.due_date, priority: task.priority,
-          tags: task.tags, estimated_minutes: task.estimated_minutes
-        },
-        prefer: "return=representation"
-      }).then(function (rows) { return rows[0]; });
+          p_plan_id: task.plan_id, p_title: task.title, p_due_date: task.due_date, p_priority: task.priority,
+          p_tags: task.tags, p_estimated_minutes: task.estimated_minutes
+        }
+      });
     },
     updateTask: function (id, task) {
-      return request("tasks?id=eq." + encodeURIComponent(id), {
-        method: "PATCH",
+      return request("rpc/update_task", {
+        method: "POST",
         body: {
-          title: task.title, due_date: task.due_date, priority: task.priority,
-          tags: task.tags, estimated_minutes: task.estimated_minutes
-        },
-        prefer: "return=representation"
-      }).then(function (rows) { return rows[0]; });
-    },
-    // 지우기: 행을 없애지 않고 지운 시각만 적는다(소프트 삭제). 돌아보기 집계에서 빠진다.
-    deleteTask: function (id) {
-      return request("tasks?id=eq." + encodeURIComponent(id), {
-        method: "PATCH", body: { deleted_at: new Date().toISOString() }, prefer: "return=minimal"
+          p_id: id, p_title: task.title, p_due_date: task.due_date, p_priority: task.priority,
+          p_tags: task.tags, p_estimated_minutes: task.estimated_minutes
+        }
       });
+    },
+    // 지우기: 행을 없애지 않고 지운 시각만 적는다(소프트 삭제). 돌아보기 집계에서 빠진다. (시각은 서버가 정한다)
+    deleteTask: function (id) {
+      return request("rpc/delete_task", { method: "POST", body: { p_id: id } });
     },
     completeTask: function (a) {
       return request("rpc/complete_task", {
