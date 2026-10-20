@@ -1,0 +1,19 @@
+{
+  "name": "ai-llm-passkey-profile",
+  "version": "1.0.0",
+  "description": "자기소개 페이지 + 패스키로 잠근 나만의 자리",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "start": "node server.js",
+    "test": "node test/e2e.mjs"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "dependencies": {
+    "@simplewebauthn/server": "^14.0.3",
+    "express": "^5.3.0",
+    "express-session": "^1.19.0"
+  }
+}
