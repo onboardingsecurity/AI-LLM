@@ -877,6 +877,127 @@
     .naming-card-desc{ font-size: 12px; }
     .naming-grid{ grid-template-columns: repeat(auto-fit, minmax(100px, 1fr)); }
   }
+
+  /* ---------- 공개 / 비공개 경계 + 나만의 자리 (패스키로 잠금) ---------- */
+  .zone-divider{
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+    text-align: center;
+  }
+  .zone-label{
+    font-size: 14px;
+    padding: 6px 14px;
+    border-radius: 999px;
+    border: 1px solid var(--panel-border);
+    background: rgba(16,35,63,0.55);
+  }
+  .zone-private{ border-color: var(--accent-warm); color: #ffe2bd; }
+  .zone-line{
+    width: 100%;
+    border-top: 3px dashed var(--accent-warm);
+  }
+  .private-zone{ margin-top: clamp(24px, 4vh, 40px); }
+
+  .private-panel{
+    background: rgba(8,20,48,0.6);
+    border: 2px dashed var(--accent-warm);
+    border-radius: 14px;
+    padding: clamp(14px, 1.8vw, 20px) clamp(16px, 2vw, 24px);
+  }
+  .private-passkeys{ margin-top: 16px; }
+  .private-lead{ font-weight: 700; word-break: keep-all; }
+  .private-sub{ color: var(--text-muted); font-size: 14px; margin-top: 6px; word-break: keep-all; }
+  .private-sub-title{ font-size: 16px; margin-bottom: 10px; }
+
+  .private-bar{
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-bottom: 14px;
+  }
+  .private-who{ font-weight: 700; color: var(--accent); }
+  .private-list{ display: flex; flex-direction: column; gap: 12px; }
+  .private-item{
+    background: rgba(8,20,48,0.6);
+    border: 1px solid var(--accent-warm);
+    border-radius: 14px;
+    padding: clamp(14px, 1.8vw, 20px) clamp(16px, 2vw, 24px);
+  }
+
+  .auth-actions{ margin-top: 14px; }
+  .auth-btn{
+    background: var(--accent);
+    color: #06110f;
+    border: 0;
+    border-radius: 8px;
+    padding: 9px 16px;
+    font-size: 14px;
+    font-weight: 700;
+    font-family: inherit;
+    cursor: pointer;
+  }
+  .auth-btn:hover{ filter: brightness(1.08); }
+  .auth-btn:focus-visible{ outline: 2px solid #fff; outline-offset: 2px; }
+  .auth-btn:disabled{ opacity: 0.5; cursor: not-allowed; }
+  .auth-btn-quiet{
+    background: transparent;
+    color: var(--text);
+    border: 1px solid var(--panel-border);
+  }
+
+  .auth-details{ margin-top: 18px; }
+  .auth-details summary{ cursor: pointer; font-size: 14px; color: var(--text-muted); }
+  .auth-form{
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    max-width: 420px;
+    margin-top: 12px;
+  }
+  .auth-form label{ font-size: 13px; color: var(--text-muted); margin-top: 6px; }
+  .auth-form input,
+  .auth-form select{
+    background: rgba(255,255,255,0.12);
+    color: var(--text);
+    border: 1px solid var(--panel-border);
+    border-radius: 8px;
+    padding: 8px 10px;
+    font-size: 14px;
+    font-family: inherit;
+  }
+  .auth-form select option{ color: #111; }
+  .auth-form input::placeholder{ color: rgba(255,255,255,0.55); }
+  .auth-form input:focus-visible,
+  .auth-form select:focus-visible{ outline: 2px solid var(--accent); outline-offset: 1px; }
+  .auth-form .auth-btn{ margin-top: 10px; align-self: flex-start; }
+
+  .passkey-list{ list-style: none; display: flex; flex-direction: column; gap: 8px; }
+  .passkey-row{
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 8px;
+    padding: 10px 12px;
+    border: 1px solid var(--panel-border);
+    border-radius: 10px;
+    font-size: 14px;
+  }
+  .passkey-name{ font-weight: 700; }
+  .passkey-meta{ color: var(--text-muted); font-size: 12px; }
+  .passkey-current{ color: var(--accent); font-size: 12px; margin-left: 6px; }
+
+  .auth-status{
+    margin-top: 14px;
+    min-height: 1.6em;
+    font-size: 14px;
+    color: #ffe2bd;
+    word-break: keep-all;
+  }
 </style>
 </head>
 <body>
@@ -1351,6 +1472,59 @@
     </div>
   </section>
 
+  <!-- ===== 여기까지 공개 영역 / 여기부터 비공개 영역 (비공개 내용은 이 파일에 없고, 로그인 뒤 서버가 내려 준다) ===== -->
+  <div class="category zone-divider reveal" role="separator" aria-label="여기까지 공개 영역, 여기부터 비공개 영역">
+    <span class="zone-label zone-public mono">▲ 공개 영역 · 누구나 볼 수 있습니다</span>
+    <span class="zone-line" aria-hidden="true"></span>
+    <span class="zone-label zone-private mono">▼ 🔒 비공개 영역 · 패스키로만 열립니다</span>
+  </div>
+
+  <section class="category private-zone reveal" id="private-section" aria-labelledby="private-title">
+    <h2 class="category-title" id="private-title"><span class="title-badge">🔒</span>나만의 자리</h2>
+
+    <div class="private-panel" id="private-locked">
+      <p class="private-lead">🔒 잠겨 있습니다. 이 자리의 내용은 패스키로 들어온 뒤에만 서버가 내려 줍니다.</p>
+      <p class="private-sub">비밀번호는 없습니다. 이 기기가 서명으로 본인임을 증명합니다.</p>
+      <div class="auth-actions">
+        <button type="button" class="auth-btn" id="btn-login">🔑 패스키로 들어가기</button>
+      </div>
+
+      <details class="auth-details" id="register-details">
+        <summary>패스키 처음 등록하기</summary>
+        <form class="auth-form" id="register-form" autocomplete="off">
+          <label for="reg-account">계정</label>
+          <select id="reg-account" required></select>
+          <label for="reg-name">이 패스키의 이름</label>
+          <input type="text" id="reg-name" maxlength="30" placeholder="예: 내 맥북" required>
+          <label for="reg-code">일회용 설정 코드 (서버를 켠 화면에 표시, 비밀번호 아님)</label>
+          <input type="text" id="reg-code" name="setup-code" autocomplete="off" spellcheck="false" placeholder="XXXXX-XXXXX" required>
+          <button type="submit" class="auth-btn">패스키 만들기</button>
+        </form>
+      </details>
+    </div>
+
+    <div id="private-open" hidden>
+      <div class="private-bar">
+        <p class="private-who" id="private-who"></p>
+        <button type="button" class="auth-btn auth-btn-quiet" id="btn-logout">로그아웃</button>
+      </div>
+      <div class="private-list" id="private-items"></div>
+
+      <div class="private-panel private-passkeys">
+        <h3 class="private-sub-title">내 패스키 목록</h3>
+        <ul class="passkey-list" id="passkey-list"></ul>
+        <p class="private-sub" id="passkey-note"></p>
+        <form class="auth-form" id="add-form" autocomplete="off">
+          <label for="add-name">패스키 하나 더 등록 (기기를 잃어버릴 때 대비)</label>
+          <input type="text" id="add-name" maxlength="30" placeholder="예: 휴대폰" required>
+          <button type="submit" class="auth-btn">패스키 추가</button>
+        </form>
+      </div>
+    </div>
+
+    <p class="auth-status" id="auth-status" role="status" aria-live="polite"></p>
+  </section>
+
   </main>
 
 <div id="img-lightbox">
@@ -1375,6 +1549,7 @@
   <div class="rope-indicator" id="ind-skill-section" role="button" tabindex="0" aria-label="기술로 이동"><span class="rope-indicator-icon">⚙️</span><span class="rope-indicator-label">기술</span></div>
   <div class="rope-indicator" id="ind-role-section" role="button" tabindex="0" aria-label="직무로 이동"><span class="rope-indicator-icon">💼</span><span class="rope-indicator-label">직무</span></div>
   <div class="rope-indicator" id="ind-strength-section" role="button" tabindex="0" aria-label="강점으로 이동"><span class="rope-indicator-icon">❤️</span><span class="rope-indicator-label">강점</span></div>
+  <div class="rope-indicator" id="ind-private-section" role="button" tabindex="0" aria-label="나만의 자리로 이동"><span class="rope-indicator-icon">🔒</span><span class="rope-indicator-label">나만의</span></div>
 </div>
 
 <script>
@@ -1422,7 +1597,8 @@
       { id: 'map-section',      indId: 'ind-map-section' },
       { id: 'skill-section',    indId: 'ind-skill-section' },
       { id: 'role-section',     indId: 'ind-role-section' },
-      { id: 'strength-section', indId: 'ind-strength-section' }
+      { id: 'strength-section', indId: 'ind-strength-section' },
+      { id: 'private-section',  indId: 'ind-private-section' }
     ];
     var sectionRanges = [];
 
@@ -2203,6 +2379,7 @@
     });
   })();
 </script>
+<script src="/auth.js" defer></script>
 
 </body>
 </html>
