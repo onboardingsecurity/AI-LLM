@@ -54,6 +54,8 @@
     <button type="button" role="tab" id="tab-do" class="tab" aria-controls="tasks-area" aria-selected="false" tabindex="-1">할 일</button>
     <span class="tab-line" aria-hidden="true"></span>
     <button type="button" role="tab" id="tab-see" class="tab" aria-controls="review-area" aria-selected="false" tabindex="-1">돌아보기</button>
+    <span class="tab-line" aria-hidden="true"></span>
+    <button type="button" role="tab" id="tab-five" class="tab" aria-controls="five-area" aria-selected="false" tabindex="-1">5일 측정</button>
   </nav>
 
   <main class="board" id="app-board" hidden>
@@ -224,6 +226,18 @@
       <section class="card card-wide" aria-labelledby="h-title">
         <h2 id="h-title">넘긴 기록</h2>
         <ul class="plans" id="h-list"></ul>
+      </section>
+    </div>
+
+    <div class="col col-one" id="five-area" role="tabpanel" aria-labelledby="tab-five" hidden>
+      <section class="card" aria-labelledby="five-title">
+        <div class="card-head task-head">
+          <div class="head-title">
+            <h2 id="five-title">5일 측정</h2>
+            <span class="status" id="five-status" role="status" hidden></span>
+          </div>
+        </div>
+        <div id="five-body" class="five-body"></div>
       </section>
     </div>
   </main>

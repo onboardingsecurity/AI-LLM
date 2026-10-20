@@ -6,7 +6,7 @@
   const btn = document.getElementById("export-btn");
   const msg = document.getElementById("export-msg");
 
-  const TABLES = ["plans", "plan_revisions", "tasks", "executions", "retrospectives"];
+  const TABLES = ["plans", "plan_revisions", "tasks", "executions", "retrospectives", "experiments", "rule_changes"];
 
   function stamp(d) {
     function p(n) { return String(n).padStart(2, "0"); }

@@ -10,7 +10,7 @@
   const LOGIN_FAILED = "이메일 또는 비밀번호가 맞지 않습니다.";   // 비밀번호가 틀렸을 때와 없는 이메일일 때 같은 문구
   const APP_SCRIPTS = [
     "js/api.js", "js/cal.js", "js/app.js", "js/tasks.js",
-    "js/review.js", "js/export.js", "js/tabs.js", "js/fx.js"
+    "js/review.js", "js/five.js", "js/export.js", "js/tabs.js", "js/fx.js"
   ];
 
   let session = readSession();

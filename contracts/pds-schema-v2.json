@@ -1,6 +1,6 @@
 {
   "schema_version": "pds-schema-v2",
-  "description": "플랜두씨 다이어리 최종 데이터베이스 계약. 정의 원본은 supabase/schema.sql 이다.",
+  "description": "플랜두씨 다이어리 최종 데이터베이스 계약. 정의 원본은 supabase/schema.sql 이고, 7번에서 supabase/auth-lock.sql(주인·잠금), auth-session-check.sql(세션 확인), five-day.sql(5일 측정)이 더해졌다.",
   "database": "Supabase (Postgres)",
   "date_rules": {
     "timestamps": "timestamptz. UTC 로 저장하고 화면에서 Asia/Seoul 로 보여 준다.",
@@ -9,7 +9,7 @@
     "input_timestamps": "화면의 시작·끝난 시각 입력은 서울 시간(+09:00)으로 해석해 저장한다."
   },
   "units": {
-    "time": "분(minutes), 정수. 저장할 때와 보여 줄 때 같은 단위를 쓴다.",
+    "time": "분(minutes), 정수. 저장할 때와 보여 줄 때 같은 단위를 쓴다. 5일 측정의 값도 분이다.",
     "priority": "1=높음, 2=중간, 3=낮음 (작을수록 먼저)"
   },
   "tables": {
@@ -25,10 +25,14 @@
         "success_criteria": "text, 1~500자",
         "estimated_minutes": "integer, 0 이상",
         "created_at": "timestamptz",
-        "updated_at": "timestamptz"
+        "updated_at": "timestamptz",
+        "user_id": "uuid, 주인. 서버가 토큰의 사용자로 채운다(auth.users 삭제 시 함께 삭제). 브라우저가 보내지 않는다."
       },
       "relations": [],
-      "rules": ["고치면 plan_revisions 에 그 시점 값이 자동으로 쌓인다.", "브라우저에서 지울 수 없다."]
+      "rules": [
+        "고치면 plan_revisions 에 그 시점 값이 자동으로 쌓인다.",
+        "브라우저에서 지울 수 없다."
+      ]
     },
     "plan_revisions": {
       "purpose": "계획 수정 이력. 만들어질 때(버전 1)와 고쳐질 때마다 한 건씩 쌓는다.",
@@ -43,10 +47,18 @@
         "priority": "smallint",
         "success_criteria": "text",
         "estimated_minutes": "integer",
-        "recorded_at": "timestamptz"
+        "recorded_at": "timestamptz",
+        "user_id": "uuid, 주인. 서버가 토큰의 사용자로 채운다(auth.users 삭제 시 함께 삭제). 브라우저가 보내지 않는다."
       },
-      "relations": [{ "column": "plan_id", "references": "plans.id" }],
-      "rules": ["트리거로만 쌓인다. 브라우저는 읽기만 가능(고치기·지우기 불가)."]
+      "relations": [
+        {
+          "column": "plan_id",
+          "references": "plans.id"
+        }
+      ],
+      "rules": [
+        "트리거로만 쌓인다. 브라우저는 읽기만 가능(고치기·지우기 불가)."
+      ]
     },
     "tasks": {
       "purpose": "계획에 딸린 할 일.",
@@ -63,9 +75,15 @@
         "completed_at": "timestamptz, 없을 수 있음",
         "deleted_at": "timestamptz, 있으면 지운 할 일",
         "created_at": "timestamptz",
-        "updated_at": "timestamptz"
+        "updated_at": "timestamptz",
+        "user_id": "uuid, 주인. 서버가 토큰의 사용자로 채운다(auth.users 삭제 시 함께 삭제). 브라우저가 보내지 않는다."
       },
-      "relations": [{ "column": "plan_id", "references": "plans.id" }],
+      "relations": [
+        {
+          "column": "plan_id",
+          "references": "plans.id"
+        }
+      ],
       "rules": [
         "지우기는 deleted_at 만 채운다(소프트 삭제). 집계에서 제외된다.",
         "status 는 complete_task / reopen_task 함수로만 바뀐다.",
@@ -82,12 +100,18 @@
         "ended_at": "timestamptz, started_at 이상",
         "actual_minutes": "integer, 0 이상, 시작~끝 사이 분(올림) 이하",
         "blocked_reason": "text, 최대 300자, 없을 수 있음",
-        "request_key": "uuid, 유일. 같은 요청을 알아보는 키",
+        "request_key": "uuid, (user_id, request_key) 유일. 같은 요청을 알아보는 키",
         "status": "text, active | canceled",
         "created_at": "timestamptz",
-        "canceled_at": "timestamptz, status=canceled 일 때만"
+        "canceled_at": "timestamptz, status=canceled 일 때만",
+        "user_id": "uuid, 주인. 서버가 토큰의 사용자로 채운다(auth.users 삭제 시 함께 삭제). 브라우저가 보내지 않는다."
       },
-      "relations": [{ "column": "task_id", "references": "tasks.id" }],
+      "relations": [
+        {
+          "column": "task_id",
+          "references": "tasks.id"
+        }
+      ],
       "rules": [
         "한 할 일에 status=active 인 기록은 한 건만(부분 유일 인덱스).",
         "되돌리면 지우지 않고 canceled 로 남긴다. 집계에서 제외된다.",
@@ -104,13 +128,77 @@
         "period_end": "date, period_start 이상",
         "improvement": "text, 1~200자",
         "next_plan_id": "bigint",
-        "created_at": "timestamptz"
+        "created_at": "timestamptz",
+        "user_id": "uuid, 주인. 서버가 토큰의 사용자로 채운다(auth.users 삭제 시 함께 삭제). 브라우저가 보내지 않는다."
       },
       "relations": [
-        { "column": "plan_id", "references": "plans.id" },
-        { "column": "next_plan_id", "references": "plans.id" }
+        {
+          "column": "plan_id",
+          "references": "plans.id"
+        },
+        {
+          "column": "next_plan_id",
+          "references": "plans.id"
+        }
       ],
-      "rules": ["(plan_id, period_start, period_end) 유일: 같은 기간은 한 번만 넘긴다."]
+      "rules": [
+        "(plan_id, period_start, period_end) 유일: 같은 기간은 한 번만 넘긴다."
+      ]
+    },
+    "experiments": {
+      "purpose": "5일 측정에서 1일차에 고정한 값. 사람마다 1건이고 고정한 뒤에는 고칠 수 없다(트리거).",
+      "primary_key": "id",
+      "columns": {
+        "id": "bigint identity",
+        "user_id": "uuid, 유일(사람마다 1건)",
+        "question": "text, 1~200자. 1일차에 답하려는 질문 한 문장",
+        "plan_rule_a": "text, 1~200자. 1·2일차에 쓰는 계획 규칙(규칙 A)",
+        "metric": "text. daily_abs_gap_minutes",
+        "metric_label": "text. 하루 단위 (실제 걸린 시간 − 예상 시간)의 절댓값 합",
+        "unit": "text. 분",
+        "eligibility_rule": "text. 어떤 기록을 세는가",
+        "missing_rule": "text. 값이 빠졌을 때",
+        "duplicate_rule": "text. 값이 중복될 때",
+        "outlier_rule": "text. 값이 유난히 튈 때",
+        "rounding_rule": "text. 반올림",
+        "week_start": "text. 주 시작 요일(월요일)",
+        "started_at": "timestamptz, 서버가 찍는 고정 시각. 이 시각 이후에 입력한 실행 기록만 센다"
+      },
+      "relations": [
+        {
+          "column": "user_id",
+          "references": "auth.users.id"
+        }
+      ],
+      "rules": [
+        "start_experiment 함수로만 만든다. 표에는 읽기 권한만 있고, 고치기는 트리거가 막는다."
+      ]
+    },
+    "rule_changes": {
+      "purpose": "5일 측정 중 계획 규칙을 바꾼 기록. 사람마다 1건. 2일차 기록 뒤, 3일차 기록 앞에서만 만들어진다.",
+      "primary_key": "id",
+      "columns": {
+        "id": "bigint identity",
+        "user_id": "uuid",
+        "experiment_id": "bigint, 유일(한 번만 바꿀 수 있다)",
+        "rule_before": "text. 바꾸기 전 규칙(규칙 A)",
+        "rule_after": "text, 1~200자. 바꾼 규칙(규칙 B)",
+        "reason": "text, 1~300자. 바꾼 이유",
+        "changed_at": "timestamptz, 서버가 찍는 바꾼 시각",
+        "day1_date": "date, 1일차 날짜(서울)",
+        "day2_date": "date, 2일차 날짜(서울), day1_date 보다 뒤",
+        "day1_execution_ids": "bigint[], 1일차로 센 실행 기록 번호",
+        "day2_execution_ids": "bigint[], 2일차로 센 실행 기록 번호"
+      },
+      "relations": [
+        {
+          "column": "experiment_id",
+          "references": "experiments.id"
+        }
+      ],
+      "rules": [
+        "change_rule 함수로만 만든다. 기록이 있는 날이 정확히 2일이고, 2일차 날짜가 오늘(서울)보다 앞일 때만 가능하다."
+      ]
     }
   },
   "functions": {
@@ -118,7 +206,10 @@
     "reopen_task": "되돌리기. 유효한 실행 기록을 canceled 로 바꾸고 할 일을 todo 로 돌린다.",
     "review_tasks": "돌아보기 숫자의 근거 목록. metric = all | done | overdue | blocked.",
     "review_summary": "돌아보기 집계. 숫자는 review_tasks 에서 나오므로 근거 목록과 항상 같다.",
-    "hand_over_improvement": "고칠 점 한 줄을 다음 계획으로 넘긴다. 같은 기간은 한 번만."
+    "hand_over_improvement": "고칠 점 한 줄을 다음 계획으로 넘긴다. 같은 기간은 한 번만.",
+    "start_experiment": "질문과 계획 규칙(A)을 받아 고정한다. 지표·단위·처리 규칙은 함수가 정한 값(experiment_defaults)이다. 두 번째 호출은 거절.",
+    "change_rule": "계획 규칙을 한 번만 바꾼다. 서버가 바꾼 시각을 찍고, 1일차·2일차 기록 번호를 함께 저장한다.",
+    "experiment_report": "5일 측정 화면의 모든 값. 일차별 값·합계·평균·튀는 날·전후 비교를 서버가 계산한다."
   },
   "review_definitions": {
     "plan_count": "그 계획에 딸린, 지우지 않은 할 일 수",
@@ -130,10 +221,26 @@
     "diff_minutes": "actual_minutes - estimated_minutes. 대상이 없으면 0"
   },
   "access": {
-    "login": "없음. 링크를 아는 누구나 읽고 쓸 수 있다. 남이 봐도 괜찮은 내용만 넣는다.",
-    "read": "5개 표 모두 공개",
-    "write_direct": ["plans(만들기·고치기)", "tasks(만들기·고치기·소프트 삭제)"],
-    "write_via_function_only": ["plan_revisions(트리거)", "executions(complete_task, reopen_task)", "retrospectives(hand_over_improvement)"],
-    "delete": "어느 표에서도 불가"
+    "login": "필요. 가입·로그인은 Supabase Auth(JWT). 요청마다 접근 토큰을 Authorization 헤더로 보낸다.",
+    "read": "7개 표 모두 로그인한 본인 행만 읽힌다(RLS '내 것만 읽기' + session_alive). 로그인하지 않으면 401.",
+    "write_direct": [],
+    "write_via_function_only": [
+      "plans(create_plan, update_plan)",
+      "tasks(create_task, update_task, delete_task)",
+      "plan_revisions(트리거)",
+      "executions(complete_task, reopen_task)",
+      "retrospectives(hand_over_improvement)",
+      "experiments(start_experiment)",
+      "rule_changes(change_rule)"
+    ],
+    "delete": "표에 직접 지우기는 불가. 계정 탈퇴(delete_my_account)로 본인 계정과 모든 자료가 함께 지워진다."
+  },
+  "measurement_definitions": {
+    "counted_record": "고정한 뒤에 입력한 실행 기록 중 되돌리지 않았고 지우지 않은 할 일의 것. 끝난 날(서울)과 입력한 날(서울)이 같고, 끝난 시각이 입력 시각보다 1분을 넘게 뒤(미래)가 아니어야 센다.",
+    "day_no": "센 기록이 있는 서로 다른 입력일(서울)을 순서대로 1일차, 2일차… 로 센다. 5일차까지만 센다.",
+    "daily_value": "그날 센 기록의 |actual_minutes − 할 일의 estimated_minutes| 합, 단위 분(정수)",
+    "average": "센 기록이 있는 날들의 하루 값 평균, 소수 첫째 자리까지 반올림",
+    "outlier": "기록 있는 날이 3일 이상일 때 하루 값이 중앙값의 3배 이상이면 표시(빼지는 않는다)",
+    "rule_ab": "규칙 변경 시각 이전에 입력한 기록은 규칙 A, 이후는 규칙 B"
   }
 }

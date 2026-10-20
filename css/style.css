@@ -761,3 +761,17 @@ button.dd-btn.plan-pick, .dd-list[data-for="t-plan"], .dd-list[data-for="r-plan"
 /* 폭죽이 터질 때 퍼지는 얇은 충격 고리 */
 .fx-ring { position: absolute; border: 2px solid rgba(255, 255, 255, 0.9); border-radius: 50%; box-shadow: 0 0 10px rgba(255, 255, 255, 0.7); will-change: transform, opacity; }
 .fx-heart { position: absolute; background-repeat: no-repeat; background-size: 100% 100%; image-rendering: pixelated; will-change: transform, opacity; }
+
+/* ---------- 5일 측정 탭 ---------- */
+#five-area:not([hidden]) { flex: 1 1 auto; align-items: stretch; }
+.five-body { padding: 2px 2px 6px; }
+.five-sec { margin: 0 0 20px; }
+.five-sec h3 { margin: 0 0 8px; font-size: 18px; font-weight: 400; color: var(--pixel-ink); }
+.five-note { margin: 4px 0 10px; font-size: 15px; color: var(--muted); white-space: pre-line; }
+.five-table-wrap { overflow-x: auto; margin: 0 0 8px; }
+.five-table { width: 100%; border-collapse: collapse; font-size: 15px; background: var(--bg); }
+.five-table th, .five-table td { padding: 5px 8px; border: 1px solid var(--line); text-align: left; vertical-align: top; }
+.five-table th { background: var(--tint); font-weight: 400; color: var(--pixel-ink); white-space: nowrap; }
+.five-table .num { text-align: right; }
+.five-table tr.off td { color: var(--muted); background: transparent; }
+.five-form { max-width: 720px; }

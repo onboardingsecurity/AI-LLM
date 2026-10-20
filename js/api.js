@@ -149,7 +149,7 @@
 
     // ---- 내보내기 (카드 5) ---- 정해 둔 표만 읽는다.
     exportTable: function (name) {
-      const allowed = ["plans", "plan_revisions", "tasks", "executions", "retrospectives"];
+      const allowed = ["plans", "plan_revisions", "tasks", "executions", "retrospectives", "experiments", "rule_changes"];
       if (allowed.indexOf(name) < 0) return Promise.reject(new Error("내보낼 수 없는 표입니다."));
       return request(name + "?select=*&order=id.asc");
     },
@@ -185,6 +185,18 @@
     },
     listRetrospectives: function (planId) {
       return request("retrospectives?select=*&plan_id=eq." + encodeURIComponent(planId) + "&order=id.asc");
+    },
+
+    // ---- 5일 측정 (7번 카드 5, supabase/five-day.sql) ----
+    // 하루 값·합계·평균·전후 비교는 모두 DB 함수 experiment_report 가 계산해서 준다. 시각은 서버가 찍는다.
+    experimentReport: function () {
+      return request("rpc/experiment_report", { method: "POST", body: {} });
+    },
+    startExperiment: function (question, planRule) {
+      return request("rpc/start_experiment", { method: "POST", body: { p_question: question, p_plan_rule: planRule } });
+    },
+    changeRule: function (ruleAfter, reason) {
+      return request("rpc/change_rule", { method: "POST", body: { p_rule_after: ruleAfter, p_reason: reason } });
     }
   };
 })();
