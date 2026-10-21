@@ -218,7 +218,7 @@
   async function registerPasskey(fields){
     if(!supported()) return false;
     var opt = await api('POST', '/api/register/options', fields);
-    if(!opt.ok){ say(errorText(opt)); return false; }
+    if(!opt.ok){ if(opt.data && opt.data.error === 'login_required'){ say(''); alert('이미 패스키가 존재합니다. 로그인 후 시도해주세요.'); } else say(errorText(opt)); return false; }
 
     var cred;
     try{
@@ -272,7 +272,7 @@
     try{
       cred = await navigator.credentials.get({ publicKey: requestOptionsFromJSON(opt.data) });
     }catch(e){
-      say(e && e.name === 'NotAllowedError' ? '로그인을 취소했거나 사용할 패스키가 없습니다.' : '패스키로 들어가지 못했습니다.');
+      say(e && e.name === 'NotAllowedError' ? '' : '패스키로 들어가지 못했습니다.');
       return;
     }
 
