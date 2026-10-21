@@ -1,12 +1,12 @@
 {
-  "ranAt": "2026-10-20T22:05:06.320Z",
+  "ranAt": "2026-10-21T06:36:27.201Z",
   "note": "가상 인증기(소프트웨어)로 실행한 서버 시험 결과",
   "results": [
     {
       "id": "T08-C18",
       "desc": "로그인 없이 받은 페이지 소스에 비공개 내용이 없다",
       "pass": true,
-      "evidence": "GET / → 200, 소스 5682645자, 비공개 문장 12개 중 발견 0개"
+      "evidence": "GET / → 200, 소스 5685030자, 비공개 문장 12개 중 발견 0개"
     },
     {
       "id": "T08-C16/C17",
@@ -30,25 +30,25 @@
       "id": "T08-C19/C20",
       "desc": "등록 요청마다 서버가 새 질문을 만들고 값이 서로 다르다",
       "pass": true,
-      "evidence": "질문1=M4VmnXeTbsAEmeRCDUt3owzNGi8g6dxDbg6-l2MPCPo / 질문2=qDgeUEA6S8HsE6dZkOJHsLntXruHmFW2kUUMfzzkwJI"
+      "evidence": "질문1=LVIcXNmAg68itcKdLlW_a5Dt2r288FwupktEYyQf82Q / 질문2=Zhb01ytmmlAReINIutNLwGKA3YdgBFJIO9K2evPzDGA"
     },
     {
       "id": "T08-C25",
       "desc": "등록을 중간에 취소하면 서버에 아무것도 저장되지 않는다",
       "pass": true,
-      "evidence": "취소 뒤 등록 시도 → 400 {\"error\":\"challenge_missing\"}, passkeys.json 계정 수 0"
+      "evidence": "취소 뒤 등록 시도 → 400 {\"error\":\"challenge_missing\"}, 저장소(passkeys.json) 계정 수 0"
     },
     {
       "id": "T08-C21/C24",
       "desc": "등록이 끝나면 서버에 공개키가 이름과 함께 저장된다",
       "pass": true,
-      "evidence": "저장 레코드: {\"id\":\"AW6YCqt5A_K3nqyCU_aePR4Ar-4tfRCKXkznK2MRLCM\",\"name\":\"내 맥북\",\"publicKey\":\"pQECAyYgASFYIKX9J6fEuujYH9xIy-yry_SiwNNDyboye-S3Wmtd0nTOIlggx734dth6KXPi6SPTkHtHk7QHbK4ry4wH0e3WkUs7-Kc\",\"counter\":0}"
+      "evidence": "저장 레코드: {\"id\":\"YUWtbKWKBs6FeEcN1DIVX91djAr0PSj_sHATzOy5pZU\",\"name\":\"내 맥북\",\"publicKey\":\"pQECAyYgASFYIO2lnbU2Vh9kI8QSxfTH69gPrZzdeX0cI8w4BrVrvbX3IlggycP6jORg-I3Hauct6MtwZEYQeUQtDbCXdwznzX6hN6E\",\"counter\":0}"
     },
     {
       "id": "T08-C23",
       "desc": "개인키는 서버로 가지 않는다 (저장소와 요청 기록에 개인키 값이 없다)",
       "pass": true,
-      "evidence": "개인키 값(d) 길이 43자를 passkeys.json·요청 기록에서 검색 → 없음. 등록 요청 본문 필드: id, rawId, type, response{clientDataJSON, attestationObject, transports}"
+      "evidence": "개인키 값(d) 길이 43자를 저장소·요청 기록에서 검색 → 없음. 등록 요청 본문 필드: id, rawId, type, response{clientDataJSON, attestationObject, transports}"
     },
     {
       "id": "T08-C19",
@@ -66,7 +66,7 @@
       "id": "T08-C27/C28",
       "desc": "로그인 요청마다 서버가 새 질문을 보내고 값이 서로 다르다",
       "pass": true,
-      "evidence": "질문1=wpHtaxv8-aKpXkKBe7RGXLlnzaUGlpXKODiMtbtbTDQ / 질문2=zv68Jud1lZQoeYpNpZq54JWPr7KFUBJaWT_Uvq2GGHo → 질문2로 서명, 로그인 200"
+      "evidence": "질문1=DD0etf6OFhyaAHNApgXtuqnDc8lILSgtlD2Wla3ckus / 질문2=cN-SWFhpxnp-2BU2shXFl-2RzSBYCRLz36ByUQHJo1w → 질문2로 서명, 로그인 200"
     },
     {
       "id": "T08-C29/C30",
@@ -84,7 +84,7 @@
       "id": "T08-C31",
       "desc": "지난 로그인의 서명을 새 질문에 붙여 보내도 거절된다",
       "pass": true,
-      "evidence": "새 질문(uTEbk-JBXbp8WtcfWXnA3bzOrtqacAwPpOQXzRmLycU)에 지난 서명 → 401 {\"error\":\"signature_invalid\"}"
+      "evidence": "새 질문(omXO04pImAWCwQW4CO0psysEQHqRJxVbx-GX-f7pXOk)에 지난 서명 → 401 {\"error\":\"signature_invalid\"}"
     },
     {
       "id": "T08-C29",
@@ -108,7 +108,7 @@
       "id": "T08-C42/C43",
       "desc": "한 계정에 패스키가 두 개 등록되고, 목록에 이름과 등록 날짜가 보인다",
       "pass": true,
-      "evidence": "목록: [{\"name\":\"내 맥북\",\"createdAt\":\"2026-10-20T22:05:06.287Z\"},{\"name\":\"휴대폰\",\"createdAt\":\"2026-10-20T22:05:06.302Z\"}] / 두 번째 등록 질문의 제외 목록에 첫 패스키 포함: true"
+      "evidence": "목록: [{\"name\":\"내 맥북\",\"createdAt\":\"2026-10-21T06:36:26.579Z\"},{\"name\":\"휴대폰\",\"createdAt\":\"2026-10-21T06:36:26.860Z\"}] / 두 번째 등록 질문의 제외 목록에 첫 패스키 포함: true"
     },
     {
       "id": "T08-C44",
@@ -166,6 +166,12 @@
     },
     {
       "id": "보안",
+      "desc": "100KB를 넘는 요청 본문은 413으로 거절된다 (서버 오류 500이 아니다)",
+      "pass": true,
+      "evidence": "120KB 본문 → 413 {\"error\":\"payload_too_large\"}"
+    },
+    {
+      "id": "보안",
       "desc": "다른 사이트(Origin)에서 온 상태 변경 요청은 거절된다",
       "pass": true,
       "evidence": "Origin: https://evil.example → 403 {\"error\":\"bad_origin\"}"
@@ -174,7 +180,7 @@
       "id": "T08-C35",
       "desc": "페이지 어디에도 비밀번호 입력 칸이 없다",
       "pass": true,
-      "evidence": "index.html 에서 type=\"password\" 검색 → 0건"
+      "evidence": "public/index.html 에서 type=\"password\" 검색 → 0건"
     }
   ]
 }

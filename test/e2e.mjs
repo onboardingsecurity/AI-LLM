@@ -13,7 +13,35 @@ const PORT = 3100;
 const ORIGIN = `http://localhost:${PORT}`;
 const RP_ID = 'localhost';
 const SETUP_CODE = 'TEST-CODE';
+// 기본: 파일·메모리 저장소로 시험. E2E_STORE=supabase 이면 실제 Supabase 테이블로 같은 시험을 한다.
+// 이때 시험 시작 전에 네 테이블의 모든 행을 지우므로, 연습용 프로젝트에만 쓰고 E2E_ALLOW_WIPE=yes 를 직접 붙여야 한다.
+const USE_SUPABASE = process.env.E2E_STORE === 'supabase';
+let sb = null;
+if (USE_SUPABASE) {
+  if (process.env.E2E_ALLOW_WIPE !== 'yes') throw new Error('E2E_STORE=supabase 는 테이블을 비웁니다. 연습용 프로젝트라면 E2E_ALLOW_WIPE=yes 를 함께 지정하세요.');
+  if (!process.env.SUPABASE_URL || !process.env.SUPABASE_SERVICE_ROLE_KEY) throw new Error('SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY 가 필요합니다.');
+  const { createClient } = await import('@supabase/supabase-js');
+  sb = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY, { auth: { persistSession: false, autoRefreshToken: false } });
+}
+// 임시 폴더는 설정 확인이 끝난 뒤에 만든다 (설정 오류로 끝나도 폴더가 남지 않게)
 const DATA_DIR = fs.mkdtempSync(path.join(os.tmpdir(), 'passkey-e2e-'));
+async function wipeSupabase() {
+  for (const [table, col] of [['passkeys', 'id'], ['sessions', 'sid_hash'], ['challenges', 'value'], ['auth_failures', 'key_hash']]) {
+    const { error } = await sb.from(table).delete().neq(col, '');
+    if (error) throw new Error(`${table} 비우기 실패: ${error.message}`);
+  }
+}
+if (USE_SUPABASE) {
+  try { await wipeSupabase(); } catch (e) { fs.rmSync(DATA_DIR, { recursive: true, force: true }); throw e; }
+}
+
+// 시험이 만든 임시 데이터는 성공·실패와 관계없이 끝에 항상 지운다 (시스템 임시 폴더, Supabase 에 넣은 시험 행)
+async function cleanup() {
+  fs.rmSync(DATA_DIR, { recursive: true, force: true });
+  if (USE_SUPABASE) {
+    try { await wipeSupabase(); } catch (e) { console.error(`시험 데이터 정리 실패: ${e.message}`); }
+  }
+}
 const LOG_FILE = path.join(ROOT, 'logs', 'e2e-log.jsonl');
 const REPORT_FILE = path.join(ROOT, 'logs', 'e2e-report.json');
 const privateData = JSON.parse(fs.readFileSync(path.join(ROOT, 'data', 'private-data.json'), 'utf8')).accounts;
@@ -148,8 +176,19 @@ function check(id, desc, pass, evidence) {
   results.push({ id, desc, pass: !!pass, evidence });
   console.log(`${pass ? 'PASS' : 'FAIL'}  ${id}  ${desc}\n        ${evidence}`);
 }
-const passkeysJson = () => {
-  try { return JSON.parse(fs.readFileSync(path.join(DATA_DIR, 'passkeys.json'), 'utf8')); } catch { return { accounts: {} }; }
+// 저장소에 실제로 들어 있는 패스키 (파일 저장소는 passkeys.json, Supabase 는 passkeys 테이블)
+const passkeysJson = async () => {
+  if (!USE_SUPABASE) {
+    try { return JSON.parse(fs.readFileSync(path.join(DATA_DIR, 'passkeys.json'), 'utf8')); } catch { return { accounts: {} }; }
+  }
+  const { data, error } = await sb.from('passkeys').select('*').order('created_at');
+  if (error) throw new Error(error.message);
+  const accounts = {};
+  for (const r of data) {
+    accounts[r.account_id] ??= { userHandle: r.user_handle, passkeys: [] };
+    accounts[r.account_id].passkeys.push({ id: r.id, name: r.name, publicKey: r.public_key, counter: Number(r.counter), transports: r.transports, deviceType: r.device_type, backedUp: r.backed_up, createdAt: r.created_at, lastUsedAt: r.last_used_at });
+  }
+  return { accounts };
 };
 
 /* ---------- 서버 띄우기 ---------- */
@@ -157,13 +196,17 @@ fs.mkdirSync(path.dirname(LOG_FILE), { recursive: true });
 fs.writeFileSync(LOG_FILE, '');
 const server = spawn('node', ['server.js'], {
   cwd: ROOT,
-  env: { ...process.env, PORT: String(PORT), ORIGIN, DATA_DIR, LOG_FILE, SETUP_CODE },
+  env: {
+    ...process.env, PORT: String(PORT), ORIGIN, DATA_DIR, LOG_FILE, SETUP_CODE,
+    // 배포 환경변수가 시험 서버에 섞여 들어가지 않도록, Supabase 는 시험 모드일 때만 넘긴다
+    ...(USE_SUPABASE ? { SESSION_SECRET: process.env.SESSION_SECRET || crypto.randomBytes(16).toString('hex') } : { SUPABASE_URL: '', SUPABASE_SERVICE_ROLE_KEY: '' }),
+  },
   stdio: ['ignore', 'pipe', 'inherit'],
 });
 let ready = false;
 server.stdout.on('data', (d) => { if (String(d).includes('서버 시작')) ready = true; });
 for (let i = 0; i < 50 && !ready; i++) await new Promise((r) => setTimeout(r, 100));
-if (!ready) { server.kill(); throw new Error('서버가 시작되지 않았습니다'); }
+if (!ready) { server.kill(); await cleanup(); throw new Error('서버가 시작되지 않았습니다'); }
 
 try {
   const secretStrings = Object.values(privateData).flatMap((a) => a.items.flatMap((it) => [it.title, it.body]));
@@ -200,19 +243,19 @@ try {
   await A.req('POST', '/api/register/cancel', {});
   const afterCancel = await A.req('POST', '/api/register/verify', { response: a1.create(opt2.data) });
   check('T08-C25', '등록을 중간에 취소하면 서버에 아무것도 저장되지 않는다',
-    afterCancel.status === 400 && Object.keys(passkeysJson().accounts).length === 0,
-    `취소 뒤 등록 시도 → ${afterCancel.status} ${JSON.stringify(afterCancel.data)}, passkeys.json 계정 수 ${Object.keys(passkeysJson().accounts).length}`);
+    afterCancel.status === 400 && Object.keys((await passkeysJson()).accounts).length === 0,
+    `취소 뒤 등록 시도 → ${afterCancel.status} ${JSON.stringify(afterCancel.data)}, 저장소(${USE_SUPABASE ? 'Supabase passkeys 테이블' : 'passkeys.json'}) 계정 수 ${Object.keys((await passkeysJson()).accounts).length}`);
 
   const reg1 = await A.register(a1, 'account-a', '내 맥북', { setupCode: SETUP_CODE });
-  const stored1 = passkeysJson().accounts['account-a']?.passkeys?.[0];
+  const stored1 = (await passkeysJson()).accounts['account-a']?.passkeys?.[0];
   check('T08-C21/C24', '등록이 끝나면 서버에 공개키가 이름과 함께 저장된다',
     reg1.done?.status === 200 && stored1?.publicKey && stored1.name === '내 맥북',
     `저장 레코드: ${JSON.stringify({ id: stored1?.id, name: stored1?.name, publicKey: stored1?.publicKey, counter: stored1?.counter })}`);
-  const storedText = fs.readFileSync(path.join(DATA_DIR, 'passkeys.json'), 'utf8');
+  const storedText = JSON.stringify(await passkeysJson());
   const logText1 = fs.readFileSync(LOG_FILE, 'utf8');
   check('T08-C23', '개인키는 서버로 가지 않는다 (저장소와 요청 기록에 개인키 값이 없다)',
     !storedText.includes(a1.privateD) && !logText1.includes(a1.privateD),
-    `개인키 값(d) 길이 ${a1.privateD.length}자를 passkeys.json·요청 기록에서 검색 → 없음. 등록 요청 본문 필드: id, rawId, type, response{clientDataJSON, attestationObject, transports}`);
+    `개인키 값(d) 길이 ${a1.privateD.length}자를 저장소·요청 기록에서 검색 → 없음. 등록 요청 본문 필드: id, rawId, type, response{clientDataJSON, attestationObject, transports}`);
 
   const reuse = await A.req('POST', '/api/register/verify', { response: reg1.opt && a1.create(reg1.opt.data) });
   check('T08-C19', '검증이 끝난 등록 질문은 다시 쓸 수 없다', reuse.status === 400,
@@ -345,13 +388,18 @@ try {
     delOther.status === 404 && bStill.data.passkeys.length === 1,
     `A가 B의 패스키 삭제 요청 → ${delOther.status} ${JSON.stringify(delOther.data)}, B의 패스키 ${bStill.data.passkeys.length}개 그대로`);
 
+  const tooBig = await anon.req('POST', '/api/login/options', { pad: 'x'.repeat(120_000) });
+  check('보안', '100KB를 넘는 요청 본문은 413으로 거절된다 (서버 오류 500이 아니다)', tooBig.status === 413,
+    `120KB 본문 → ${tooBig.status} ${JSON.stringify(tooBig.data)}`);
+
   const evil = await A2c.req('DELETE', `/api/passkeys/${encodeURIComponent(a2.id)}`, undefined, { Origin: 'https://evil.example' });
   check('보안', '다른 사이트(Origin)에서 온 상태 변경 요청은 거절된다', evil.status === 403, `Origin: https://evil.example → ${evil.status} ${JSON.stringify(evil.data)}`);
 
-  const noPw = fs.readFileSync(path.join(ROOT, 'index.html'), 'utf8').match(/type="password"/g);
-  check('T08-C35', '페이지 어디에도 비밀번호 입력 칸이 없다', !noPw, `index.html 에서 type="password" 검색 → ${noPw ? noPw.length : 0}건`);
+  const noPw = fs.readFileSync(path.join(ROOT, 'public', 'index.html'), 'utf8').match(/type="password"/g);
+  check('T08-C35', '페이지 어디에도 비밀번호 입력 칸이 없다', !noPw, `public/index.html 에서 type="password" 검색 → ${noPw ? noPw.length : 0}건`);
 } finally {
   server.kill();
+  await cleanup();
 }
 
 const failed = results.filter((r) => !r.pass);
