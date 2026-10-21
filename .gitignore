@@ -3,3 +3,7 @@ node_modules/
 # 실행 중에 생기는 패스키 저장소(공개키)는 저장소에 올리지 않는다
 data/passkeys.json
 data/passkeys.json.tmp
+# Vercel 연결 정보, 로컬 환경변수 (키가 들어갈 수 있다)
+.vercel
+.env.local
+.env*.local
