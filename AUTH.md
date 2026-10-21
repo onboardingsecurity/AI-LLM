@@ -58,8 +58,8 @@
 | 흐름 | 브라우저 (`auth.js`) | 서버 (`server.js`) |
 |---|---|---|
 | 등록 | `public/auth.js` 218줄 `registerPasskey` → 225줄 `credentials.create` | `server.js` 203줄 `/api/register/options`(질문 발급, 설정 코드 확인) → 242줄 `/api/register/verify`(검증, 공개키 저장) · 290줄 `/api/register/cancel` |
-| 로그인 | `public/auth.js` 263줄 `btn-login` 클릭 → 271줄 `credentials.get` | `server.js` 298줄 `/api/login/options`(질문 발급) → 308줄 `/api/login/verify`(서명 검증, 351줄 세션 새로 발급) |
-| 로그아웃 | `public/auth.js` 285줄 `btn-logout` 클릭 | `server.js` 358줄 `/api/logout`(세션 파기) |
+| 로그인 | `public/auth.js` 263줄 `btn-login` 클릭(이미 로그인된 세션이면 새 서명 없이 화면만 갱신) → 273줄 `credentials.get` | `server.js` 298줄 `/api/login/options`(질문 발급) → 308줄 `/api/login/verify`(서명 검증, 351줄 세션 새로 발급) |
+| 로그아웃 | `public/auth.js` 287줄 `btn-logout` 클릭 | `server.js` 358줄 `/api/logout`(세션 파기) |
 | 비공개 조회 | `public/auth.js` 206줄 `refresh` | `server.js` 366줄 `/api/private`, 371줄 `/api/accounts/:id/private` (모두 `requireLogin`, 183줄) |
 
 **거절을 만들어 내는 소스 위치 (T08-C41)**

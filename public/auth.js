@@ -18,7 +18,7 @@
     challenge_missing: '로그인 질문이 없습니다. 처음부터 다시 시도해 주세요.',
     challenge_expired: '질문이 만료되었습니다. 처음부터 다시 시도해 주세요.',
     challenge_already_used: '이미 사용한 질문입니다. 처음부터 다시 시도해 주세요.',
-    unknown_credential: '서버에 등록되어 있지 않은 패스키입니다. (삭제된 패스키일 수 있습니다)',
+    unknown_credential: '서버에 등록되어 있지 않은 패스키입니다.',
     signature_invalid: '서명을 확인하지 못했습니다.',
     registration_invalid: '등록 정보를 확인하지 못했습니다.',
     already_registered: '이미 등록된 패스키입니다.',
@@ -123,7 +123,7 @@
   /* ---------- 화면 전환 ---------- */
   // 로그아웃·잠금 상태에서는 받아 둔 비공개 내용을 화면에서도 지운다
   function showLocked(){
-    openEl.hidden = true;
+    openEl.hidden = true; $('add-form').reset();
     lockedEl.hidden = false;
     $('private-items').textContent = '';
     $('passkey-list').textContent = '';
@@ -225,7 +225,7 @@
       cred = await navigator.credentials.create({ publicKey: creationOptionsFromJSON(opt.data) });
     }catch(e){
       await api('POST', '/api/register/cancel');
-      if(e && e.name === 'InvalidStateError') say('이 기기에 이 계정의 패스키가 이미 있습니다. 다른 기기나 보안 키로 등록해 보세요.');
+      if(e && e.name === 'InvalidStateError'){ var dup = '이미 패스키가 존재합니다. 다른 기기나 보안 키로 등록해 보세요.'; say(dup); alert(dup); }
       else if(e && e.name === 'NotAllowedError') say('패스키 등록을 취소했습니다. 서버에는 아무것도 저장되지 않았습니다.');
       else say('패스키를 만들지 못했습니다. 서버에는 아무것도 저장되지 않았습니다.');
       return false;
@@ -256,13 +256,15 @@
     var s = await api('GET', '/api/session');
     if(!s.data || !s.data.loggedIn){ say(MESSAGES.login_required); return; }
     var ok = await registerPasskey({ account: s.data.account.id, name: $('add-name').value });
-    if(ok){ $('add-form').reset(); await refresh(); }
+    $('add-form').reset(); if(ok){ await refresh(); }
   });
 
   /* ---------- ② 로그인 ---------- */
   $('btn-login').addEventListener('click', async function(){
     if(!supported()) return;
     say('');
+    var now = await api('GET', '/api/session');
+    if(now.data && now.data.loggedIn){ await refresh(); return; }
     var opt = await api('POST', '/api/login/options');
     if(!opt.ok){ say(errorText(opt)); return; }
 
@@ -275,25 +277,25 @@
     }
 
     var done = await api('POST', '/api/login/verify', { response: assertionToJSON(cred) });
-    if(!done.ok){ say(errorText(done)); return; }
-    say('');
+    if(!done.ok){ say(errorText(done)); if(done.data && done.data.error === 'unknown_credential') alert(errorText(done)); return; }
+    var okMsg = '로그인되었습니다.'; say('');
     await refresh();
-    $('private-section').scrollIntoView({ behavior: 'smooth', block: 'start' });
+    alert(okMsg); $('private-section').scrollIntoView({ behavior: 'smooth', block: 'start' });
   });
 
   /* ---------- 로그아웃 ---------- */
   $('btn-logout').addEventListener('click', async function(){
     await api('POST', '/api/logout');
     showLocked();
-    say('로그아웃했습니다. 비공개 내용은 화면에서도 지웠습니다.');
+    var byeMsg = '정상적으로 로그아웃되었습니다.'; say(''); alert(byeMsg);
   });
 
   /* ---------- ④ 패스키 삭제 ---------- */
   async function removePasskey(p){
-    if(!window.confirm('패스키 "' + p.name + '"을(를) 지울까요? 이 패스키로는 더 이상 들어올 수 없습니다.')) return;
+    if(!window.confirm('삭제 시 해당 패스키로는 더 이상 들어올 수 없습니다. 삭제하시겠습니까?')) return;
     var res = await api('DELETE', '/api/passkeys/' + encodeURIComponent(p.id));
     if(!res.ok){ say(errorText(res)); return; }
-    say('패스키 "' + p.name + '"을(를) 지웠습니다. 남은 패스키: ' + res.data.remaining + '개');
+    say(p.name + ' 패스키를 삭제했습니다. 남은 패스키: ' + res.data.remaining + '개');
     await refresh();
   }
 
