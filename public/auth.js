@@ -27,7 +27,7 @@
     bad_origin: '허용되지 않은 출처의 요청입니다.'
   };
 
-  function say(text){ statusEl.textContent = ''; if(text) alert(text); }
+  function say(text){ statusEl.textContent = ''; if(text) alert(text); } var busy = false; function guard(fn){ return async function(ev){ if(ev && ev.type === 'submit') ev.preventDefault(); if(busy) return; busy = true; var bs = Array.prototype.slice.call(document.querySelectorAll('#private-section button')); var was = bs.map(function(b){ return b.disabled; }); bs.forEach(function(b){ b.disabled = true; }); try{ await fn(ev); } finally{ busy = false; bs.forEach(function(b, i){ b.disabled = was[i]; }); } }; } // 결과가 올 때까지 버튼을 막는다
 
   function errorText(res){
     var code = res.data && res.data.error;
@@ -123,7 +123,7 @@
   /* ---------- 화면 전환 ---------- */
   // 로그아웃·잠금 상태에서는 받아 둔 비공개 내용을 화면에서도 지운다
   function showLocked(){
-    openEl.hidden = true; $('add-form').reset();
+    if(!openEl.hidden){ $('register-form').reset(); $('register-details').open = false; } openEl.hidden = true; $('add-form').reset();
     lockedEl.hidden = false;
     $('private-items').textContent = '';
     $('passkey-list').textContent = '';
@@ -193,7 +193,7 @@
       del.className = 'auth-btn auth-btn-quiet';
       del.textContent = '삭제';
       del.disabled = list.length <= 1;
-      del.addEventListener('click', function(){ removePasskey(p); });
+      del.addEventListener('click', guard(function(){ return removePasskey(p); }));
 
       li.append(info, del);
       ul.appendChild(li);
@@ -215,7 +215,7 @@
   }
 
   /* ---------- ① 등록 ---------- */
-  var regBusy = false; async function registerPasskey(fields){ if(regBusy) return false; regBusy = true; var bs = document.querySelectorAll('#register-form button, #add-form button'); bs.forEach(function(b){ b.disabled = true; }); try{ return await registerPasskeyRun(fields); } finally{ regBusy = false; bs.forEach(function(b){ b.disabled = false; }); } } async function registerPasskeyRun(fields){
+  async function registerPasskey(fields){
     if(!supported()) return false;
     var opt = await api('POST', '/api/register/options', fields);
     if(!opt.ok){ if(opt.data && opt.data.error === 'login_required'){ say(''); alert('이미 패스키가 존재합니다. 로그인 후 시도해주세요.'); } else say(errorText(opt)); return false; }
@@ -237,7 +237,7 @@
     return true;
   }
 
-  $('register-form').addEventListener('submit', async function(ev){
+  $('register-form').addEventListener('submit', guard(async function(ev){
     ev.preventDefault();
     var ok = await registerPasskey({
       account: $('reg-account').value,
@@ -249,18 +249,18 @@
       $('register-details').open = false;
       // 등록 완료 알림은 registerPasskey 안에서 이미 띄움
     }
-  });
+  }));
 
-  $('add-form').addEventListener('submit', async function(ev){
+  $('add-form').addEventListener('submit', guard(async function(ev){
     ev.preventDefault();
     var s = await api('GET', '/api/session');
     if(!s.data || !s.data.loggedIn){ say(MESSAGES.login_required); return; }
     var ok = await registerPasskey({ account: s.data.account.id, name: $('add-name').value });
     $('add-form').reset(); if(ok){ await refresh(); }
-  });
+  }));
 
   /* ---------- ② 로그인 ---------- */
-  $('btn-login').addEventListener('click', async function(){
+  $('btn-login').addEventListener('click', guard(async function(){
     if(!supported()) return;
     say('');
     var now = await api('GET', '/api/session');
@@ -281,14 +281,14 @@
     var okMsg = '로그인되었습니다.'; say('');
     await refresh();
     alert(okMsg); $('private-section').scrollIntoView({ behavior: 'smooth', block: 'start' });
-  });
+  }));
 
   /* ---------- 로그아웃 ---------- */
-  $('btn-logout').addEventListener('click', async function(){
+  $('btn-logout').addEventListener('click', guard(async function(){
     await api('POST', '/api/logout');
     showLocked();
     var byeMsg = '정상적으로 로그아웃되었습니다.'; say(''); alert(byeMsg);
-  });
+  }));
 
   /* ---------- ④ 패스키 삭제 ---------- */
   async function removePasskey(p){
