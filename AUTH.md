@@ -87,7 +87,15 @@
 
 `publicKey`는 **공개키**입니다. 비밀번호가 아니며, 이 값만으로는 로그인할 수 없습니다. 개인키는 기기(또는 Google 비밀번호 관리자) 안에만 있고 서버로 전송되지 않습니다. 등록 요청 본문은 `{ response: { id, rawId, type, authenticatorAttachment, clientExtensionResults, response: { clientDataJSON, attestationObject, transports } } }`이고, 이 안에 개인키는 없습니다(`logs/auth-log.jsonl`의 `/api/register/verify` 기록).
 
-**패스키를 저장한 곳 (T08-C26):** 실제 기기(Mac, Chrome)로 등록했습니다.
+**패스키를 저장한 곳 (T08-C26):** 실제 기기(Mac, Chrome)로 등록했습니다. 첫 번째 표는 제출하는 배포 주소(HTTPS)에서 등록한 것이고, 두 번째 표는 `localhost`에서 먼저 시험한 것입니다.
+
+| 배포 주소의 패스키 | 저장 위치 |
+|---|---|
+| 계정 A "배포 테스트 1" (삭제함) | **Google 비밀번호 관리자** |
+| 계정 A "배포 테스트 2" | **내 Chrome** |
+| 계정 B "배포 테스트 B" | **Google 비밀번호 관리자** |
+
+`localhost`에서 먼저 시험한 패스키(제출한 요청·응답 기록 `logs/auth-log.jsonl`은 이쪽입니다):
 
 | 패스키 | 저장 위치 | 서버에 기록된 값 |
 |---|---|---|

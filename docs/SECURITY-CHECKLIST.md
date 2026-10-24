@@ -19,7 +19,7 @@
 
 ### A. 키 값 노출과 관리
 
-| ID | 점검 항목 | 확인 방법 | 상태 | 근거 (2026-10-21) |
+| ID | 점검 항목 | 확인 방법 | 상태 | 근거 (2026-10-24) |
 |---|---|---|---|---|
 | S01 | 비밀키·토큰·API 키 값이 파일에 없다 | 명령 ① | ✅ | 키·토큰·개인키 패턴 검색 결과 없음 |
 | S02 | 세션 비밀·설정 코드가 소스에 박혀 있지 않다 | 명령 ② | ✅ | 세션 비밀은 환경변수 또는 실행 때 무작위 생성, 설정 코드도 환경변수 또는 무작위. Supabase 사용 때는 두 값이 없으면 서버가 시작하지 않음. `TEST-CODE`는 시험 전용 상수 |
@@ -42,7 +42,7 @@
 |---|---|---|---|---|
 | S10 | 기록 파일에서 세션 값·설정 코드가 가려져 있다 | 명령 ⑥ | ✅ | `sid=***masked***`만 존재, `setupCode`는 `***masked***` |
 | S11 | `logs/auth-log.jsonl`(실제 기기 기록)을 올릴지 정했다 | 사용자 결정 | ✅ | 비밀값 없음(세션·설정 코드 가림, 서명은 한 번 쓴 질문에 대한 것이라 재사용 불가). 식별자·공개키는 `localhost` 전용이라 다른 곳에서 쓸 수 없어 **저장소에 포함**하기로 판단. 원하지 않으면 `.gitignore`에 추가
-| S12 | 서버 콘솔·호스팅 로그에 설정 코드가 찍히지 않는다 | `server.js` 402~407줄 | ⏳ | `SETUP_CODE` 환경변수로 고정하면 값을 찍지 않고(코드 확인), Vercel에서는 서버를 listen하지 않으며 Supabase 사용 때 이 환경변수가 필수. 내 컴퓨터에서 무작위 코드를 쓸 때만 콘솔에 출력. 배포 로그에 실제로 없는지는 배포 후 확인 |
+| S12 | 서버 콘솔·호스팅 로그에 설정 코드가 찍히지 않는다 | `server.js` 402~407줄 | ✅ | 배포 Vercel Logs(2026-10-24)의 `register/options` 요청 기록에서 `setupCode`와 쿠키(`sid`), 응답의 `setCookie`가 모두 `***masked***`. `SETUP_CODE` 환경변수로 고정하면 값을 찍지 않고(코드), Vercel에서는 서버를 listen하지 않음 |
 
 ### D. 외부 연결
 
@@ -50,7 +50,7 @@
 |---|---|---|---|---|
 | S13 | 서버·브라우저 코드가 외부로 호출하는 곳을 안다 | 명령 ⑦ | ✅ | `public/auth.js`의 `fetch`는 같은 출처 `/api`만. 서버가 부르는 외부는 `SUPABASE_URL`(환경변수) 한 곳뿐(`store.js`), 소스에 주소가 박혀 있지 않음(증명서 인증 `none` 형식이라 메타데이터 조회도 없음) |
 | S14 | 외부 스크립트가 없고, 외부 자원은 무엇인지 안다 | 명령 ⑧ | ✅ | 스크립트는 `/auth.js`뿐(`public/`로 이동, 내용 동일). 외부는 Google Fonts(1번에서 유래)이며, 방문자 브라우저가 Google에 글꼴을 요청함 |
-| S15 | 의존성 취약점이 없고 내려받는 곳이 npm 공식이다 | 명령 ⑨ | ✅ | `npm audit` 0건, lockfile 106개 모두 `registry.npmjs.org` (`@supabase/supabase-js` 추가 후) |
+| S15 | 의존성 취약점이 없고 내려받는 곳이 npm 공식이다 | 명령 ⑨ | ✅ | `npm audit` 0건(2026-10-24 `body-parser` 2.3.0 → 2.4.0으로 올려 high 1건 해결), lockfile 106개 모두 `registry.npmjs.org` |
 | S16 | 위험한 API(`innerHTML`, `eval`, 쉘 실행)를 쓰지 않는다 | 명령 ⑦ | ✅ | 검색 결과 없음, 화면 출력은 `textContent`만 사용 |
 
 ### E. 시스템 변경
@@ -64,27 +64,27 @@
 
 | ID | 점검 항목 | 확인 방법 | 상태 | 근거 |
 |---|---|---|---|---|
-| S19 | 서버가 폴더·소스·데이터를 주소로 내려 주지 않는다 | 명령 ⑪ | ✅ | 내 컴퓨터 서버에서 `/`, `/auth.js`만 200, `/store.js`, `/server.js`, `/supabase/schema.sql`, `/data/…`, `/node_modules/`, `/.git/config`, `/AUTH.md`, `/logs/…` 모두 404. 배포에서는 `public/`의 두 파일만 정적 제공(나머지는 함수 안에만 있음) — 배포 주소에서 같은 목록을 다시 확인해야 함 |
+| S19 | 서버가 폴더·소스·데이터를 주소로 내려 주지 않는다 | 명령 ⑪ | ✅ | 내 컴퓨터 서버에서 `/`, `/auth.js`만 200, `/store.js`, `/server.js`, `/supabase/schema.sql`, `/data/…`, `/node_modules/`, `/.git/config`, `/AUTH.md`, `/logs/…`, `/docs/…` 모두 404. **배포 주소에서도** `/server.js`, `/store.js`, `/package.json`, `/data/private-data.json`, `/supabase/schema.sql`, `/AUTH.md`, `/.git/config`, `/logs/…`, `/docs/…` 모두 404(2026-10-24) |
 | S20 | 쿠키에 `HttpOnly`·`SameSite`가 있고 https 주소로 켜면 `Secure`가 붙는다 | 명령 ⑪ | ✅ | `HttpOnly; Secure; SameSite=Lax` 확인(임시 서버, https 주소로 설정) |
 | S21 | 다른 출처에서 온 상태 변경 요청을 막는다 | 명령 ⑪, `npm test` | ✅ | `Origin: https://evil.example` → 403 |
 | S22 | 입력 검증과 시도 횟수 제한이 있다 | `server.js` 203줄~, 시험 | ✅ | 이름 1~30자, JSON 100KB 제한(초과는 413 `payload_too_large`, 시험으로 확인), 잘못된 JSON 400, 설정 코드·로그인 실패 5분에 10회 제한. 한계는 `AUTH.md` ⑥ |
-| S23 | 배포 환경의 HTTPS·HSTS·CSP 같은 보안 헤더 | 배포 후 확인 | ⏳ | API는 `Cache-Control: no-store`, `nosniff`, 모든 응답에 `vercel.json`으로 `nosniff`·`X-Frame-Options: DENY`·`Referrer-Policy` 설정(배포 후 확인 필요). HSTS는 호스팅이 처리하는지 확인 필요. CSP는 페이지에 인라인 스크립트가 많아 아직 없음 |
+| S23 | 배포 환경의 HTTPS·HSTS·CSP 같은 보안 헤더 | 배포 후 확인 | ✅ | 배포 응답 헤더에 `Content-Security-Policy`(`vercel.json`), HSTS(max-age 63072000, includeSubDomains, preload), `X-Frame-Options: DENY`, `X-Content-Type-Options: nosniff`, `Referrer-Policy: same-origin`을 확인(2026-10-24). 사용자가 실제 Chrome 콘솔에서 CSP 위반이 없는 것을 확인. 인라인 스크립트가 많아 `script-src`에 `'unsafe-inline'`을 허용하므로 인라인 XSS 자체는 막지 못함(화면 출력이 `textContent`뿐이라 보완). API는 `Cache-Control: no-store` |
 
 ### G. 올리기 직전
 
 | ID | 점검 항목 | 확인 방법 | 상태 | 근거 |
 |---|---|---|---|---|
 | S24 | 커밋·푸시에 들어갈 파일 목록을 확인했다 | 명령 ③ (`git status`) | ✅ | 커밋 대상 확인함: `server.js`, `auth.js`, `index.html`, `AUTH.md`, `docs/`, `data/private-data.json`, `test/`, `logs/`, `package*.json`, `.gitignore`. `data/passkeys.json`·`node_modules`는 제외됨
-| S25 | 원격 저장소의 공개 여부와 소유를 확인했다 | 사용자가 GitHub에서 확인 | ➖ | `gh`가 설치돼 있지 않아 공개 여부를 확인하지 못함. 올리는 내용은 점검을 통과했으므로 공개여도 문제가 되는 값은 없음. 소스 URL로 낼 저장소의 공개 설정은 GitHub에서 사용자가 확인
+| S25 | 원격 저장소의 공개 여부와 소유를 확인했다 | 사용자가 GitHub에서 확인 | ✅ | 사용자 확인(2026-10-24): 시크릿 창에서 소스 URL(`…/tree/ai-passkey-on-my-introduction-page`)이 로그인 없이 열림 = 저장소 공개 |
 
 ### H. Supabase 저장소와 Vercel 배포
 
 | ID | 점검 항목 | 확인 방법 | 상태 | 근거 |
 |---|---|---|---|---|
 | S26 | 서비스 롤 키·Supabase 주소가 소스·문서·기록·브라우저 코드에 없다 | 명령 ①, 명령 ⑫ | ✅ | 키 패턴·`supabase.co`·`sb_secret` 검색 결과 없음. 키는 `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY` 환경변수로만 읽고(`store.js`), 브라우저 코드(`public/auth.js`)에는 Supabase 호출이 없음 |
-| S27 | Supabase 테이블이 공개(anon) 키로 읽히거나 써지지 않는다(RLS 켬, 정책 없음) | `supabase/schema.sql` 적용 뒤 명령 ⑬ | ⏳ | 스키마 적용 뒤 4개 테이블의 RLS가 모두 `true`임을 SQL로 확인함(2026-10-21). 공개 키로 직접 요청해 막히는지(명령 ⑬)는 아직 안 함 |
+| S27 | Supabase 테이블이 공개(anon) 키로 읽히거나 써지지 않는다(RLS 켬, 정책 없음) | `supabase/schema.sql` 적용 뒤 명령 ⑬ | ✅ | `supabase/schema.sql` 적용 뒤 4개 테이블의 RLS가 모두 `true`(2026-10-21). 사용자가 공개(publishable) 키로 직접 요청(명령 ⑬): 4개 테이블 읽기 모두 401, `delete_passkey` 호출 401(2026-10-24) |
 | S28 | 배포 환경에서 필수 설정이 없으면 서버가 시작하지 않는다 | 명령 ⑭ | ✅ | `VERCEL=1`이고 Supabase 키가 없으면 시작 거부, Supabase 사용 때 `SESSION_SECRET`·`SETUP_CODE`가 없으면 시작 거부, DB에 연결할 수 없으면 500 `server_error`만 돌려주고 키는 응답·로그에 없음 |
-| S29 | Supabase 저장소 코드를 실제 Supabase 프로젝트로 시험했다 | `E2E_STORE=supabase npm test` | ➖ | 기본 `npm test`(30개)는 파일·메모리 저장소 기준. Supabase 저장소는 연습용 프로젝트가 있어야 돌릴 수 있고 아직 돌리지 않음. 돌리면 시험이 끝날 때 넣은 행을 모두 지움 |
+| S29 | Supabase 저장소 코드를 실제 Supabase 프로젝트로 시험했다 | `E2E_STORE=supabase npm test` | ✅ | 사용자 실행(2026-10-24): `E2E_STORE=supabase npm test` 30/30 통과(실제 Supabase 테이블, 시작과 끝에 4개 테이블의 모든 행을 지움) |
 
 ## 확인 명령 모음
 
@@ -156,8 +156,8 @@ VERCEL=1 node server.js                                                       # 
 SUPABASE_URL=http://127.0.0.1:9 SUPABASE_SERVICE_ROLE_KEY=x node server.js    # SESSION_SECRET 환경변수가 필요합니다
 ```
 
-## 최근 점검 결과 (2026-10-21, Supabase 저장소 전환 뒤)
+## 최근 점검 결과 (2026-10-24, 배포 직전)
 
 | 구분 | ✅ 통과 | ⏳ 진행중 | ➖ 미확인/사용자 확인 | ❌ 실패 |
 |---|---|---|---|---|
-| 점검 항목 29개 | 24 | 3 (S12, S23, S27) | 2 (S25, S29) | 0 |
+| 점검 항목 29개 | 29 | 0 | 0 | 0 |
