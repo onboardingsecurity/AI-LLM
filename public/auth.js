@@ -1,4 +1,4 @@
-/* 나만의 자리: 패스키 등록·로그인·로그아웃·비공개 자료 조회 (브라우저 쪽)
+/* 나만의 계획: 패스키 등록·로그인·로그아웃·비공개 자료 조회 (브라우저 쪽)
    개인키는 기기 안에서만 쓰이고, 서버로는 공개키와 서명만 보낸다. */
 (function(){
   'use strict';
@@ -10,7 +10,7 @@
 
   var MESSAGES = {
     login_required: '로그인이 필요합니다.',
-    forbidden: '이 계정으로는 할 수 없는 요청입니다.',
+    forbidden: '해당 계정으로 불가능한 요청입니다.',
     bad_setup_code: '설정 코드가 올바르지 않습니다.',
     too_many_attempts: '시도가 너무 많습니다. 잠시 뒤에 다시 해 주세요.',
     name_required: '패스키 이름을 1~30자로 적어 주세요.',
@@ -22,16 +22,16 @@
     signature_invalid: '서명을 확인하지 못했습니다.',
     registration_invalid: '등록 정보를 확인하지 못했습니다.',
     already_registered: '이미 등록된 패스키입니다.',
-    last_passkey: '마지막 패스키는 지울 수 없습니다. 먼저 다른 패스키를 하나 더 등록하세요.',
+    last_passkey: '패스키는 최소 한 개를 유지해야 합니다.',
     not_found: '찾을 수 없습니다.',
     bad_origin: '허용되지 않은 출처의 요청입니다.'
   };
 
-  function say(text){ statusEl.textContent = ''; if(text) alert(text); } var busy = false; function guard(fn){ return async function(ev){ if(ev && ev.type === 'submit') ev.preventDefault(); if(busy) return; busy = true; var bs = Array.prototype.slice.call(document.querySelectorAll('#private-section button')); var was = bs.map(function(b){ return b.disabled; }); bs.forEach(function(b){ b.disabled = true; }); try{ await fn(ev); } finally{ busy = false; bs.forEach(function(b, i){ b.disabled = was[i]; }); } }; } // 결과가 올 때까지 버튼을 막는다
+  function say(text){ statusEl.textContent = ''; if(text) alert(text); } var busy = false; function guard(fn){ return async function(ev){ if(ev && ev.type === 'submit') ev.preventDefault(); if(busy) return; busy = true; var bs = Array.prototype.slice.call(document.querySelectorAll('#private-section button, #register-modal button')); var was = bs.map(function(b){ return b.disabled; }); bs.forEach(function(b){ b.disabled = true; }); try{ await fn(ev); } finally{ busy = false; bs.forEach(function(b, i){ b.disabled = was[i]; }); } }; } // 결과가 올 때까지 버튼을 막는다
 
   function errorText(res){
     var code = res.data && res.data.error;
-    return MESSAGES[code] || ('요청에 실패했습니다. (' + res.status + ')');
+    return MESSAGES[code] || '요청에 실패했습니다.';
   }
 
   async function api(method, url, body){
@@ -116,14 +116,14 @@
 
   function supported(){
     if(window.PublicKeyCredential && navigator.credentials) return true;
-    say('이 브라우저나 기기는 패스키를 지원하지 않습니다. 최신 Chrome·Safari·Edge에서 열어 주세요.');
+    say('해당 브라우저, 기기는 패스키를 지원하지 않습니다.');
     return false;
   }
 
   /* ---------- 화면 전환 ---------- */
   // 로그아웃·잠금 상태에서는 받아 둔 비공개 내용을 화면에서도 지운다
   function showLocked(){
-    if(!openEl.hidden){ $('register-form').reset(); $('register-details').open = false; } openEl.hidden = true; $('add-form').reset();
+    if(!openEl.hidden){ $('register-form').reset(); $('register-modal').hidden = true; } openEl.hidden = true; $('add-form').reset();
     lockedEl.hidden = false;
     $('private-items').textContent = '';
     $('passkey-list').textContent = '';
@@ -133,7 +133,7 @@
   function showOpen(account){
     lockedEl.hidden = true;
     openEl.hidden = false;
-    $('private-who').textContent = '🔓 ' + account.label + '으로 들어와 있습니다';
+    $('private-who').textContent = '🔓 ' + account.label + '로 들어와 있습니다.';
     relayout();
   }
 
@@ -192,14 +192,14 @@
       del.type = 'button';
       del.className = 'auth-btn auth-btn-quiet';
       del.textContent = '삭제';
-      del.disabled = list.length <= 1;
-      del.addEventListener('click', guard(function(){ return removePasskey(p); }));
+      // 하나뿐이어도 누를 수 있게 두고, 누르면 알림만 띄우고 삭제 요청은 보내지 않는다
+      del.addEventListener('click', guard(function(){ if(list.length <= 1){ alert('패스키는 최소 한 개를 유지해야 합니다.'); return; } return removePasskey(p); }));
 
       li.append(info, del);
       ul.appendChild(li);
     });
     $('passkey-note').textContent = list.length <= 1
-      ? '패스키가 하나뿐이라 지울 수 없습니다. 지우면 이 자리에 들어올 방법이 없어지기 때문입니다. 먼저 하나 더 등록하세요.'
+      ? ''
       : '패스키가 ' + list.length + '개 있습니다. 하나를 지워도 나머지로 들어올 수 있습니다.';
   }
 
@@ -218,22 +218,22 @@
   async function registerPasskey(fields){
     if(!supported()) return false;
     var opt = await api('POST', '/api/register/options', fields);
-    if(!opt.ok){ if(opt.data && opt.data.error === 'login_required'){ say(''); alert('이미 패스키가 존재합니다. 로그인 후 시도해주세요.'); } else say(errorText(opt)); return false; }
+    if(!opt.ok){ if(opt.data && opt.data.error === 'login_required'){ say(''); alert('해당 계정은 이미 패스키가 존재합니다.'); } else say(errorText(opt)); return false; }
 
     var cred;
     try{
       cred = await navigator.credentials.create({ publicKey: creationOptionsFromJSON(opt.data) });
     }catch(e){
       await api('POST', '/api/register/cancel');
-      if(e && e.name === 'InvalidStateError'){ var dup = '이미 패스키가 존재합니다. 다른 기기나 보안 키로 등록해 보세요.'; say(dup); }
-      else if(e && e.name === 'NotAllowedError') say('패스키 등록을 취소했습니다. 서버에는 아무것도 저장되지 않았습니다.');
-      else say('패스키를 만들지 못했습니다. 서버에는 아무것도 저장되지 않았습니다.');
+      if(e && e.name === 'InvalidStateError'){ var dup = '해당 위치에 이미 패스키가 존재합니다.'; say(dup); }
+      else if(e && e.name === 'NotAllowedError') say('패스키 등록을 취소했습니다.');
+      else say('패스키 등록에 실패했습니다.');
       return false;
     }
 
     var done = await api('POST', '/api/register/verify', { response: registrationToJSON(cred) });
     if(!done.ok){ say(errorText(done)); return false; }
-    say('패스키 "' + done.data.passkey.name + '"을(를) 등록했습니다. 서버에는 공개키만 저장되었습니다.' + (fields.setupCode ? ' 이제 "패스키로 들어가기"를 눌러 주세요.' : ''));
+    say('서버에 패스키를 등록했습니다.');
     return true;
   }
 
@@ -246,7 +246,7 @@
     });
     if(ok){
       $('register-form').reset();
-      $('register-details').open = false;
+      $('register-modal').hidden = true;
       // 등록 완료 알림은 registerPasskey 안에서 이미 띄움
     }
   }));
@@ -272,13 +272,13 @@
     try{
       cred = await navigator.credentials.get({ publicKey: requestOptionsFromJSON(opt.data) });
     }catch(e){
-      say(e && e.name === 'NotAllowedError' ? '' : '패스키로 들어가지 못했습니다.');
+      say(e && e.name === 'NotAllowedError' ? '' : '패스키 로그인에 실패했습니다.');
       return;
     }
 
     var done = await api('POST', '/api/login/verify', { response: assertionToJSON(cred) });
     if(!done.ok){ say(errorText(done)); return; }
-    var okMsg = '로그인되었습니다.'; say('');
+    var okMsg = '패스키로 로그인되었습니다.'; say('');
     await refresh();
     alert(okMsg); $('private-section').scrollIntoView({ behavior: 'smooth', block: 'start' });
   }));
@@ -292,10 +292,10 @@
 
   /* ---------- ④ 패스키 삭제 ---------- */
   async function removePasskey(p){
-    if(!(await window.askConfirm('삭제 시 해당 패스키로는 더 이상 들어올 수 없습니다. 삭제하시겠습니까?', '삭제'))) return;
+    if(!(await window.askConfirm('삭제 시 해당 패스키로는 더 이상 들어올 수 없습니다.', '확인')) || !(await window.askConfirm('삭제하시겠습니까?', '삭제'))) return;
     var res = await api('DELETE', '/api/passkeys/' + encodeURIComponent(p.id));
     if(!res.ok){ say(errorText(res)); return; }
-    say(p.name + ' 패스키를 삭제했습니다. 남은 패스키: ' + res.data.remaining + '개');
+    say('패스키를 삭제했습니다.');
     await refresh();
   }
 
@@ -404,4 +404,29 @@
   window.askConfirm = function(message, okLabel){
     return new Promise(function(resolve){ show('confirm', message, okLabel, resolve); });
   };
+})();
+
+/* ---------- 처음 등록 창(모달) ---------- */
+(function(){
+  var modal = document.getElementById('register-modal');
+  var openBtn = document.getElementById('btn-register-open');
+  var cancelBtn = document.getElementById('btn-register-cancel');
+  if(!modal || !openBtn || !cancelBtn) return;
+  // 변형(transform)이 있는 조상 안에서는 fixed 위치가 틀어지므로 body 바로 아래로 옮긴다
+  document.body.appendChild(modal);
+  function open(){ modal.hidden = false; document.getElementById('reg-account').focus(); }
+  function close(){ if(cancelBtn.disabled) return; modal.hidden = true; openBtn.focus(); } // 요청이 진행 중이면(버튼이 막힌 동안) 닫지 않는다
+  openBtn.addEventListener('click', open);
+  cancelBtn.addEventListener('click', close);
+  modal.addEventListener('click', function(e){ if(e.target === modal) close(); });
+  document.addEventListener('keydown', function(e){
+    if(modal.hidden || e.defaultPrevented || document.querySelector('.pk-dialog-back')) return;
+    if(e.key === 'Escape'){ e.preventDefault(); close(); return; }
+    if(e.key !== 'Tab') return;
+    var items = Array.prototype.filter.call(modal.querySelectorAll('select, input, button'), function(n){ return !n.disabled; });
+    if(!items.length) return;
+    var first = items[0], last = items[items.length - 1];
+    if(e.shiftKey && document.activeElement === first){ e.preventDefault(); last.focus(); }
+    else if(!e.shiftKey && document.activeElement === last){ e.preventDefault(); first.focus(); }
+  });
 })();
