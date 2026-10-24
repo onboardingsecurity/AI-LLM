@@ -292,7 +292,7 @@
 
   /* ---------- ④ 패스키 삭제 ---------- */
   async function removePasskey(p){
-    if(!window.confirm('삭제 시 해당 패스키로는 더 이상 들어올 수 없습니다. 삭제하시겠습니까?')) return;
+    if(!(await window.askConfirm('삭제 시 해당 패스키로는 더 이상 들어올 수 없습니다. 삭제하시겠습니까?', '삭제'))) return;
     var res = await api('DELETE', '/api/passkeys/' + encodeURIComponent(p.id));
     if(!res.ok){ say(errorText(res)); return; }
     say(p.name + ' 패스키를 삭제했습니다. 남은 패스키: ' + res.data.remaining + '개');
@@ -311,4 +311,97 @@
     });
     await refresh();
   })();
+})();
+
+/* ---------- 알림·확인 창: 브라우저 기본 팝업 대신 이 페이지의 모양으로 ---------- */
+(function(){
+  var style = document.createElement('style');
+  style.textContent = [
+    '.pk-dialog-back{position:fixed;inset:0;z-index:2147483000;display:flex;align-items:center;justify-content:center;padding:16px;background:rgba(4,12,32,0.6);backdrop-filter:blur(3px);animation:pk-fade .15s ease-out}',
+    '.pk-dialog{box-sizing:border-box;width:min(420px,100%);background:rgba(8,20,48,0.96);border:2px dashed var(--accent-warm,#f2a65a);border-radius:14px;padding:20px 22px;color:var(--text,#fff);font-family:inherit;box-shadow:0 18px 48px rgba(0,0,0,0.45);animation:pk-pop .18s ease-out}',
+    '.pk-dialog-title{margin:0 0 8px;font-size:13px;font-weight:700;color:var(--accent,#4fd8c4)}',
+    '.pk-dialog-msg{margin:0;font-size:16px;font-weight:700;line-height:1.55;word-break:keep-all;white-space:pre-line}',
+    '.pk-dialog-actions{display:flex;justify-content:flex-end;gap:10px;margin-top:18px}',
+    '.pk-dialog-actions .auth-btn{min-width:72px}',
+    '.pk-dialog-actions .pk-warn{background:var(--accent-warm,#f2a65a)}',
+    '@keyframes pk-fade{from{opacity:0}to{opacity:1}}',
+    '@keyframes pk-pop{from{opacity:0;transform:translateY(8px) scale(.97)}to{opacity:1;transform:none}}',
+    '@media (prefers-reduced-motion:reduce){.pk-dialog-back,.pk-dialog{animation:none}}'
+  ].join('');
+  document.head.appendChild(style);
+
+  var queue = [], busy = false;
+
+  function el(tag, cls, text){
+    var n = document.createElement(tag);
+    n.className = cls;
+    if(text != null) n.textContent = text;
+    return n;
+  }
+
+  function show(kind, message, okLabel, done){
+    queue.push({ kind: kind, message: String(message), okLabel: okLabel, done: done });
+    if(!busy) next();
+  }
+
+  function next(){
+    var job = queue.shift();
+    if(!job){ busy = false; return; }
+    busy = true;
+    var isConfirm = job.kind === 'confirm';
+    var before = document.activeElement;
+
+    var back = el('div', 'pk-dialog-back');
+    var box = el('div', 'pk-dialog');
+    box.setAttribute('role', isConfirm ? 'alertdialog' : 'dialog');
+    box.setAttribute('aria-modal', 'true');
+    box.setAttribute('aria-labelledby', 'pk-dialog-title');
+    box.setAttribute('aria-describedby', 'pk-dialog-msg');
+    var title = el('p', 'pk-dialog-title', isConfirm ? '🔑 확인' : '🔒 알림');
+    title.id = 'pk-dialog-title';
+    var msg = el('p', 'pk-dialog-msg', job.message);
+    msg.id = 'pk-dialog-msg';
+    var actions = el('div', 'pk-dialog-actions');
+    var ok = el('button', 'auth-btn' + (isConfirm ? ' pk-warn' : ''), job.okLabel || '확인');
+    ok.type = 'button';
+    var cancel = null;
+    if(isConfirm){
+      cancel = el('button', 'auth-btn auth-btn-quiet', '취소');
+      cancel.type = 'button';
+      actions.appendChild(cancel);
+    }
+    actions.appendChild(ok);
+    box.appendChild(title);
+    box.appendChild(msg);
+    box.appendChild(actions);
+    back.appendChild(box);
+    document.body.appendChild(back);
+
+    function close(result){
+      document.removeEventListener('keydown', onKey, true);
+      back.remove();
+      if(before && before.focus) before.focus();
+      job.done(result);
+      next();
+    }
+    function onKey(e){
+      if(e.key === 'Escape'){ e.preventDefault(); close(false); return; }
+      if(e.key !== 'Tab') return;
+      e.preventDefault();
+      if(!cancel) return;
+      (document.activeElement === cancel ? ok : cancel).focus();
+    }
+    ok.addEventListener('click', function(){ close(true); });
+    if(cancel) cancel.addEventListener('click', function(){ close(false); });
+    back.addEventListener('click', function(e){ if(e.target === back) close(false); });
+    document.addEventListener('keydown', onKey, true);
+    // 확인 창은 실수로 지우지 않도록 "취소"에 먼저 초점을 둔다
+    (cancel || ok).focus();
+  }
+
+  // 기존 alert(...) 호출은 그대로 두고, 이 페이지에서만 같은 모양의 창으로 바꾼다
+  window.alert = function(message){ show('alert', message, '확인', function(){}); };
+  window.askConfirm = function(message, okLabel){
+    return new Promise(function(resolve){ show('confirm', message, okLabel, resolve); });
+  };
 })();
