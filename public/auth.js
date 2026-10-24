@@ -6,7 +6,7 @@
   var $ = function(id){ return document.getElementById(id); };
   var lockedEl = $('private-locked');
   var openEl = $('private-open');
-  var statusEl = $('auth-status');
+  var statusEl = $('auth-status'); statusEl.hidden = true; // 아래쪽 글자 줄은 쓰지 않고 알림 창으로 안내한다
 
   var MESSAGES = {
     login_required: '로그인이 필요합니다.',
@@ -27,7 +27,7 @@
     bad_origin: '허용되지 않은 출처의 요청입니다.'
   };
 
-  function say(text){ statusEl.textContent = text || ''; }
+  function say(text){ statusEl.textContent = ''; if(text) alert(text); }
 
   function errorText(res){
     var code = res.data && res.data.error;
@@ -215,7 +215,7 @@
   }
 
   /* ---------- ① 등록 ---------- */
-  async function registerPasskey(fields){
+  var regBusy = false; async function registerPasskey(fields){ if(regBusy) return false; regBusy = true; var bs = document.querySelectorAll('#register-form button, #add-form button'); bs.forEach(function(b){ b.disabled = true; }); try{ return await registerPasskeyRun(fields); } finally{ regBusy = false; bs.forEach(function(b){ b.disabled = false; }); } } async function registerPasskeyRun(fields){
     if(!supported()) return false;
     var opt = await api('POST', '/api/register/options', fields);
     if(!opt.ok){ if(opt.data && opt.data.error === 'login_required'){ say(''); alert('이미 패스키가 존재합니다. 로그인 후 시도해주세요.'); } else say(errorText(opt)); return false; }
@@ -225,7 +225,7 @@
       cred = await navigator.credentials.create({ publicKey: creationOptionsFromJSON(opt.data) });
     }catch(e){
       await api('POST', '/api/register/cancel');
-      if(e && e.name === 'InvalidStateError'){ var dup = '이미 패스키가 존재합니다. 다른 기기나 보안 키로 등록해 보세요.'; say(dup); alert(dup); }
+      if(e && e.name === 'InvalidStateError'){ var dup = '이미 패스키가 존재합니다. 다른 기기나 보안 키로 등록해 보세요.'; say(dup); }
       else if(e && e.name === 'NotAllowedError') say('패스키 등록을 취소했습니다. 서버에는 아무것도 저장되지 않았습니다.');
       else say('패스키를 만들지 못했습니다. 서버에는 아무것도 저장되지 않았습니다.');
       return false;
@@ -233,7 +233,7 @@
 
     var done = await api('POST', '/api/register/verify', { response: registrationToJSON(cred) });
     if(!done.ok){ say(errorText(done)); return false; }
-    say('패스키 "' + done.data.passkey.name + '"을(를) 등록했습니다. 서버에는 공개키만 저장되었습니다.');
+    say('패스키 "' + done.data.passkey.name + '"을(를) 등록했습니다. 서버에는 공개키만 저장되었습니다.' + (fields.setupCode ? ' 이제 "패스키로 들어가기"를 눌러 주세요.' : ''));
     return true;
   }
 
@@ -247,7 +247,7 @@
     if(ok){
       $('register-form').reset();
       $('register-details').open = false;
-      say('패스키를 등록했습니다. 이제 "패스키로 들어가기"를 눌러 주세요.');
+      // 등록 완료 알림은 registerPasskey 안에서 이미 띄움
     }
   });
 
@@ -277,7 +277,7 @@
     }
 
     var done = await api('POST', '/api/login/verify', { response: assertionToJSON(cred) });
-    if(!done.ok){ say(errorText(done)); if(done.data && done.data.error === 'unknown_credential') alert(errorText(done)); return; }
+    if(!done.ok){ say(errorText(done)); return; }
     var okMsg = '로그인되었습니다.'; say('');
     await refresh();
     alert(okMsg); $('private-section').scrollIntoView({ behavior: 'smooth', block: 'start' });
