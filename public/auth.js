@@ -123,7 +123,7 @@
   /* ---------- 화면 전환 ---------- */
   // 로그아웃·잠금 상태에서는 받아 둔 비공개 내용을 화면에서도 지운다
   function showLocked(){
-    if(!openEl.hidden){ $('register-form').reset(); $('register-modal').hidden = true; } openEl.hidden = true; $('add-form').reset();
+    if(!openEl.hidden){ $('register-form').reset(); $('register-modal').hidden = true; } openEl.hidden = true; $('private-title').hidden = true; $('add-form').reset(); // 제목은 로그인했을 때만 보인다
     lockedEl.hidden = false;
     $('private-items').textContent = '';
     $('passkey-list').textContent = '';
@@ -132,7 +132,7 @@
 
   function showOpen(account){
     lockedEl.hidden = true;
-    openEl.hidden = false;
+    openEl.hidden = false; $('private-title').hidden = false;
     $('private-who').textContent = '🔓 ' + account.label + '로 들어와 있습니다.';
     relayout();
   }
@@ -410,14 +410,13 @@
 (function(){
   var modal = document.getElementById('register-modal');
   var openBtn = document.getElementById('btn-register-open');
-  var cancelBtn = document.getElementById('btn-register-cancel');
-  if(!modal || !openBtn || !cancelBtn) return;
+  var submitBtn = modal ? modal.querySelector('button[type="submit"]') : null;
+  if(!modal || !openBtn || !submitBtn) return;
   // 변형(transform)이 있는 조상 안에서는 fixed 위치가 틀어지므로 body 바로 아래로 옮긴다
   document.body.appendChild(modal);
-  function open(){ modal.hidden = false; document.getElementById('reg-account').focus(); }
-  function close(){ if(cancelBtn.disabled) return; modal.hidden = true; openBtn.focus(); } // 요청이 진행 중이면(버튼이 막힌 동안) 닫지 않는다
+  function open(){ document.getElementById('register-form').reset(); modal.hidden = false; document.getElementById('reg-account').focus(); } // 열 때마다 칸을 비운다
+  function close(){ if(submitBtn.disabled) return; modal.hidden = true; openBtn.focus(); } // 요청이 진행 중이면(버튼이 막힌 동안) 닫지 않는다
   openBtn.addEventListener('click', open);
-  cancelBtn.addEventListener('click', close);
   modal.addEventListener('click', function(e){ if(e.target === modal) close(); });
   document.addEventListener('keydown', function(e){
     if(modal.hidden || e.defaultPrevented || document.querySelector('.pk-dialog-back')) return;
