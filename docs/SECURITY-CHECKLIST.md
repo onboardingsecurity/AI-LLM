@@ -156,7 +156,7 @@ VERCEL=1 node server.js                                                       # 
 SUPABASE_URL=http://127.0.0.1:9 SUPABASE_SERVICE_ROLE_KEY=x node server.js    # SESSION_SECRET 환경변수가 필요합니다
 ```
 
-## 최근 점검 결과 (2026-10-25, 배포 직전)
+## 최근 점검 결과 (2026-10-25, 제출 완료)
 
 | 구분 | ✅ 통과 | ⏳ 진행중 | ➖ 미확인/사용자 확인 | ❌ 실패 |
 |---|---|---|---|---|
