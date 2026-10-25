@@ -55,7 +55,7 @@
 
 | ID | 점검 항목 | 확인 방법 | 상태 | 근거 |
 |---|---|---|---|---|
-| S13 | 커밋·푸시에 들어갈 파일 목록을 확인했다 | 스크립트가 목록 출력, 사용자 확인 | ✅ | 사용자 확인(2026-10-26): 올라갈 파일 9개(`.gitignore`, `NARRATIVE.md`, `README.md`, `agent/AGENT-PROMPT.md`, `docs/REQUIREMENTS.md`, `docs/SECURITY-CHECKLIST.md`, `package.json`, `records/README.md`, `scripts/check.mjs`). 기록 원문(`records/ritual-history-2026-10-23.json`)과 이름 목록(`records/names-to-hide.txt`)은 ignore 되어 올라가지 않음. 커밋과 푸시는 사용자가 직접 함 |
+| S13 | 커밋·푸시에 들어갈 파일 목록을 확인했다 | 스크립트가 목록 출력, 사용자 확인 | ✅ | 사용자 확인(2026-10-26): 올라갈 파일 9개와 사용자가 요청해 추가한 `docs/HANDOFF.md`(`.gitignore`, `NARRATIVE.md`, `README.md`, `agent/AGENT-PROMPT.md`, `docs/REQUIREMENTS.md`, `docs/SECURITY-CHECKLIST.md`, `package.json`, `records/README.md`, `scripts/check.mjs`). 기록 원문(`records/ritual-history-2026-10-23.json`)과 이름 목록(`records/names-to-hide.txt`)은 ignore 되어 올라가지 않음. 커밋과 푸시는 사용자가 직접 함 |
 | S14 | 원격 저장소 공개 여부와 실명 문서의 공개 판단 | 사용자 확인, 올라갈 파일 검색 | ✅ | 사용자 확인(2026-10-26): 저장소는 공개. 실명은 T09-C01이 요구하는 본인 이름이라 문제로 보지 않기로 함. 그 밖에 공개되는 정보를 검색함: 부대·군번·계급·보직, 학교·회사·주소·연락처 없음. 지역은 시·군 수준(경기도 포천), 건강 관련 표현은 "강박", "예민" 정도이고 진단·병력 없음. 동료의 말은 이름 없이 "동료 1, 2, 3"으로만 적힘 |
 | S16 | 제출 파일을 직접 읽어 다른 사람 이름이 없는지 확인했다 | Claude가 파일 전체를 읽고 이름 목록 대조 | ✅ | 2026-10-26 Claude가 `NARRATIVE.md` 212줄을 처음부터 끝까지 읽음. 본인 이름 외 사람 이름·별명·연락처 없음, 동료는 "동료 1, 2, 3"으로만 적힘. 이름 목록 6개를 올라갈 파일 9개와 대조해 0건. 고유명사는 도구 이름(Wazuh)뿐 |
 
