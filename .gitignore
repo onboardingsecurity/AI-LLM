@@ -1,0 +1,7 @@
+node_modules/
+.env
+.env.local
+.env*.local
+# 내 리추얼 기록 원문에는 동료 이름 등이 들어 있다. 저장소에 올리지 않는다.
+records/*
+!records/README.md

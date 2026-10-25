@@ -1,0 +1,15 @@
+{
+  "name": "ai-agent-talking-about-me",
+  "version": "1.0.0",
+  "description": "리추얼 기록에서 내 강점과 이야기를 찾는 에이전트 규칙과 서사 문서",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "check": "node scripts/check.mjs",
+    "check:req": "node scripts/check.mjs req",
+    "check:sec": "node scripts/check.mjs sec"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}
