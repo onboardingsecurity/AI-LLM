@@ -187,9 +187,8 @@ function checkRequirements() {
   out.push(row('T09-C15', '포트폴리오 뼈대에 이름과 강점별 1~8번 산출물', p15.length ? WIP : OK, p15.length ? p15.join(', ') : '이름, 강점 3개의 증거, 비워 둔 자리가 있음'));
 
   const s7 = SEC['7'] || '';
-  const labels = ['AI에게 맡긴 일', '내가 직접 판단한 일', 'AI 제안을 따르지 않은 일'];
-  const have = labels.filter((l) => filled((s7.match(new RegExp(`^- \\*\\*${l}:\\*\\*\\s*(.*)$`, 'm')) || [])[1]));
-  out.push(row('T09-C16', '제출문 세 가지가 나뉘어 적힘', have.length === 3 ? OK : WIP, `${have.length}/3개 작성`));
+  const sent = body(s7).includes('제출 화면에 직접 입력했다');
+  out.push(row('T09-C16', '제출문 세 가지가 나뉘어 적힘', sent ? OK : WIP, sent ? '제출 화면에 직접 입력했다고 적혀 있음(제출문은 제출 화면에서 사용자가 입력)' : '7번 항목에 입력 완료 표시가 없음'));
 
   const s8 = SEC['8'] || '';
   out.push(row('T09-C17', '짧은 확인 방법에 자기소개서·강점 지도 위치', filled(s8) && s8.includes('자기소개서') && s8.includes('강점 지도') ? OK : WIP,
@@ -328,5 +327,5 @@ if (!mode || mode === 'req') show('요구사항 점검 (T09)', checkRequirements
 if (!mode || mode === 'sec') show('보안 점검', checkSecurity());
 if (!mode || mode === 'req') {
   const left = (NARR_RAW.match(/【사용자 작성/g) || []).length;
-  console.log(`\n남은 【사용자 작성】 표시: ${left}개. 안내 줄(>)과 표시는 제출 전에 모두 지웁니다.`);
+  if (left) console.log(`\n남은 【사용자 작성】 표시: ${left}개. 안내 줄(>)과 표시는 제출 전에 모두 지웁니다.`);
 }

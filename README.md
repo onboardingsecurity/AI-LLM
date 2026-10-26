@@ -7,11 +7,10 @@ AI LLM 활용을 위한 저장소
 
 | 파일 | 내용 |
 |---|---|
-| [NARRATIVE.md](NARRATIVE.md) | 제출할 서사 문서. 비어 있는 `【사용자 작성】` 칸을 채움 |
+| [NARRATIVE.md](NARRATIVE.md) | 제출하는 서사 문서 |
 | [agent/AGENT-PROMPT.md](agent/AGENT-PROMPT.md) | 무료 AI 서비스의 새 대화에 붙이는 규칙과 질문 |
 | [docs/REQUIREMENTS.md](docs/REQUIREMENTS.md) | 요구사항 명세서(T09-C01~C26) |
 | [docs/SECURITY-CHECKLIST.md](docs/SECURITY-CHECKLIST.md) | 보안 점검 리스트 |
-| [docs/HANDOFF.md](docs/HANDOFF.md) | 다른 세션에서 이어서 작업할 때 읽는 핸드오프 |
 | [records/](records/README.md) | 리추얼 기록 원문 자리. 저장소에 올라가지 않음 |
 
 ### 점검
