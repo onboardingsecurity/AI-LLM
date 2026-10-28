@@ -1,0 +1,16 @@
+{
+  "hooks": {
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "shell": "bash",
+            "command": "printf '%s' '{\"hookSpecificOutput\":{\"hookEventName\":\"UserPromptSubmit\",\"additionalContext\":\"[내용 점검 규칙 D11] 주제·가설·설문 문항·프롬프트·결과 해석·결론 등 문장을 쓰거나 고치기 전에 docs/REQUIREMENTS.md 2-1절 기준으로 먼저 점검하세요. 비윤리적·비도덕적이거나 대상(직업 종사자, 응답자 등)이 기분 나쁠 수 있으면, 쓰기 전에 짧게 경고하고 대안을 두 가지 이내로 제안해 사용자와 함께 고치세요.\"}}'",
+            "timeout": 10
+          }
+        ]
+      }
+    ]
+  }
+}
