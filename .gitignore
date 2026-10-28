@@ -1,0 +1,9 @@
+# 키와 환경 파일
+.env
+.env.*
+*.pem
+*.key
+
+# 의존성과 제출용 산출물
+node_modules/
+dist/
