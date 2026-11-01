@@ -7,3 +7,6 @@
 # 의존성과 제출용 산출물
 node_modules/
 dist/
+
+# 가게 이름 목록(중복 확인용, 제출물에 넣지 않음)
+data/private/
