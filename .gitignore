@@ -1,0 +1,14 @@
+# 11번 과제: 소설 원고는 공개 저장소에 올리지 않는다 (보안 S08)
+/NOVEL*
+/novel*
+/drafts/
+/scratch/
+
+# 실제 경험 기록 원문과 실명↔가명 목록(records/README.md만 올라감, 보안 S02)
+/records/*
+!/records/README.md
+
+# 키와 설치 폴더
+.env
+.env.*
+node_modules/
