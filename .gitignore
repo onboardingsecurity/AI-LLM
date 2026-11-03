@@ -1,0 +1,12 @@
+# 12번 과제: 소설 원고와 기록 원문, 이름 목록은 공개 저장소에 올리지 않는다 (보안 S02, S08)
+/records/*
+!/records/README.md
+/NOVEL*
+/novel*
+/drafts/
+/scratch/
+
+# 키와 설치 폴더
+.env
+.env.*
+node_modules/
