@@ -1,0 +1,15 @@
+# 키 값과 환경 변수 파일
+.env
+.env.*
+*.pem
+*.key
+
+# 설치물과 산출물
+node_modules/
+dist/
+
+# 배포 도구가 만드는 폴더(Vercel 연결 정보)
+.vercel/
+
+# 운영체제와 편집기가 만드는 파일
+.DS_Store
