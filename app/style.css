@@ -1,0 +1,218 @@
+/* 화면 스타일: 플랜두씨 다이어리(ai-second-plan-do-see-diary), 12번 사이트와 같은 분위기
+   글꼴: 주아체(배민 주아체, Jua, SIL OFL 1.1)  배경·캐릭터·커서: assets/  선택 그림: assets/icons/ (출처는 CREDITS.md)
+   외부 글꼴·이미지 없이 이 폴더의 파일만 쓴다. */
+
+@font-face {
+  font-family: "Jua";
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+  src: url("fonts/jua-regular.ttf") format("truetype");
+}
+
+:root {
+  --bg: #f4f5f7;
+  --panel: rgba(255, 255, 255, 0.8);   /* 흰 바탕 전부가 쓰는 공통 투명도 */
+  --text: #1c2430;
+  --muted: #5b6675;
+  --line: #d5dae1;
+  --accent: #c2410c;                   /* 버튼 등 강조색(주황). 흰 바탕 위 글씨 대비 5.2 */
+  --on-accent: #ffffff;
+  --error: #b3261e;
+  --pixel-ink: #3b2a1e;                /* 픽셀 테두리 색(짙은 갈색) */
+  --tint: #ffe9d2;                     /* 눌림·강조 바탕(연한 주황) */
+  --px2: 0 -2px 0 var(--pixel-ink), 0 2px 0 var(--pixel-ink), -2px 0 0 var(--pixel-ink), 2px 0 0 var(--pixel-ink);
+  --px3: 0 -3px 0 var(--pixel-ink), 0 3px 0 var(--pixel-ink), -3px 0 0 var(--pixel-ink), 3px 0 0 var(--pixel-ink);
+  --drop: 5px 7px 0 rgba(59, 42, 30, 0.2);
+  --bevel: inset -3px -3px 0 rgba(0, 0, 0, 0.25), inset 3px 3px 0 rgba(255, 255, 255, 0.3);
+  color-scheme: light;                 /* 어두운 모드여도 항상 밝은 화면 */
+}
+
+* { box-sizing: border-box; }
+/* 서비스 전체에서 같은 마우스 커서(클릭 위치는 이미지의 뾰족한 끝) */
+* { cursor: url("assets/mouse-cursor.png") 4 0, auto; }
+[hidden] { display: none !important; }
+html, body { margin: 0; }
+html { scrollbar-width: none; }
+html::-webkit-scrollbar { display: none; }
+
+body {
+  min-height: 100vh;
+  padding: 0 16px 16px;
+  background: var(--bg);
+  color: var(--text);
+  font-family: "Jua", "Apple SD Gothic Neo", "Malgun Gothic", system-ui, sans-serif;
+  font-size: 17px;
+  line-height: 1.6;
+  word-break: keep-all;                 /* 한글이 낱말 중간에서 꺾이지 않고 낱말 단위로 줄바꿈 */
+  overflow-wrap: anywhere;             /* 아주 긴 낱말만 예외로 꺾는다 */
+}
+
+/* 배경: 스크롤해도 화면에 고정되고 창 크기에 맞춰 채운다. 화면보다 크게 깔아 가장자리가 잘려 나가게 한다. */
+body::before {
+  content: "";
+  position: fixed;
+  inset: -5% -10%;
+  z-index: -1;
+  background: url("assets/background.png") center / cover no-repeat;
+}
+
+.top, main { max-width: 46rem; margin-left: auto; margin-right: auto; }
+
+/* ---------- 머리말 ---------- */
+.top { display: flex; align-items: center; gap: 12px; padding: 16px 4px 6px; }
+.mascot { flex: none; width: 64px; height: 64px; user-select: none; -webkit-user-drag: none; -webkit-tap-highlight-color: transparent; }
+.top h1 { margin: 0; font-size: 34px; font-weight: 400; line-height: 1.15; color: var(--pixel-ink); }
+.paper { margin: 0 0 2px; font-size: 14px; line-height: 1.4; color: var(--muted); }
+
+/* ---------- 본문 카드 ---------- */
+main {
+  margin-top: 8px;
+  padding: 18px 24px 26px;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  box-shadow: 0 1px 2px rgba(28, 36, 48, .14), 0 4px 10px rgba(28, 36, 48, .12), inset 0 1px 0 #fff;
+}
+.lead {
+  margin: 4px 4px 18px; padding: 8px 16px; background: #fff;
+  font-size: 19px; line-height: 1.55; color: var(--pixel-ink);
+  box-shadow: var(--px3), var(--drop);
+}
+h2 {
+  display: flex; align-items: center; gap: 10px;
+  margin: 18px 0 8px; font-size: 24px; font-weight: 400; line-height: 1.3; color: var(--pixel-ink);
+}
+h2::before {          /* 다이어리 타임라인의 점(네모칸)과 같은 모양 */
+  content: ""; flex: none; width: 14px; height: 14px; background: #fff; box-shadow: var(--px2); margin: 0 3px;
+}
+h2:focus { outline: none; }
+h3 { margin: 0 0 6px; font-size: 20px; font-weight: 400; color: var(--pixel-ink); }
+h4 { margin: 14px 0 2px; font-size: 18px; font-weight: 400; color: var(--pixel-ink); }
+.error { margin: 0 0 10px; color: var(--error); }
+
+/* 화면이 바뀔 때 네 칸으로 끊겨 올라오는 움직임 */
+.screen { animation: screen-in 0.24s steps(4) both; }
+@keyframes screen-in { from { transform: translateY(12px); opacity: 0; } to { transform: none; opacity: 1; } }
+
+/* ---------- 픽셀 버튼 ---------- */
+button {
+  font: inherit;
+  font-size: 16px;
+  color: var(--on-accent);
+  background: var(--accent);
+  display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+  padding: 4px 12px; margin: 3px; border: 0; border-radius: 0;
+  box-shadow: var(--px3), var(--bevel);
+}
+button:hover { filter: brightness(1.1); }
+button:active { transform: translateY(3px); }
+button:focus-visible { outline: 4px dashed var(--pixel-ink); outline-offset: 8px; }
+
+/* 보조 버튼: 흰 바탕에 갈색 글씨 */
+button.ghost { color: var(--pixel-ink); background: var(--panel); box-shadow: var(--px2); }
+button.ghost:hover { background: var(--tint); filter: none; }
+button.ghost:active { transform: translateY(2px); }
+
+button.go { width: 100%; margin: 6px 3px 3px; padding: 10px 16px; font-size: 22px; }
+
+/* ---------- 직업 선택: 픽셀 그림과 이름 ---------- */
+.job-list { list-style: none; margin: 8px 0 4px; padding: 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 18px; }
+button.job {
+  position: relative; display: flex; flex-direction: column; align-items: center; gap: 6px;
+  width: 100%; margin: 3px; padding: 12px 8px 10px;
+  background: #fff; color: var(--pixel-ink);
+  box-shadow: var(--px3), var(--drop);
+}
+button.job:hover { background: var(--tint); filter: none; }
+button.job:active { transform: translateY(3px); box-shadow: var(--px3); }
+button.job img.job-art { width: 96px; height: 96px; object-fit: contain; image-rendering: pixelated; pointer-events: none; }
+button.job:hover:not(.off) img.job-art { animation: bob 0.5s steps(2) infinite; }
+@keyframes bob { 0% { transform: translateY(0); } 50% { transform: translateY(-5px); } 100% { transform: translateY(0); } }
+.job-name { font-size: 19px; line-height: 1.3; text-align: center; color: var(--pixel-ink); }
+button.job.off { background: #f3efe6; box-shadow: var(--px3); }
+button.job.off:hover { background: #f3efe6; }
+button.job.off .job-name { color: var(--muted); }
+button.job .lock { position: absolute; right: 8px; top: 8px; width: 28px; height: auto; image-rendering: pixelated; pointer-events: none; }
+
+/* ---------- 가게 입력 ---------- */
+.shops { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; margin: 12px 4px 6px; }
+.shop { padding: 8px 14px 14px; background: #fff; box-shadow: var(--px3), var(--drop); }
+.label, label { display: block; margin: 8px 0 2px; font-size: 15px; color: var(--muted); }
+.chips { display: flex; flex-wrap: wrap; }
+button.chip { padding: 2px 10px; font-size: 16px; }
+button.chip[aria-checked="true"] { color: var(--on-accent); background: var(--accent); box-shadow: var(--px3), var(--bevel); }
+button.chip[aria-checked="true"]:hover { filter: brightness(1.1); background: var(--accent); }
+
+.stepper { display: flex; align-items: center; gap: 4px; }
+.stepper input { flex: 1 1 auto; min-width: 0; }
+button.step { flex: none; width: 34px; height: 34px; padding: 0; font-size: 20px; }
+input {
+  width: 100%; margin: 3px; padding: 5px 10px;
+  font: inherit; font-size: 18px; color: var(--pixel-ink);
+  background: #fff; border: 0; border-radius: 0; box-shadow: var(--px2);
+}
+input::placeholder { color: #9aa3ad; }
+input:focus-visible { outline: 3px dashed var(--pixel-ink); outline-offset: 5px; }
+input[aria-invalid="true"] { background: #fdf2f2; }
+
+/* ---------- 결과 ---------- */
+.result { margin: 22px 4px 4px; padding: 6px 16px 12px; background: #fff; box-shadow: var(--px3), var(--drop); animation: result-pop 0.24s steps(3) both; }
+@keyframes result-pop { from { transform: translateY(8px) scale(0.97); opacity: 0; } to { transform: none; opacity: 1; } }
+.result h3 { margin: 10px 0 4px; font-size: 21px; line-height: 1.4; }
+.quip { margin: 6px 0; padding-left: 22px; position: relative; font-size: 19px; line-height: 1.5; color: var(--pixel-ink); }
+.quip::before { content: ""; position: absolute; left: 0; top: .6em; width: 10px; height: 10px; background: var(--accent); box-shadow: var(--px2); }
+.reasons { margin: 0 0 6px; padding-left: 1.3rem; font-size: 16px; line-height: 1.6; }
+.reasons li { margin: 4px 0; }
+
+/* ---------- 알림·확인 창(<dialog>): 다이어리의 알림 창과 같은 모양 ---------- */
+.dlg {
+  --dlg-tone: var(--accent); --dlg-tint: #ffe9d2;
+  padding: 0; border: 0; background: transparent; color: var(--pixel-ink); font: inherit;
+  width: min(340px, calc(100vw - 48px)); max-width: none; overflow: visible;
+}
+.dlg-ok { --dlg-tone: #1b6e3c; --dlg-tint: #dff3e5; }
+.dlg-warn { --dlg-tone: var(--accent); --dlg-tint: #ffe9d2; }
+.dlg::backdrop { background: rgba(59, 42, 30, 0.5); }
+.dlg[open] { animation: dlg-pop 0.18s steps(4) both; }
+@keyframes dlg-pop { from { transform: translateY(12px) scale(0.94); opacity: 0; } to { transform: none; opacity: 1; } }
+.dlg-box {
+  margin: 0; background: #fff; overflow: visible;
+  box-shadow: 0 -4px 0 var(--pixel-ink), 0 4px 0 var(--pixel-ink), -4px 0 0 var(--pixel-ink), 4px 0 0 var(--pixel-ink),
+              8px 12px 0 rgba(59, 42, 30, 0.35);
+}
+.dlg-bar {
+  display: flex; align-items: center; gap: 10px; padding: 7px 12px;
+  background: repeating-conic-gradient(var(--dlg-tint) 0% 25%, #fff 0% 50%) 0 0 / 16px 16px;
+  border-bottom: 4px solid var(--pixel-ink);
+}
+.dlg-icon {
+  flex: none; display: grid; place-items: center; width: 24px; height: 24px; margin: 0 2px;
+  background: var(--dlg-tone); color: #fff; font-size: 15px; line-height: 1;
+  box-shadow: var(--px2), var(--bevel);
+}
+.dlg-title { margin: 0; font-size: 18px; color: var(--pixel-ink); }
+.dlg-text { margin: 0; padding: 14px 16px 2px; font-size: 17px; line-height: 1.5; white-space: pre-line; overflow-wrap: anywhere; }
+.dlg-actions { display: flex; justify-content: flex-end; padding: 10px 14px 14px; }
+.dlg-actions button { min-width: 68px; }
+
+/* ---------- 클릭 효과(하트, ? , !) ---------- */
+#fx-layer { position: fixed; inset: 0; overflow: hidden; pointer-events: none; z-index: 2000; }
+.fx-heart { position: absolute; image-rendering: pixelated; will-change: transform, opacity; }
+.fx-glyph {
+  position: absolute; font-family: "Jua", "Apple SD Gothic Neo", sans-serif; line-height: 1; white-space: nowrap; will-change: transform, opacity;
+  text-shadow: -1.5px 0 var(--pixel-ink), 1.5px 0 var(--pixel-ink), 0 -1.5px var(--pixel-ink), 0 1.5px var(--pixel-ink),
+               -1.5px -1.5px 0 var(--pixel-ink), 1.5px -1.5px 0 var(--pixel-ink), -1.5px 1.5px 0 var(--pixel-ink), 1.5px 1.5px 0 var(--pixel-ink);
+}
+.mascot[data-fx] { cursor: url("assets/mouse-cursor.png") 4 0, pointer; }
+
+/* ---------- 좁은 화면 ---------- */
+@media (max-width: 36rem) {
+  body { padding: 0 10px 12px; font-size: 16px; }
+  main { padding: 12px 12px 20px; }
+  .top h1 { font-size: 26px; }
+  .mascot { width: 52px; height: 52px; }
+  .lead { font-size: 17px; }
+  .job-list { gap: 14px; }
+  .shops { grid-template-columns: 1fr; }
+}

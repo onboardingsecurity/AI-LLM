@@ -1,0 +1,83 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="referrer" content="no-referrer">
+<title>대구 직업 호칭 가격 비교</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header class="top">
+  <img id="mascot" class="mascot" src="assets/left.png" alt="" width="64" height="64" data-fx="hearts">
+  <div>
+    <p class="paper">논문: 네일샵 시술자 호칭 유형과 손 젤 원톤 가격 수준의 관계: 대구 지역 탐색적 비교</p>
+    <h1>대구 직업 호칭 가격 비교</h1>
+  </div>
+</header>
+
+<main class="card">
+  <noscript><p class="error">이 앱은 자바스크립트가 켜져 있어야 동작합니다.</p></noscript>
+
+  <p class="lead">이 앱은 대구에서 네일샵을 고르는 손님이 두 가게의 호칭과 손 젤 원톤 가격을 넣으면, 그 가격 차이를 호칭 탓으로 볼 근거가 있는지 논문 결과로 알려 주어 돕습니다.</p>
+
+  <section id="screen-jobs" class="screen" aria-labelledby="jobs-title">
+    <h2 id="jobs-title" tabindex="-1">어떤 직업을 비교할까요?</h2>
+    <ul id="job-list" class="job-list"></ul>
+  </section>
+
+  <section id="screen-compare" class="screen" aria-labelledby="compare-title" hidden>
+    <button type="button" id="back" class="ghost">← 직업 다시 고르기</button>
+    <h2 id="compare-title" tabindex="-1">가게 두 곳을 비교해요</h2>
+
+    <form id="compare-form" novalidate>
+      <div class="shops">
+        <section class="shop" aria-labelledby="shop-0-title">
+          <h3 id="shop-0-title">가게 1</h3>
+          <p class="label" id="label-title-0">시술자 호칭</p>
+          <div id="picker-0"></div>
+          <label for="price-0">손 젤 원톤 가격(원)</label>
+          <div class="stepper">
+            <button type="button" class="ghost step" data-target="price-0" data-delta="-1000" aria-label="1,000원 줄이기">−</button>
+            <input id="price-0" type="text" inputmode="numeric" autocomplete="off" maxlength="12" placeholder="예: 35000">
+            <button type="button" class="ghost step" data-target="price-0" data-delta="1000" aria-label="1,000원 늘리기">+</button>
+          </div>
+        </section>
+        <section class="shop" aria-labelledby="shop-1-title">
+          <h3 id="shop-1-title">가게 2</h3>
+          <p class="label" id="label-title-1">시술자 호칭</p>
+          <div id="picker-1"></div>
+          <label for="price-1">손 젤 원톤 가격(원)</label>
+          <div class="stepper">
+            <button type="button" class="ghost step" data-target="price-1" data-delta="-1000" aria-label="1,000원 줄이기">−</button>
+            <input id="price-1" type="text" inputmode="numeric" autocomplete="off" maxlength="12" placeholder="예: 30000">
+            <button type="button" class="ghost step" data-target="price-1" data-delta="1000" aria-label="1,000원 늘리기">+</button>
+          </div>
+        </section>
+      </div>
+      <div class="actions"><button type="submit" class="go">비교하기</button></div>
+    </form>
+
+    <div id="result" class="result" aria-live="polite" hidden></div>
+  </section>
+</main>
+
+<dialog id="app-dialog" class="dlg dlg-warn" aria-labelledby="dlg-title">
+  <form method="dialog" class="dlg-box">
+    <div class="dlg-bar">
+      <span id="dlg-icon" class="dlg-icon" aria-hidden="true">!</span>
+      <p id="dlg-title" class="dlg-title">알림</p>
+    </div>
+    <p id="dlg-text" class="dlg-text"></p>
+    <div class="dlg-actions"><button id="dlg-ok" value="ok">확인</button></div>
+  </form>
+</dialog>
+
+<div id="fx-layer" aria-hidden="true"></div>
+
+<script src="data.js"></script>
+<script src="messages.js"></script>
+<script src="logic.js"></script>
+<script src="script.js"></script>
+</body>
+</html>
