@@ -294,7 +294,7 @@ def approval_status(cands, approved):
 
 # ---------------------------------------------------------------- 쓰기
 # 사이트에는 스크립트·인라인 스타일·외부 리소스가 없으므로 같은 출처의 CSS와 그림만 허용한다.
-CSP = "default-src 'none'; img-src 'self'; style-src 'self'; base-uri 'none'; form-action 'none'"
+CSP = "default-src 'none'; font-src 'self'; img-src 'self'; style-src 'self'; base-uri 'none'; form-action 'none'"
 NAV = (("index.html", "처음"), ("story.html", "이야기"),
        ("numbers.html", "숫자"), ("works.html", "대표작"))
 

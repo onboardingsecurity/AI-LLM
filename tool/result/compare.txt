@@ -1,5 +1,5 @@
 같은 입력으로 두 번 만든 결과 비교: 모두 같음
 같음  d56561dd2ee19e62  candidates.md
 같음  abe83304af06338e  numbers.json
-같음  1ff8f750d39823a9  site/numbers.html
-같음  6713d911f1e5e3c7  site/story.html
+같음  d4e1ca24781a74cc  site/numbers.html
+같음  8cef82e324554a2d  site/story.html
