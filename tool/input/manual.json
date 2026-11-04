@@ -1,0 +1,29 @@
+{
+  "attendance": {
+    "source": "내 출석 기록",
+    "as_of": "2026-11-04",
+    "attended_days": 56,
+    "absent_days": 0
+  },
+  "submissions": {
+    "source": "내 제출 현황",
+    "all_final_confirmed": true,
+    "entries": [
+      {"task": "T01", "date": "2026-09-14"},
+      {"task": "T02", "date": "2026-09-19"},
+      {"task": "T03", "date": "2026-09-22"},
+      {"task": "T04", "date": "2026-10-10"},
+      {"task": "T05", "date": "2026-10-12"},
+      {"task": "T06", "date": "2026-10-19"},
+      {"task": "T07", "date": "2026-10-20"},
+      {"task": "T07", "date": "2026-10-20"},
+      {"task": "T07", "date": "2026-10-24"},
+      {"task": "T08", "date": "2026-10-25"},
+      {"task": "T09", "date": "2026-10-26"},
+      {"task": "T09", "date": "2026-10-26"},
+      {"task": "반 추가 과제", "date": "2026-10-28"},
+      {"task": "T10", "date": "2026-11-01"},
+      {"task": "T11", "date": "2026-11-03"}
+    ]
+  }
+}

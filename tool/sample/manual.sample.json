@@ -1,0 +1,26 @@
+{
+  "attendance": {
+    "source": "샘플",
+    "as_of": "2026-08-19",
+    "attended_days": 6,
+    "absent_days": 0
+  },
+  "submissions": {
+    "source": "샘플",
+    "all_final_confirmed": true,
+    "entries": [
+      {
+        "task": "T01",
+        "date": "2026-08-14"
+      },
+      {
+        "task": "T01",
+        "date": "2026-08-18"
+      },
+      {
+        "task": "T02",
+        "date": "2026-08-19"
+      }
+    ]
+  }
+}
