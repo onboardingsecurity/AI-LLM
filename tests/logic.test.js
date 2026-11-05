@@ -345,6 +345,14 @@ test('알아 둘 점 맨 위: 인상 순위와 인상·가격 순서의 관계�
   assert.ok(script.includes('...logic.paperExtras(result), ...messages.limits'));
 });
 
+test('알아 둘 점에 "차이를 못 찾은 것이 차이가 없다는 증명은 아니다"가 표본 한계 바로 아래에 있다', () => {
+  const i = messages.limits.findIndex((l) => l.includes('표본이 작아요'));
+  assert.ok(i >= 0);
+  assert.equal(messages.limits[i + 1], '차이를 찾지 못했다고 해서, 차이가 없다고 증명한 것은 아니에요.');
+  assert.equal(messages.limits.length, 4);
+  assert.ok(messages.limits.every((l) => l.length <= 70));
+});
+
 test('새 문장에도 인과 단정, 책임 돌리기, 권유, 무관 단정이 없다', () => {
   const texts = [
     ...Object.values(messages.singleHeadline),
@@ -574,7 +582,7 @@ test('서비스 이름이 탭 제목, 첫 화면 제목, README에 같게 들어
   assert.ok(html.includes(`<title>${NAME}</title>`));
   assert.ok(html.includes(`<h1>${NAME}</h1>`));
   const readme = fs.readFileSync(path.join(appDir, 'README.md'), 'utf8');
-  assert.equal(readme.split('\n')[0], `# ${NAME}`);
+  assert.equal(readme.split(/\r?\n/)[0], `# ${NAME}`);
   assert.ok(!/가제|대구 직업 호칭 가격 비교/.test(html + readme), '옛 가제가 남아 있음');
 });
 
