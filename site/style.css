@@ -107,7 +107,7 @@ h2::before {          /* 다이어리 타임라인의 점(네모칸)과 같은 �
 }
 h3 { margin: 22px 0 4px; font-size: 20px; color: var(--pixel-ink); }
 p { margin: 10px 0; }
-.intro { margin: 6px 0 22px; font-size: 21px; line-height: 1.6; }
+.intro { margin: 6px 0 22px; font-size: 19px; line-height: 1.6; }
 .lead { font-size: 22px; line-height: 1.6; color: var(--pixel-ink); }
 .closing {
   margin-top: 28px; padding-top: 16px; font-size: 19px; color: var(--pixel-ink);
