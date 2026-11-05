@@ -37,8 +37,9 @@ html { scrollbar-width: none; }
 html::-webkit-scrollbar { display: none; }
 
 body {
+  display: flex; flex-direction: column;   /* 흰 카드(main)를 브라우저 바닥 직전까지 늘리려고 세로로 쌓는다 */
   min-height: 100vh;
-  padding: 0 16px 16px;
+  padding: 0 16px 24px;
   background: var(--bg);
   color: var(--text);
   font-family: "Jua", "Apple SD Gothic Neo", "Malgun Gothic", system-ui, sans-serif;
@@ -57,38 +58,39 @@ body::before {
   background: url("assets/background.png") center / cover no-repeat;
 }
 
-.top, main { max-width: 46rem; margin-left: auto; margin-right: auto; }
+.top, main { width: 100%; max-width: 46rem; margin-left: auto; margin-right: auto; }
 
 /* ---------- 머리말 ---------- */
-.top { display: flex; align-items: center; gap: 12px; padding: 16px 4px 6px; }
+.top { display: flex; align-items: center; justify-content: center; gap: 16px; padding: 28px 4px 14px; }
+.top > div { text-align: center; }
 .mascot { flex: none; width: 64px; height: 64px; user-select: none; -webkit-user-drag: none; -webkit-tap-highlight-color: transparent; }
 .top h1 { margin: 0; font-size: 34px; font-weight: 400; line-height: 1.15; color: var(--pixel-ink); }
-.paper { margin: 0 0 2px; font-size: 14px; line-height: 1.4; color: var(--muted); }
 
 /* ---------- 본문 카드 ---------- */
 main {
-  margin-top: 8px;
-  padding: 18px 24px 26px;
+  display: flex; flex-direction: column;   /* 안의 화면이 카드 높이를 채우고, 뒤로 가기 버튼이 카드 맨 아래로 내려가게 한다 */
+  flex: 1 0 auto;                       /* 화면이 길면 카드가 바닥 직전(아래 여백 24px 위)까지 늘어나고, 내용이 길면 내용만큼 커진다 */
+  margin-top: 16px;
+  padding: 32px 40px 20px;
   background: var(--panel);
   border: 1px solid var(--line);
   border-radius: 8px;
   box-shadow: 0 1px 2px rgba(28, 36, 48, .14), 0 4px 10px rgba(28, 36, 48, .12), inset 0 1px 0 #fff;
 }
 .lead {
-  margin: 4px 4px 18px; padding: 8px 16px; background: #fff;
-  font-size: 19px; line-height: 1.55; color: var(--pixel-ink);
+  margin: 4px 4px 0; padding: 18px 24px; background: #fff;
+  font-size: 19px; line-height: 1.75; color: var(--pixel-ink); text-align: center;
   box-shadow: var(--px3), var(--drop);
 }
+/* 첫 문장 아래의 작은 회색 설명(이 서비스가 누구를 어떻게 돕는지) */
+.lead-sub { margin: 14px 4px 56px; font-size: 14px; line-height: 1.6; text-align: center; color: var(--muted); }
 h2 {
-  display: flex; align-items: center; gap: 10px;
-  margin: 18px 0 8px; font-size: 24px; font-weight: 400; line-height: 1.3; color: var(--pixel-ink);
-}
-h2::before {          /* 다이어리 타임라인의 점(네모칸)과 같은 모양 */
-  content: ""; flex: none; width: 14px; height: 14px; background: #fff; box-shadow: var(--px2); margin: 0 3px;
+  display: flex; align-items: center; justify-content: center; gap: 10px; text-align: center;
+  margin: 32px 0 16px; font-size: 24px; font-weight: 400; line-height: 1.3; color: var(--pixel-ink);
 }
 h2:focus { outline: none; }
-h3 { margin: 0 0 6px; font-size: 20px; font-weight: 400; color: var(--pixel-ink); }
-h4 { margin: 14px 0 2px; font-size: 18px; font-weight: 400; color: var(--pixel-ink); }
+h3 { margin: 0 0 12px; font-size: 20px; font-weight: 400; color: var(--pixel-ink); }
+h4 { margin: 26px 0 8px; font-size: 18px; font-weight: 400; color: var(--pixel-ink); }
 .error { margin: 0 0 10px; color: var(--error); }
 
 /* 화면이 바뀔 때 네 칸으로 끊겨 올라오는 움직임 */
@@ -102,7 +104,7 @@ button {
   color: var(--on-accent);
   background: var(--accent);
   display: inline-flex; align-items: center; justify-content: center; gap: 8px;
-  padding: 4px 12px; margin: 3px; border: 0; border-radius: 0;
+  padding: 8px 18px; margin: 5px; border: 0; border-radius: 0;
   box-shadow: var(--px3), var(--bevel);
 }
 button:hover { filter: brightness(1.1); }
@@ -114,13 +116,13 @@ button.ghost { color: var(--pixel-ink); background: var(--panel); box-shadow: va
 button.ghost:hover { background: var(--tint); filter: none; }
 button.ghost:active { transform: translateY(2px); }
 
-button.go { width: 100%; margin: 6px 3px 3px; padding: 10px 16px; font-size: 22px; }
+button.go { width: 100%; margin: 20px 3px 6px; padding: 16px 20px; font-size: 22px; }
 
 /* ---------- 직업 선택: 픽셀 그림과 이름 ---------- */
-.job-list { list-style: none; margin: 8px 0 4px; padding: 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 18px; }
+.job-list { list-style: none; margin: 16px 0 8px; padding: 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 28px; }
 button.job {
-  position: relative; display: flex; flex-direction: column; align-items: center; gap: 6px;
-  width: 100%; margin: 3px; padding: 12px 8px 10px;
+  position: relative; display: flex; flex-direction: column; align-items: center; gap: 12px;
+  width: 100%; margin: 3px; padding: 20px 12px 18px;
   background: #fff; color: var(--pixel-ink);
   box-shadow: var(--px3), var(--drop);
 }
@@ -130,25 +132,122 @@ button.job img.job-art { width: 96px; height: 96px; object-fit: contain; image-r
 button.job:hover:not(.off) img.job-art { animation: bob 0.5s steps(2) infinite; }
 @keyframes bob { 0% { transform: translateY(0); } 50% { transform: translateY(-5px); } 100% { transform: translateY(0); } }
 .job-name { font-size: 19px; line-height: 1.3; text-align: center; color: var(--pixel-ink); }
+/* 서비스 선택: 칸이 하나여도 길게 늘어나지 않고 직업 칸 크기를 유지한다(그림과 이름은 직업 칸과 같다) */
+.service-list { grid-template-columns: repeat(auto-fit, minmax(140px, 200px)); justify-content: center; }
 button.job.off { background: #f3efe6; box-shadow: var(--px3); }
 button.job.off:hover { background: #f3efe6; }
 button.job.off .job-name { color: var(--muted); }
+/* 직업 선택은 한 줄에 세 칸(위 세 개, 아래 세 개). 좁은 화면에서는 두 칸 */
+.job-list:not(.service-list) { grid-template-columns: repeat(3, 1fr); }
+/* 완전히 잠긴 칸: 마우스를 올려도, 눌러도 변하지 않고 누를 수 없는 모양의 커서 */
+button.job.sealed, button.job.sealed:hover, button.job.sealed:active { cursor: not-allowed; filter: none; transform: none; background: #f3efe6; box-shadow: var(--px3); }
+button.job.sealed:hover img.job-art { animation: none; }
 button.job .lock { position: absolute; right: 8px; top: 8px; width: 28px; height: auto; image-rendering: pixelated; pointer-events: none; }
 
-/* ---------- 가게 입력 ---------- */
-.shops { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; margin: 12px 4px 6px; }
-.shop { padding: 8px 14px 14px; background: #fff; box-shadow: var(--px3), var(--drop); }
-.label, label { display: block; margin: 8px 0 2px; font-size: 15px; color: var(--muted); }
-.chips { display: flex; flex-wrap: wrap; }
-button.chip { padding: 2px 10px; font-size: 16px; }
-button.chip[aria-checked="true"] { color: var(--on-accent); background: var(--accent); box-shadow: var(--px3), var(--bevel); }
-button.chip[aria-checked="true"]:hover { filter: brightness(1.1); background: var(--accent); }
+/* 서비스 칸과 뒤로 가기 버튼 사이의 가는 선 */
+.divider { height: 0; margin: 36px 4px 18px; border: 0; border-top: 2px solid var(--line); }
+/* 흰 카드가 바닥 직전까지 늘어나므로 지금 보이는 화면이 카드 높이를 채운다. 뒤로 가기 줄(.back-bar)은 화면 밖, 카드 맨 아래에 하나만 있어서
+   화면이 바뀌어도 새로 생기지 않고 그 자리에 그대로 있다. 직업 선택에서는 자리만 두고 보이지 않는다. */
+main > .screen:not([hidden]) { flex: 1 0 auto; display: flex; flex-direction: column; }
+/* 직업·서비스 선택 화면에서 칸 아래 남는 공간을 채우는 누워 있는 공룡 그림(다이어리의 small-space 그림).
+   남는 높이만큼만 보이고(그림이 그 안에서 줄어든다), 창이 낮아 남는 공간이 없으면 자리를 차지하지 않는다. */
+.rest-art { position: relative; flex: 1 1 0; min-height: 0; margin-top: 8px; pointer-events: none; }
+/* 직업 선택에서는 뒤로 가기 줄이 보이지 않으니, 그 자리(약 134px)까지 그림이 쓴다. 줄은 자리만 있고 눌리지 않는다(inert). */
+#screen-jobs .rest-art { margin-bottom: -134px; }
+.rest-art img { position: absolute; top: 0; bottom: 0; left: 50%; transform: translateX(-50%); height: 100%; width: auto; max-width: 100%; object-fit: contain; object-position: center bottom; user-select: none; }
+.screen > h2:first-child { margin-top: 0; }
+#screen-result .result { margin-top: 16px; }   /* 세로로 쌓으면 위아래 여백이 겹치지 않고 더해지므로, 문장 상자 아래 64px만 남긴다 */
+.back-bar { flex: none; margin-top: 36px; }
+.back-bar[data-off="true"] { visibility: hidden; }
+.back-bar .divider { margin: 0 4px 14px; }
 
-.stepper { display: flex; align-items: center; gap: 4px; }
-.stepper input { flex: 1 1 auto; min-width: 0; }
-button.step { flex: none; width: 34px; height: 34px; padding: 0; font-size: 20px; }
+/* 뒤로 가기 버튼: 글자 없이 왼쪽으로 걸어가는 사람 그림만 */
+button.back, button.back:hover, button.back:active {
+  position: relative; display: block; width: min(100%, 360px); height: 72px; margin: 5px auto; padding: 0; overflow: hidden;
+  background: #c9e9f5; image-rendering: pixelated;
+}
+/* 숲은 세 겹(하늘, 나무, 풀밭)이다. 마우스를 올리거나 누르고 있는 동안 가까운 겹일수록 빠르게 오른쪽으로 흘러서
+   (사람은 왼쪽으로 걷고 있으니 숲은 반대로 흐른다) 숲 속을 걸어가는 느낌이 난다. 한 겹은 한 장(240px)씩 이어 붙은 그림이라
+   한 장의 길이만큼 움직이면 처음과 똑같아져 끊김 없이 계속 이어진다. 손을 떼면 처음 모습으로 돌아간다. */
+.back-layer {
+  position: absolute; inset: 0; background-repeat: repeat-x; background-position: 0 0; background-size: auto 100%;
+  image-rendering: pixelated; pointer-events: none;
+}
+.back-sky { background-image: url("assets/icons/back-sky.png"); }
+.back-trees { background-image: url("assets/icons/back-trees.png"); }
+.back-ground { background-image: url("assets/icons/back-ground.png"); }
+
+/* 사람은 맨 오른쪽에서 시작해 왼쪽 끝으로 걸어가고, 닿으면 다시 맨 오른쪽에서 계속 걷는다(올려 둔 동안 반복).
+   걸으면서 위아래로 조금씩 출렁인다: 앞으로 가는 건 left/transform, 출렁임은 별도 속성 translate로 따로 돌린다. */
+.back-art {
+  position: absolute; top: 12px; left: calc(100% - 14px); height: 52px; width: auto;
+  transform: translateX(-100%); image-rendering: pixelated; pointer-events: none;
+}
+button.back:hover .back-art, button.back:active .back-art, button.back:focus-visible .back-art {
+  animation: walk-left 3.6s linear infinite, walk-bob 0.4s steps(1, end) infinite;
+}
+button.back:hover .back-ground, button.back:active .back-ground, button.back:focus-visible .back-ground { animation: scroll-tile 2.4s linear infinite; }
+button.back:hover .back-trees, button.back:active .back-trees, button.back:focus-visible .back-trees { animation: scroll-tile 4.8s linear infinite; }
+button.back:hover .back-sky, button.back:active .back-sky, button.back:focus-visible .back-sky { animation: scroll-tile 9.6s linear infinite; }
+@keyframes walk-left { from { left: calc(100% - 14px); transform: translateX(-100%); } to { left: 14px; transform: translateX(0); } }
+@keyframes walk-bob { 0% { translate: 0 0; } 50% { translate: 0 -5px; } 100% { translate: 0 0; } }
+@keyframes scroll-tile { from { background-position-x: 0; } to { background-position-x: 240px; } }
+@media (prefers-reduced-motion: reduce) {
+  button.back:hover .back-art, button.back:active .back-art, button.back:focus-visible .back-art,
+  button.back:hover .back-layer, button.back:active .back-layer, button.back:focus-visible .back-layer { animation: none; }
+}
+
+/* ---------- 가게 입력 ---------- */
+.shops { display: grid; grid-template-columns: 1fr 1fr; gap: 28px; margin: 20px 4px 10px; }
+.shop { padding: 18px 22px 24px; background: #fff; box-shadow: var(--px3), var(--drop); }
+.label, label { display: block; margin: 16px 0 6px; font-size: 15px; color: var(--muted); }
+/* 호칭 고르기: 진짜 select는 숨기고(.dd-native), 다이어리처럼 오른쪽에 픽셀 버튼 모양 ▾ 가 있는 버튼(.dd-btn)과 색이 들어간 목록(.dd-list)을 쓴다.
+   배경 겹 순서(위→아래): 화살표 / 버튼 안쪽 바탕(26x24) / 버튼 갈색 테두리(30x28). */
+.dd-native { display: none !important; }
+button.dd-btn {
+  --dd-fill: #fff; --dd-dy: 0px;
+  display: block; width: calc(100% - 6px); margin: 5px 3px; padding: 9px 52px 9px 14px;
+  font: inherit; font-size: 18px; text-align: left; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  color: var(--pixel-ink); background-color: #fff; border: 0; border-radius: 0; box-shadow: var(--px2);
+  background-image:
+    url("assets/icons/dd-arrow.png"),
+    linear-gradient(var(--dd-fill), var(--dd-fill)),
+    linear-gradient(var(--pixel-ink), var(--pixel-ink));
+  background-repeat: no-repeat;
+  background-size: 14px 9px, 26px 24px, 30px 28px;
+  background-position:
+    calc(100% - 13px) calc(50% + var(--dd-dy)),
+    calc(100% - 7px) calc(50% + var(--dd-dy)),
+    calc(100% - 5px) calc(50% + var(--dd-dy));
+}
+button.dd-btn { image-rendering: pixelated; }
+button.dd-btn.empty { color: #9aa3ad; }
+/* 마우스를 올리면 버튼 안쪽이 연한 주황, 누르는 동안(또는 목록이 열려 있는 동안)은 2px 눌린다 */
+button.dd-btn:hover { --dd-fill: var(--tint); filter: none; }
+button.dd-btn:active, button.dd-btn[aria-expanded="true"] { --dd-fill: var(--tint); --dd-dy: 2px; transform: none; }
+button.dd-btn:focus-visible { outline: 3px dashed var(--pixel-ink); outline-offset: 5px; }
+
+.dd-list {
+  position: fixed; z-index: 1000; margin: 0; padding: 6px; list-style: none; overflow: auto;
+  background: #fff; color: var(--pixel-ink); font-size: 18px;
+  box-shadow: var(--px2), 4px 6px 0 rgba(59, 42, 30, 0.25);
+}
+.dd-list[hidden] { display: none; }
+.dd-opt { padding: 8px 12px; cursor: pointer; outline: 0; overflow-wrap: anywhere; }
+.dd-opt.dd-hint { color: #9aa3ad; }
+.dd-opt:hover, .dd-opt:focus { background: var(--tint); }
+.dd-opt[aria-selected="true"] { background: var(--accent); color: var(--on-accent); }
+.dd-opt[aria-selected="true"]:hover, .dd-opt[aria-selected="true"]:focus { filter: brightness(1.1); }
+
+/* 숫자 칸: 한 틀 안에 입력칸이 있고, 오른쪽에 [−][+] 버튼이 붙는다(다이어리의 증감 버튼과 같은 모양) */
+.stepper { display: flex; align-items: center; gap: 6px; margin: 5px 3px; padding-right: 8px; background: #fff; box-shadow: var(--px2); }
+.stepper:focus-within { outline: 3px dashed var(--pixel-ink); outline-offset: 5px; }
+.stepper:has(input[aria-invalid="true"]) { background: #fdf2f2; }
+.stepper input { flex: 1 1 auto; min-width: 0; margin: 0; background: transparent; box-shadow: none; outline: 0; }
+.stepper input:focus-visible { outline: 0; }
+button.step { flex: none; width: 26px; height: 24px; margin: 0; padding: 0; font-size: 18px; line-height: 1; }
 input {
-  width: 100%; margin: 3px; padding: 5px 10px;
+  width: 100%; margin: 5px 3px; padding: 9px 14px;
   font: inherit; font-size: 18px; color: var(--pixel-ink);
   background: #fff; border: 0; border-radius: 0; box-shadow: var(--px2);
 }
@@ -156,14 +255,34 @@ input::placeholder { color: #9aa3ad; }
 input:focus-visible { outline: 3px dashed var(--pixel-ink); outline-offset: 5px; }
 input[aria-invalid="true"] { background: #fdf2f2; }
 
+/* ---------- 계산 중(로딩) ---------- */
+.loading-dlg { width: min(340px, calc(100vw - 48px)); }
+.loading-body { display: flex; flex-direction: column; align-items: center; gap: 8px; padding: 22px 24px 26px; }
+.calc-art { position: relative; width: 102px; height: 96px; }
+.calc-art img { position: absolute; inset: 0; width: 100%; height: 100%; image-rendering: pixelated; }
+/* 두 그림을 0.6초마다 번갈아 보여 준다(손가락이 계산기 키를 누르는 모양) */
+.calc-a { animation: calc-a 0.6s steps(1, end) infinite; }
+.calc-b { opacity: 0; animation: calc-b 0.6s steps(1, end) infinite; }
+@keyframes calc-a { 0% { opacity: 1; } 50% { opacity: 0; } 100% { opacity: 1; } }
+@keyframes calc-b { 0% { opacity: 0; } 50% { opacity: 1; } 100% { opacity: 0; } }
+.loading-text { margin: 0; font-size: 19px; line-height: 1.5; color: var(--pixel-ink); }
+@media (prefers-reduced-motion: reduce) {
+  .calc-a, .calc-b { animation: none; }
+}
+
 /* ---------- 결과 ---------- */
-.result { margin: 22px 4px 4px; padding: 6px 16px 12px; background: #fff; box-shadow: var(--px3), var(--drop); animation: result-pop 0.24s steps(3) both; }
+.result { margin: 36px 4px 8px; padding: 16px 28px 28px; background: #fff; box-shadow: var(--px3), var(--drop); animation: result-pop 0.24s steps(3) both; }
 @keyframes result-pop { from { transform: translateY(8px) scale(0.97); opacity: 0; } to { transform: none; opacity: 1; } }
-.result h3 { margin: 10px 0 4px; font-size: 21px; line-height: 1.4; }
-.quip { margin: 6px 0; padding-left: 22px; position: relative; font-size: 19px; line-height: 1.5; color: var(--pixel-ink); }
+/* 결과 한 문장: 이것만 봐도 결과를 알 수 있게 크게, 가운데 정렬 */
+.result h3 { margin: 20px 0 20px; font-size: 26px; line-height: 1.45; text-align: center; }
+.quip { margin: 14px 0; padding-left: 26px; position: relative; font-size: 19px; line-height: 1.75; color: var(--pixel-ink); }
 .quip::before { content: ""; position: absolute; left: 0; top: .6em; width: 10px; height: 10px; background: var(--accent); box-shadow: var(--px2); }
-.reasons { margin: 0 0 6px; padding-left: 1.3rem; font-size: 16px; line-height: 1.6; }
-.reasons li { margin: 4px 0; }
+.reasons { margin: 0 0 12px; padding-left: 1.5rem; font-size: 16px; line-height: 1.8; }
+.reasons li { margin: 10px 0; }
+/* 소비자 입장에서 따져 볼 점의 세 묶음: 소비를 받아들일 이유는 초록, 소비를 망설일 이유는 주황, 더 확인해 볼 점은 갈색 */
+h5 { margin: 24px 0 8px; font-size: 17px; font-weight: 400; padding-left: 8px; border-left: 8px solid var(--pixel-ink); color: var(--pixel-ink); }
+h5.view-accept { border-left-color: #1b6e3c; }
+h5.view-hesitate { border-left-color: var(--accent); }
 
 /* ---------- 알림·확인 창(<dialog>): 다이어리의 알림 창과 같은 모양 ---------- */
 .dlg {
@@ -209,10 +328,13 @@ input[aria-invalid="true"] { background: #fdf2f2; }
 /* ---------- 좁은 화면 ---------- */
 @media (max-width: 36rem) {
   body { padding: 0 10px 12px; font-size: 16px; }
-  main { padding: 12px 12px 20px; }
+  main { padding: 22px 18px 32px; }
   .top h1 { font-size: 26px; }
+  .result h3 { font-size: 22px; }
   .mascot { width: 52px; height: 52px; }
   .lead { font-size: 17px; }
-  .job-list { gap: 14px; }
+  .lead-sub { font-size: 13px; }
+  .job-list { gap: 20px; }
+  .job-list:not(.service-list) { grid-template-columns: repeat(2, 1fr); }
   .shops { grid-template-columns: 1fr; }
 }

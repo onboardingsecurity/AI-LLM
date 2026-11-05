@@ -4,63 +4,95 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="referrer" content="no-referrer">
-<title>대구 직업 호칭 가격 비교</title>
+<title>대구! 갈래? 말래?</title>
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
 <header class="top">
   <img id="mascot" class="mascot" src="assets/left.png" alt="" width="64" height="64" data-fx="hearts">
   <div>
-    <p class="paper">논문: 네일샵 시술자 호칭 유형과 손 젤 원톤 가격 수준의 관계: 대구 지역 탐색적 비교</p>
-    <h1>대구 직업 호칭 가격 비교</h1>
+    <h1>대구! 갈래? 말래?</h1>
   </div>
 </header>
 
 <main class="card">
-  <noscript><p class="error">이 앱은 자바스크립트가 켜져 있어야 동작합니다.</p></noscript>
+  <noscript><p class="error">이 앱은 자바스크립트가 켜져 있어야 동작해요.</p></noscript>
 
-  <p class="lead">이 앱은 대구에서 네일샵을 고르는 손님이 두 가게의 호칭과 손 젤 원톤 가격을 넣으면, 그 가격 차이를 호칭 탓으로 볼 근거가 있는지 논문 결과로 알려 주어 돕습니다.</p>
+  <p class="lead" id="lead">호칭과 서비스 가격을 통해 갈지 말지 결정하자.</p>
+  <p class="lead-sub" id="lead-sub">호칭과 가격 수준의 관계: 해당 서비스는 호칭과 가게들의 가격을 비교해 사용자의 소비 결정을 돕습니다.</p>
 
   <section id="screen-jobs" class="screen" aria-labelledby="jobs-title">
     <h2 id="jobs-title" tabindex="-1">어떤 직업을 비교할까요?</h2>
     <ul id="job-list" class="job-list"></ul>
+    <div class="rest-art"><img src="assets/small-space-640.png" width="640" height="427" loading="lazy" decoding="async" alt="" role="presentation"></div>
+  </section>
+
+  <section id="screen-services" class="screen" aria-labelledby="services-title" hidden>
+    <h2 id="services-title" tabindex="-1">어떤 서비스의 가격인가요?</h2>
+    <ul id="service-list" class="job-list service-list"></ul>
+    <div class="rest-art"><img src="assets/small-space-640.png" width="640" height="427" loading="lazy" decoding="async" alt="" role="presentation"></div>
   </section>
 
   <section id="screen-compare" class="screen" aria-labelledby="compare-title" hidden>
-    <button type="button" id="back" class="ghost">← 직업 다시 고르기</button>
-    <h2 id="compare-title" tabindex="-1">가게 두 곳을 비교해요</h2>
+    <h2 id="compare-title" tabindex="-1">호칭과 가격을 어떻게 되나요?</h2>
 
     <form id="compare-form" novalidate>
       <div class="shops">
         <section class="shop" aria-labelledby="shop-0-title">
           <h3 id="shop-0-title">가게 1</h3>
-          <p class="label" id="label-title-0">시술자 호칭</p>
+          <p class="label" id="label-title-0">가게에서 쓰는 호칭</p>
           <div id="picker-0"></div>
-          <label for="price-0">손 젤 원톤 가격(원)</label>
+          <label for="price-0" id="label-price-0">손 젤 원톤 가격(원)</label>
           <div class="stepper">
-            <button type="button" class="ghost step" data-target="price-0" data-delta="-1000" aria-label="1,000원 줄이기">−</button>
             <input id="price-0" type="text" inputmode="numeric" autocomplete="off" maxlength="12" placeholder="예: 35000">
+            <button type="button" class="ghost step" data-target="price-0" data-delta="-1000" aria-label="1,000원 줄이기">−</button>
             <button type="button" class="ghost step" data-target="price-0" data-delta="1000" aria-label="1,000원 늘리기">+</button>
           </div>
         </section>
         <section class="shop" aria-labelledby="shop-1-title">
           <h3 id="shop-1-title">가게 2</h3>
-          <p class="label" id="label-title-1">시술자 호칭</p>
+          <p class="label" id="label-title-1">가게에서 쓰는 호칭</p>
           <div id="picker-1"></div>
-          <label for="price-1">손 젤 원톤 가격(원)</label>
+          <label for="price-1" id="label-price-1">손 젤 원톤 가격(원)</label>
           <div class="stepper">
-            <button type="button" class="ghost step" data-target="price-1" data-delta="-1000" aria-label="1,000원 줄이기">−</button>
             <input id="price-1" type="text" inputmode="numeric" autocomplete="off" maxlength="12" placeholder="예: 30000">
+            <button type="button" class="ghost step" data-target="price-1" data-delta="-1000" aria-label="1,000원 줄이기">−</button>
             <button type="button" class="ghost step" data-target="price-1" data-delta="1000" aria-label="1,000원 늘리기">+</button>
           </div>
         </section>
       </div>
-      <div class="actions"><button type="submit" class="go">비교하기</button></div>
+      <div class="actions"><button type="submit" class="go">알아보기</button></div>
     </form>
 
+
+  </section>
+
+  <!-- 결과 화면: 알아보기를 누르면 입력 화면 아래에 붙지 않고 이 화면으로 넘어간다 -->
+  <section id="screen-result" class="screen" aria-labelledby="result-title" hidden>
+    <h2 id="result-title" tabindex="-1">결과 화면</h2>
     <div id="result" class="result" aria-live="polite" hidden></div>
   </section>
+
+  <!-- 뒤로 가기: 화면마다 새로 만들지 않고 카드 맨 아래에 하나를 두고 계속 쓴다(직업 선택에서는 자리만 두고 보이지 않는다) -->
+  <div class="back-bar" id="back-bar" data-off="true" inert>
+    <hr class="divider">
+    <button type="button" id="back" class="ghost back" aria-label="뒤로 가기" title="뒤로 가기"><span class="back-layer back-sky" aria-hidden="true"></span><span class="back-layer back-trees" aria-hidden="true"></span><span class="back-layer back-ground" aria-hidden="true"></span><img class="back-art" src="assets/icons/back-walker.png" alt="" width="64" height="68"></button>
+  </div>
 </main>
+
+<!-- 알아보기를 누르면 뜨는 계산 중 모달 창. 계산하는 사람이 계산기를 두드리다가 끝나면 닫히고 결과 화면으로 넘어간다 -->
+<dialog id="loading-dialog" class="dlg dlg-ok loading-dlg" aria-labelledby="loading-title">
+  <div class="dlg-box">
+    <div class="dlg-bar">
+      <span class="dlg-icon" aria-hidden="true">…</span>
+      <p id="loading-title" class="dlg-title">계산 중</p>
+    </div>
+    <div class="loading-body" role="status">
+      <span class="calc-art" aria-hidden="true"><img class="calc-a" src="assets/icons/calc-a.png" alt="" width="102" height="96"><img class="calc-b" src="assets/icons/calc-b.png" alt="" width="102" height="96"></span>
+      <p class="loading-text">계..산..중</p>
+    </div>
+  </div>
+</dialog>
 
 <dialog id="app-dialog" class="dlg dlg-warn" aria-labelledby="dlg-title">
   <form method="dialog" class="dlg-box">
