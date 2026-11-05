@@ -8,4 +8,5 @@
 | assets/background.png | 본인 제작(AI 생성). ChatGPT(gpt-image)로 직접 생성한 이미지 | OpenAI 이용약관 |
 | assets/left.png | 본인 제작(AI 생성). ChatGPT로 직접 생성한 캐릭터 이미지 | OpenAI 이용약관 |
 | assets/mouse-cursor.png | 본인 제작(AI 생성). ChatGPT로 직접 생성한 마우스 커서 이미지 | OpenAI 이용약관 |
-| assets/icons/*.png | 이 저장소의 `tools/make_pixel_icons.py`가 글자 지도로 그린 픽셀 그림(직업 선택 그림, 잠금, 하트). 외부 이미지를 쓰지 않음 | 이 프로젝트에서 직접 만든 그림 |
+| assets/small-space-640.png | 본인 제작(AI 생성). 본인이 ChatGPT 이미지 생성으로 직접 만든 배경 없는 이미지(누워 있는 공룡). `ai-second-plan-do-see-diary` 브랜치의 파일을 그대로 복사했다(해시 동일). 파일에 생성 도구 정보나 위치 정보 같은 메타데이터는 없음 | OpenAI 이용약관 |
+| assets/icons/*.png | 이 저장소의 `tools/make_pixel_icons.py`가 글자 지도로 그린 픽셀 그림(직업 선택 그림, 서비스 선택 그림, 잠금, 하트). 외부 이미지를 쓰지 않음 | 이 프로젝트에서 직접 만든 그림 |
